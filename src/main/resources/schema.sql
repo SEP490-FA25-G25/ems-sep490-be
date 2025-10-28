@@ -1,0 +1,14 @@
+-- =========================================
+-- PostgreSQL Enum Types for EMS
+-- This script creates enum types before Hibernate creates tables
+--
+-- QUAN TRỌNG:
+-- - File này CHỈ định nghĩa ENUM TYPES, KHÔNG tạo tables
+-- - Hibernate sẽ TỰ ĐỘNG tạo/update tables dựa trên entities
+-- - Khi thêm enum mới: Chỉ cần thêm dòng CREATE TYPE ở đây
+--
+-- Note: If types already exist, errors will be ignored due to continue-on-error setting
+-- =========================================
+
+-- Example: Nếu bạn thêm enum mới, chỉ cần thêm dòng này:
+-- CREATE TYPE payment_status_enum AS ENUM ('pending','completed','failed','refunded');

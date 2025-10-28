@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: tms-sep490-be
+
+  security:
+    jwt:
+      # IMPORTANT: Change this secret in production! Use environment variable
+      secret: ${JWT_SECRET:ThisIsAVerySecretKeyForJWTTokenGenerationPleaseChangeInProduction123456789}
+      access-token-expiration: 900000      # 15 minutes (in milliseconds)
+      refresh-token-expiration: 604800000  # 7 days (in milliseconds)
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    # docker run --name some-postgres -e POSTGRES_PASSWORD=979712 -p 5432:5432 -d postgres 
+    # docker exec -it some-postgres psql -U postgres
+    # CREATE DATABASE ems;
+    username: postgres
+    url: jdbc:postgresql://localhost:5432/ems 
+    password: 979712
+
+#  sql:
+#    init:
+#      mode: always  # Change to 'always' only on first run to create enum types
+#      schema-locations: classpath:schema.sql
+#      data-locations: classpath:data.sql
+#      continue-on-error: true
+
+  jpa:
+    defer-datasource-initialization: true  # Must be true to run data.sql after Hibernate creates tables
+    hibernate:
+      ddl-auto: update   # <--- "create", "create-drop", "update", "validate", "none"
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: alpha
+    tags-sorter: alpha
+    display-request-duration: true
+    doc-expansion: none
+    default-models-expand-depth: 1
+    default-model-expand-depth: 1
+  show-actuator: false
+  paths-to-match: /api/**
+  packages-to-scan: org.fyp.emssep490be.controllers
