@@ -45,6 +45,32 @@ DROP TABLE IF EXISTS branch CASCADE;
 DROP TABLE IF EXISTS center CASCADE;
 DROP TABLE IF EXISTS role CASCADE;
 DROP TABLE IF EXISTS user_account CASCADE;
+DROP TABLE IF EXISTS replacement_skill_assessment CASCADE;
+DROP TABLE IF EXISTS feedback_question CASCADE;
+DROP TABLE IF EXISTS student_feedback_response CASCADE;
+
+-- Drop existing enum types (to ensure clean recreation)
+DROP TYPE IF EXISTS session_status_enum CASCADE;
+DROP TYPE IF EXISTS session_type_enum CASCADE;
+DROP TYPE IF EXISTS attendance_status_enum CASCADE;
+DROP TYPE IF EXISTS enrollment_status_enum CASCADE;
+DROP TYPE IF EXISTS request_status_enum CASCADE;
+DROP TYPE IF EXISTS teacher_request_type_enum CASCADE;
+DROP TYPE IF EXISTS student_request_type_enum CASCADE;
+DROP TYPE IF EXISTS resource_type_enum CASCADE;
+DROP TYPE IF EXISTS modality_enum CASCADE;
+DROP TYPE IF EXISTS skill_enum CASCADE;
+DROP TYPE IF EXISTS teaching_role_enum CASCADE;
+DROP TYPE IF EXISTS branch_status_enum CASCADE;
+DROP TYPE IF EXISTS class_status_enum CASCADE;
+DROP TYPE IF EXISTS subject_status_enum CASCADE;
+DROP TYPE IF EXISTS assessment_kind_enum CASCADE;
+DROP TYPE IF EXISTS teaching_slot_status_enum CASCADE;
+DROP TYPE IF EXISTS homework_status_enum CASCADE;
+DROP TYPE IF EXISTS course_status_enum CASCADE;
+DROP TYPE IF EXISTS approval_status_enum CASCADE;
+DROP TYPE IF EXISTS material_type_enum CASCADE;
+DROP TYPE IF EXISTS mapping_status_enum CASCADE;
 
 -- ========== SECTION 2: ENUM TYPES ==========
 DO $$ BEGIN CREATE TYPE session_status_enum AS ENUM ('planned','cancelled','done'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
