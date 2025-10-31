@@ -279,22 +279,249 @@ When a teacher cannot teach, follow this priority:
 
 ## Testing Strategy
 
-### Unit Tests
-- Test business logic in service layer
-- Mock repository dependencies
-- Focus on edge cases: conflicts, validations, state transitions
+The project uses a comprehensive testing approach with JUnit 5, Mockito, Testcontainers, and AssertJ.
 
-### Integration Tests
-- Test complete workflows: course creation → approval → class creation → enrollment
-- Use `@SpringBootTest` with test database
-- Clean up data after each test with `@Transactional` + rollback
+### Test Infrastructure
+
+**Dependencies (in pom.xml):**
+- JUnit 5 (Jupiter) - Testing framework (included with spring-boot-starter-test)
+- Mockito - Mocking framework for unit tests
+- AssertJ - Fluent assertions library
+- Testcontainers 1.20.4 - Docker containers for integration tests
+- REST Assured - API testing (optional)
+- JaCoCo 0.8.12 - Code coverage reporting
+
+**Base Test Classes:**
+- `AbstractIntegrationTest` - For full integration tests with `@SpringBootTest`
+- `AbstractRepositoryTest` - For repository layer tests with `@DataJpaTest`
+- `PostgreSQLTestContainer` - Singleton PostgreSQL container for all tests
+
+**Test Configuration:**
+- `src/test/resources/application-test.yml` - Test-specific configuration
+- PostgreSQL container auto-configured via Testcontainers
+- Each test runs in transaction with automatic rollback
+
+### Unit Tests (Service Layer)
+
+**Pattern:** Test business logic in isolation using Mockito
+
+```java
+@ExtendWith(MockitoExtension.class)
+class MyServiceTest {
+    @Mock
+    private MyRepository repository;
+
+    @InjectMocks
+    private MyServiceImpl service;
+
+    @Test
+    void shouldDoSomething() {
+        // Arrange: Mock dependencies
+        when(repository.findById(1L)).thenReturn(Optional.of(entity));
+
+        // Act: Call service method
+        Result result = service.doSomething(1L);
+
+        // Assert: Verify results
+        assertThat(result).isNotNull();
+        verify(repository).findById(1L);
+    }
+}
+```
+
+**Best Practices:**
+- Name tests clearly: `shouldDoXWhenY()` or `givenX_whenY_thenZ()`
+- Use `@DisplayName` for readable test descriptions
+- Mock only external dependencies (repositories, external services)
+- Focus on edge cases: null values, empty lists, exceptions
+- Verify interactions: `verify(mock).method()`
+- Use AssertJ fluent assertions for readability
+
+### Integration Tests (Repository Layer)
+
+**Pattern:** Test with real PostgreSQL database via Testcontainers
+
+```java
+@DisplayName("MyRepository Integration Tests")
+class MyRepositoryTest extends AbstractRepositoryTest {
+    @Autowired
+    private MyRepository repository;
+
+    @BeforeEach
+    void setUp() {
+        repository.deleteAll();
+    }
+
+    @Test
+    void shouldSaveAndRetrieve() {
+        // Arrange
+        Entity entity = TestDataBuilder.buildEntity().build();
+
+        // Act
+        Entity saved = repository.save(entity);
+
+        // Assert
+        assertThat(saved.getId()).isNotNull();
+        assertThat(repository.findById(saved.getId())).isPresent();
+    }
+}
+```
+
+**Best Practices:**
+- Extend `AbstractRepositoryTest` for automatic PostgreSQL setup
+- Clean database in `@BeforeEach` to ensure test isolation
+- Test actual database constraints (unique, foreign keys)
+- Verify cascade operations work correctly
+- Test complex queries and relationships
+- Use `TestDataBuilder` utility for creating test entities
+
+### Integration Tests (Full Application)
+
+**Pattern:** Test complete workflows with `@SpringBootTest`
+
+```java
+@DisplayName("Course Approval Workflow Integration Test")
+class CourseApprovalWorkflowIT extends AbstractIntegrationTest {
+    @Autowired
+    private CourseService courseService;
+
+    @Test
+    void shouldCompleteCourseApprovalWorkflow() {
+        // Test end-to-end workflow
+    }
+}
+```
+
+**Use Cases:**
+- Multi-service workflows (course creation → approval → class generation)
+- Security/authorization scenarios
+- REST API endpoints (with MockMvc or RestAssured)
+- Transaction management and rollback scenarios
+
+### Test Data Management
+
+**TestDataBuilder Utility:**
+```java
+// Fluent API for creating test entities with sensible defaults
+Center center = TestDataBuilder.buildCenter()
+    .name("Test Center")
+    .email("test@center.com")
+    .build();
+
+Course course = TestDataBuilder.buildCourse()
+    .level(level)
+    .status(CourseStatus.ACTIVE)
+    .build();
+```
+
+**Guidelines:**
+- Use `TestDataBuilder` for consistent test data
+- Set only fields relevant to the test
+- Create hierarchical data (Center → Subject → Level → Course) in correct order
+- Clean up data after tests (handled automatically by `@Transactional`)
+
+### Running Tests
+
+**Maven Commands:**
+```bash
+# Run all tests (unit + integration)
+mvn clean test
+
+# Run only unit tests (naming: *Test.java)
+mvn test
+
+# Run only integration tests (naming: *IT.java, *IntegrationTest.java)
+mvn verify
+
+# Run tests with coverage report
+mvn clean verify jacoco:report
+# Report location: target/site/jacoco/index.html
+
+# Run specific test class
+mvn test -Dtest=CenterServiceImplTest
+
+# Run specific test method
+mvn test -Dtest=CenterServiceImplTest#shouldFindCenterById
+
+# Skip tests during build
+mvn clean package -DskipTests
+```
+
+**Test Execution Flow:**
+1. **Surefire Plugin** runs `*Test.java` files in `mvn test` phase
+2. **Failsafe Plugin** runs `*IT.java` files in `mvn verify` phase
+3. **JaCoCo** generates coverage report in `mvn verify` phase
 
 ### Key Test Scenarios
-1. **Conflict Detection**: Double-booking resources, teacher conflicts
-2. **Request Workflows**: Both user-initiated and staff-initiated flows
-3. **Session Generation**: Correct date calculation, holiday skipping
-4. **Enrollment**: Capacity validation, mid-course enrollment
-5. **Makeup Logic**: Session matching, capacity checking, bidirectional linking
+
+Priority scenarios for comprehensive testing:
+
+1. **Conflict Detection**
+   - Resource double-booking (same room/zoom at same time)
+   - Teacher schedule conflicts
+   - Student schedule conflicts
+   - Capacity violations
+
+2. **Request Workflows**
+   - User-initiated requests (student/teacher creates → pending → approved)
+   - Staff-initiated requests (staff creates → waiting_confirm → user confirms → pending → approved)
+   - Request rejection handling
+   - State transition validations
+
+3. **Session Generation**
+   - Auto-generate sessions from course templates
+   - Date calculation based on schedule_days and week offset
+   - Holiday skipping logic
+   - Session count matches course.total_sessions
+
+4. **Enrollment Management**
+   - Capacity validation before enrollment
+   - Auto-generate student_session records
+   - Mid-course enrollment (only future sessions)
+   - Enrollment cancellation and cleanup
+
+5. **Makeup Session Logic**
+   - Find eligible makeup sessions (same course_session_id)
+   - Check capacity availability
+   - Priority matching (branch → modality → date)
+   - Bidirectional linking (makeup_session_id ↔ original_session_id)
+
+6. **Course/Class Approval Workflow**
+   - Dual status handling (status + approval_status)
+   - Optimistic locking with hash_checksum
+   - Permission-based approval (MANAGER, CENTER HEAD)
+   - Status transitions validation
+
+### Test Coverage Goals
+
+**Targets:**
+- Overall: 80%+ code coverage
+- Service layer: 90%+ (critical business logic)
+- Repository layer: 70%+ (simpler CRUD operations)
+- Entity layer: 60%+ (getters/setters excluded)
+
+**Focus Areas:**
+- All business logic methods in services
+- Complex query methods in repositories
+- State transition validations
+- Exception handling paths
+- Edge cases and error scenarios
+
+### CI/CD Integration
+
+Tests are designed to run in CI/CD pipelines:
+- Testcontainers works with Docker in CI environments
+- Tests are fast (container reuse across test classes)
+- No manual database setup required
+- Deterministic and repeatable results
+
+**Example GitHub Actions workflow:**
+```yaml
+- name: Run tests
+  run: mvn clean verify
+- name: Upload coverage
+  uses: codecov/codecov-action@v3
+```
 
 ## Common Pitfalls to Avoid
 
@@ -329,11 +556,12 @@ The project currently has:
 - ✅ Basic DTO pattern
 - ✅ **Repository layer** (39 Spring Data JPA interfaces)
 - ✅ **Service layer** (39 service interfaces with implementations)
+- ✅ **Test infrastructure** (Unit tests, Integration tests with Testcontainers)
 
 Still needed:
 - ⏳ Controller layer (REST API endpoints)
 - ⏳ Security configuration (JWT authentication/authorization)
-- ⏳ Unit and integration tests
+- ⏳ Expand test coverage (write tests for all services/repositories)
 - ⏳ API documentation (Swagger/OpenAPI annotations)
 
 When implementing new features, follow the pattern: Repository → Service → Controller → Tests
@@ -403,3 +631,52 @@ All 39 services are now available in `src/main/java/org/fyp/tmssep490be/services
 - StudentRequestService, TeacherRequestService
 
 All service implementations use `@Service` annotation, `@RequiredArgsConstructor` for dependency injection, and inject their corresponding repository. The services are currently templates ready for business logic implementation.
+
+### Test Infrastructure Details
+
+Complete test setup is now available in `src/test/java/org/fyp/tmssep490be/`:
+
+**Test Configuration:**
+- `src/test/resources/application-test.yml` - Test-specific Spring configuration
+- `config/PostgreSQLTestContainer.java` - Singleton PostgreSQL container
+- `config/AbstractIntegrationTest.java` - Base class for full integration tests
+- `config/AbstractRepositoryTest.java` - Base class for repository tests
+
+**Test Utilities:**
+- `utils/TestDataBuilder.java` - Fluent API for creating test entities with sensible defaults
+
+**Example Tests:**
+- `services/impl/CenterServiceImplTest.java` - Unit test example with Mockito
+- `repositories/CenterRepositoryTest.java` - Simple repository integration test
+- `repositories/CourseRepositoryIntegrationTest.java` - Complex integration test with relationships
+
+**Test Dependencies (pom.xml):**
+- JUnit 5 + Mockito + AssertJ (via spring-boot-starter-test)
+- Testcontainers 1.20.4 (PostgreSQL module)
+- REST Assured (for API testing)
+- JaCoCo 0.8.12 (code coverage)
+- Maven Surefire Plugin (unit tests)
+- Maven Failsafe Plugin (integration tests)
+
+**Running Tests:**
+```bash
+# Unit tests only
+mvn test
+
+# All tests (unit + integration)
+mvn verify
+
+# With coverage report
+mvn clean verify jacoco:report
+```
+
+**Test Naming Conventions:**
+- Unit tests: `*Test.java` (e.g., `CenterServiceImplTest.java`)
+- Integration tests: `*IT.java` or `*IntegrationTest.java` (e.g., `CenterRepositoryIT.java`)
+
+**Key Features:**
+- Real PostgreSQL database via Testcontainers (no H2 incompatibility issues)
+- Container reuse across test classes for performance
+- Automatic transaction rollback after each test
+- Fluent test data builders for easy setup
+- CI/CD ready (works with GitHub Actions, GitLab CI, etc.)
