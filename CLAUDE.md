@@ -61,6 +61,29 @@ The system uses a **tiered table structure** with clear dependency hierarchy:
 
 5. **Enum-based Type Safety**: All status/type fields use PostgreSQL enums with matching Java enums in `entities/enums/`
 
+## **Implementation Plan: Core Principles**
+
+**1. Code Quality & Structure:**
+
+- **Clean Implementation:** The implementation must be clean, avoiding unnecessary code, complexity, and "code smells." Adhere strictly to established coding standards and best practices (e.g., SOLID, DRY).
+- **No Redundancy (DRY - Don't Repeat Yourself):** Actively prevent code duplication. Abstract and reuse components, functions, and logic wherever possible.
+- **Logical Soundness & Correct Algorithms:** Ensure all logic is correct and the algorithms used are efficient and appropriate for the given problem.
+
+**2. System Integrity & Performance:**
+
+- **Prevent Race Conditions:** Proactively identify and prevent potential race conditions to ensure data integrity and system stability, especially in concurrent operations.
+- **Avoid Over-engineering:** The solution must not be over-engineered. Implement what is necessary to meet the current requirements without adding speculative features or unnecessary complexity.
+
+**3. Development Approach:**
+
+- **Adhere to Best Practices:** Always follow the best and most current industry-standard approaches for the technologies and patterns being used.
+- **Maintain a Holistic View:** Always consider the overall architecture and the impact of your changes on the entire system. Ensure new implementations integrate seamlessly.
+- **Focus on the Story & Scope:** Concentrate on delivering the user story at hand. Ensure the implementation directly serves the story's requirements and stays within the defined scope for the MVP (Minimum Viable Product). The primary goal is a functional, demonstrable feature that meets the story's acceptance criteria.
+
+**4. Final Deliverable:**
+
+- **Solid & Maintainable Code:** The final code must be robust, reliable, well-documented, and easy for other developers to understand, modify, and maintain in the future.
+
 ## Development Commands
 
 ### Build and Run
@@ -299,13 +322,13 @@ When a teacher cannot teach, follow this priority:
 ## Next Development Steps
 
 The project currently has:
-- ✅ Complete entity layer with all JPA entities
+- ✅ Complete entity layer with all JPA entities (39 entities)
 - ✅ Database schema with enums and seed data
 - ✅ Exception handling structure
 - ✅ Basic DTO pattern
+- ✅ **Repository layer** (39 Spring Data JPA interfaces)
 
 Still needed:
-- ⏳ Repository layer (Spring Data JPA interfaces)
 - ⏳ Service layer (business logic implementation)
 - ⏳ Controller layer (REST API endpoints)
 - ⏳ Security configuration (JWT authentication/authorization)
@@ -313,3 +336,36 @@ Still needed:
 - ⏳ API documentation (Swagger/OpenAPI annotations)
 
 When implementing new features, follow the pattern: Repository → Service → Controller → Tests
+
+### Repository Layer Details
+
+All 39 repositories are now available in `src/main/java/org/fyp/tmssep490be/repositories/`:
+
+**Core & Organization (10 repositories):**
+- CenterRepository, BranchRepository, RoleRepository
+- UserAccountRepository, UserRoleRepository, UserBranchesRepository
+- TeacherRepository, StudentRepository
+- ResourceRepository, TimeSlotTemplateRepository
+
+**Curriculum (12 repositories):**
+- SubjectRepository, LevelRepository, CourseRepository
+- CoursePhaseRepository, CourseSessionRepository, CourseMaterialRepository
+- PLORepository, CLORepository
+- PLOCLOMappingRepository, CourseSessionCLOMappingRepository
+- CourseAssessmentRepository, CourseAssessmentCLOMappingRepository
+
+**Operations (8 repositories):**
+- ClassRepository, SessionRepository
+- EnrollmentRepository, StudentSessionRepository
+- TeachingSlotRepository, SessionResourceRepository
+- TeacherAvailabilityRepository, TeacherSkillRepository
+
+**Assessment & Feedback (7 repositories):**
+- AssessmentRepository, ScoreRepository
+- FeedbackQuestionRepository, StudentFeedbackRepository, StudentFeedbackResponseRepository
+- QAReportRepository, ReplacementSkillAssessmentRepository
+
+**Requests (2 repositories):**
+- StudentRequestRepository, TeacherRequestRepository
+
+All repositories extend `JpaRepository<Entity, Long>` and include `@Repository` annotation for Spring component scanning.
