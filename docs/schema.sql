@@ -76,7 +76,7 @@ DROP TYPE IF EXISTS mapping_status_enum CASCADE;
 DO $$ BEGIN CREATE TYPE session_status_enum AS ENUM ('planned','cancelled','done'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE session_type_enum   AS ENUM ('class','teacher_reschedule'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE attendance_status_enum AS ENUM ('planned','present','absent'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE enrollment_status_enum AS ENUM ('enrolled','transferred','dropped'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE enrollment_status_enum AS ENUM ('enrolled','transferred','dropped','completed'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE request_status_enum AS ENUM ('pending','waiting_confirm','approved','rejected'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE teacher_request_type_enum AS ENUM ('swap','reschedule', 'modality_change'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE student_request_type_enum AS ENUM ('absence','makeup','transfer'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -85,7 +85,7 @@ DO $$ BEGIN CREATE TYPE modality_enum AS ENUM ('offline','online','hybrid'); EXC
 DO $$ BEGIN CREATE TYPE skill_enum AS ENUM ('general','reading','writing','speaking','listening'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE teaching_role_enum AS ENUM ('primary','assistant'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE branch_status_enum AS ENUM ('active','inactive','closed','planned'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE class_status_enum AS ENUM ('draft','scheduled','ongoing','completed'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE class_status_enum AS ENUM ('draft','scheduled','ongoing','completed','cancelled'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE subject_status_enum AS ENUM ('draft','active','inactive'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE assessment_kind_enum AS ENUM ('quiz','midterm','final','assignment','project','oral','practice','other'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE teaching_slot_status_enum AS ENUM ('scheduled','on_leave','substituted'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -520,7 +520,6 @@ CREATE TABLE enrollment (
   CONSTRAINT fk_enrollment_student FOREIGN KEY(student_id) REFERENCES student(id) ON DELETE CASCADE,
   CONSTRAINT fk_enrollment_join_session FOREIGN KEY(join_session_id) REFERENCES session(id) ON DELETE SET NULL,
   CONSTRAINT fk_enrollment_left_session FOREIGN KEY(left_session_id) REFERENCES session(id) ON DELETE SET NULL,
-  CONSTRAINT uq_enrollment_class_student UNIQUE(class_id,student_id)
 );
 
 CREATE TABLE student_session (

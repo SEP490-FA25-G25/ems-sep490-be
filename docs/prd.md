@@ -27,6 +27,8 @@ TMS là một **hệ thống quản lý đào tạo toàn diện** được thi�
 
 ---
 
+---
+
 ## 2. BỐI CẢNH VÀ MỤC TIÊU
 
 ### 2.1 Vấn đề (The Problem)
@@ -215,7 +217,7 @@ Các trung tâm đào tạo ngôn ngữ đang đối mặt với những thách 
 **Epic 4: Điểm danh và Báo cáo (Attendance & Reporting)**
 
 - **US-ATT-001**: Là một Teacher, tôi muốn điểm danh cho học viên trong từng buổi học, để track attendance.
-  - **Acceptance Criteria**: Xem danh sách students, mark present/absent/late/excused, save attendance
+  - **Acceptance Criteria**: Xem danh sách students, mark present/absent, save attendance. Late/excused cases track qua note field.
 
 - **US-ATT-002**: Là một Teacher, tôi muốn chấm homework cho học viên, để đánh giá tiến độ học tập.
   - **Acceptance Criteria**: Nếu session có homework, có thể mark completed/incomplete
@@ -236,14 +238,14 @@ Các trung tâm đào tạo ngôn ngữ đang đối mặt với những thách 
 
 **Epic 6: Yêu cầu Giáo viên (Teacher Requests)**
 
-- **US-REQ-TEA-001**: Là một Teacher, tôi muốn xin nghỉ một buổi học, để giải quyết việc cá nhân.
-  - **Acceptance Criteria**: Chọn session, nhập lý do, Academic Affair phải tìm substitute hoặc reschedule trước khi approve
+- **US-REQ-TEA-001**: Là một Teacher, khi tôi nghỉ, tôi muốn tìm người dạy thay (swap), để đảm bảo buổi học vẫn diễn ra.
+  - **Acceptance Criteria**: Tìm colleague đồng ý, tạo swap request, colleague confirm, Academic Affair approve
 
-- **US-REQ-TEA-002**: Là một Teacher, tôi muốn đăng ký OT để có thêm thu nhập, để dạy thay khi giáo viên khác nghỉ.
-  - **Acceptance Criteria**: Đăng ký availability override cho ngày/giờ cụ thể, khi được assign → auto create OT request
+- **US-REQ-TEA-002**: Là một Teacher, khi không tìm được người thay, tôi muốn reschedule để dạy bù, để thực hiện trách nhiệm.
+  - **Acceptance Criteria**: Chọn session, chọn new date/time/resource, submit, Academic Affair approve → create new session type="teacher_reschedule"
 
-- **US-REQ-TEA-003**: Là một Teacher, tôi muốn đổi lịch buổi học (trong 7 ngày tới), để phù hợp với lịch cá nhân.
-  - **Acceptance Criteria**: Chọn session, chọn new date/time/resource, submit, Academic Affair approve → create new session với type="teacher_reschedule"
+- **US-REQ-TEA-003**: Là một Teacher, khi không dạy offline được, tôi muốn chuyển sang dạy online, để buổi học vẫn diễn ra.
+  - **Acceptance Criteria**: Request type = "modality_change", chọn Zoom link, Academic Affair approve → update resource, notify students
 
 **Epic 7: Báo cáo và Dashboard (Reporting & Analytics)**
 
@@ -256,7 +258,8 @@ Các trung tâm đào tạo ngôn ngữ đang đối mặt với những thách 
 
 - **US-QA-001**: Là một QA, tôi muốn tạo QA reports cho classes/sessions, để theo dõi chất lượng.
 - **US-ASS-001**: Là một Teacher, tôi muốn nhập điểm cho assessments, để đánh giá học viên.
-- **US-FB-001**: Là một Student, tôi muốn đánh giá buổi học (rating + comment), để cải thiện chất lượng.
+- **US-FB-001**: Là một Student, tôi muốn đánh giá buổi học theo template questions, để cải thiện chất lượng.
+  - **Acceptance Criteria**: Trả lời các feedback questions (rating-based), submit feedback cho class/phase
 - **US-MAT-001**: Là một Subject Leader, tôi muốn upload materials cho course/phase/session, để chia sẻ tài liệu.
 
 ---
@@ -311,11 +314,22 @@ Các trung tâm đào tạo ngôn ngữ đang đối mặt với những thách 
 - Validate: mỗi CLO phải có ít nhất 1 assessment
 
 **FR-1.9: Course Materials**
-- Upload materials cho Course/Phase/Session (title, url, uploaded_by)
+- Upload materials cho Course/Phase/Session
+- Fields: title, description, material_type (video/pdf/slide/audio/document/other), url, uploaded_by, uploaded_at
+- Categorize materials theo type để dễ filter và organize
+- Track upload metadata (uploaded_by, uploaded_at)
 
 **FR-1.10: Course Approval Workflow**
 - Subject Leader submit course → Manager review → Approve/Reject
-- Khi approve: status = "active", course có thể dùng để tạo class
+- Course có 2 status fields:
+  - `course.status`: Lifecycle (draft/active/inactive) - controlled by effective_date
+  - `course.approval_status`: Workflow (pending/approved/rejected) - controlled by Manager
+- Submit flow:
+  - Subject Leader submit → `approval_status` = "pending"
+  - Manager approve → `approval_status` = "approved", `decided_by_manager`, `decided_at`
+  - Effective date: Khi `effective_date` đến → cronjob update `status` = "active"
+  - Manager reject → `approval_status` = "rejected", `rejection_reason`
+- Optimistic locking: `hash_checksum` để detect concurrent updates (Manager đang review nhưng Subject Leader edit)
 
 ---
 
@@ -353,7 +367,14 @@ Các trung tâm đào tạo ngôn ngữ đang đối mặt với những thách 
 
 **FR-2.7: Class Approval Workflow**
 - Academic Affair submit class → Center Head (branch) hoặc Manager (cross-branch) review → Approve/Reject
-- Khi approve: status = "scheduled", có thể enroll students
+- Class có 2 status fields:
+  - `class.status`: Lifecycle (draft/scheduled/ongoing/completed/cancelled)
+  - `class.approval_status`: Workflow (pending/approved/rejected)
+- Submit flow:
+  - Academic Affair submit → `approval_status` = "pending", `submitted_at`
+  - Center Head/Manager approve → `approval_status` = "approved", `status` = "scheduled", `decided_by`, `decided_at`
+  - Center Head/Manager reject → `approval_status` = "rejected", `rejection_reason`
+- Class cancelled: `status` = "cancelled" (ví dụ: không đủ students, teacher nghỉ dài hạn)
 
 ---
 
@@ -374,10 +395,14 @@ Các trung tâm đào tạo ngôn ngữ đang đối mặt với những thách 
 - Hiển thị preview với valid/warning/error
 
 **FR-3.4: Enrollment Process**
-- Select students (multi-select)
+- Select students (multi-select hoặc import CSV)
 - Capacity validation: enrolled_count + selected_count ≤ max_capacity
 - Schedule conflict check: students không học 2 classes cùng lúc
-- Capacity override với lý do (nếu vượt)
+- Capacity overflow handling:
+  - Option 1: Reject enrollment (hiển thị warning)
+  - Option 2: Override capacity (với lý do và approval)
+  - Note: Không có "waitlisted" status - học viên phải đợi hoặc enroll vào class khác
+- Track enrolled_by (user_id của Academic Affair thực hiện enrollment)
 
 **FR-3.5: Auto-Generate Student Sessions**
 - Với mỗi enrollment, tạo student_session cho tất cả future sessions
@@ -402,9 +427,10 @@ Các trung tâm đào tạo ngôn ngữ đang đối mặt với những thách 
 **FR-4.3: Attendance Recording**
 - Load students từ student_session
 - Hiển thị: student_code, full_name, attendance_status, is_makeup, homework_status
-- Mark attendance: present/absent/late/excused/remote
+- Mark attendance: present/absent
 - Mark homework: completed/incomplete/no_homework (nếu có student_task)
 - Real-time summary: present_count, absent_count, homework_completed_count
+- Note: Late/excused cases track qua `student_session.note` field
 
 **FR-4.4: Attendance Validation**
 - Chỉ điểm danh được trong ngày session (session.date = CURRENT_DATE)
@@ -422,63 +448,144 @@ Các trung tâm đào tạo ngôn ngữ đang đối mặt với những thách 
 #### FR-5: Yêu cầu Học viên (Student Request Management Module)
 
 **FR-5.1: Absence Request**
-- Student chọn session cần xin nghỉ (date >= TODAY)
-- Chọn lớp → session → nhập lý do
-- Validation: session.status = "planned", không duplicate request
-- Academic Affair approve → update student_session.attendance_status = "excused"
+
+**Luồng 1: Student tự tạo request (Primary Flow)**
+- Student login → My Requests → Create Request
+- Chọn request type = "Absence"
+- Chọn ngày → chọn class → chọn session cần nghỉ
+- Nhập lý do (required, min 10 chars)
+- Submit → status = "pending"
+- Academic Affair review → Approve/Reject
+- Approve → update student_session.attendance_status = "absent", note = "Approved absence: [reason]"
+
+**Luồng 2: Academic Affair tạo thay mặt Student (Alternative Flow)**
+- Academic Affair nhận request ngoài hệ thống (WhatsApp/phone/email)
+- Academic Affair tạo request trong hệ thống:
+  - Chọn student, class, session, nhập lý do
+  - Submit → status = "waiting_confirm"
+  - Student confirm → status = "pending"
+  - Academic Affair approve → execute
+
+**Validation**: session.status = "planned", session.date >= CURRENT_DATE, không duplicate request
 
 **FR-5.2: Makeup Request**
-- **Case 1: Học bù cho buổi đã nghỉ**
-  - Load missed sessions (attendance_status = "absent"/"late", trong X tuần gần nhất)
-  - Tìm makeup sessions: same course_session_id, status = "planned", date >= CURRENT_DATE, còn chỗ
-  - Prioritize: same branch → same modality → soonest date → most available slots
-  
-- **Case 2: Đăng ký học bù trước cho buổi tương lai**
-  - Chọn future session sẽ nghỉ → tìm makeup sessions (tương tự Case 1)
-  
-- Validation: course_session_id phải match, capacity available, không duplicate
-- Academic Affair approve → update target session = "excused", create new student_session (is_makeup = TRUE)
+
+**Luồng 1: Student tự tạo request (Primary Flow)**
+- Student login → My Requests → Create Request
+- Chọn request type = "Makeup"
+- **Option A**: Chọn buổi đã nghỉ (missed sessions trong X tuần gần nhất, attendance_status = "absent")
+- **Option B**: Chọn buổi tương lai sẽ nghỉ (future session, attendance_status = "planned")
+- Hệ thống tìm available makeup sessions:
+  - Same course_session_id (cùng nội dung)
+  - Status = "planned", date >= CURRENT_DATE
+  - Còn chỗ (enrolled_count < max_capacity)
+  - Prioritize: same branch → same modality → soonest date → most slots
+- Student chọn preferred makeup session, nhập lý do
+- Submit → status = "pending"
+- Academic Affair review → Approve/Reject
+- Approve → transaction (xem details below)
+
+**Luồng 2: Academic Affair tạo thay mặt Student**
+- Academic Affair nhận request qua WhatsApp/phone
+- Academic Affair tìm makeup sessions → tạo request
+- Submit → status = "waiting_confirm"
+- Student confirm → status = "pending"
+- Academic Affair approve → execute
+
+**Approval Transaction:**
+- Update target session: attendance_status = "absent", note = "Approved for makeup session #X"
+- Create new student_session: (is_makeup = TRUE, makeup_session_id, original_session_id)
+
+**Validation**: course_session_id match, capacity available, không duplicate
 
 **FR-5.3: Transfer Request (Class Transfer)**
-- Student chọn current_class → target_class (same course_id) → effective_date
-- Validation:
-  - Both classes same course_id
-  - Target class status = "scheduled"/"ongoing"
-  - Target class có capacity
-  - Check content gap (course_session_id mapping)
-  
-- Academic Affair approve → transaction:
-  - Update current enrollment: status = "transferred", left_at, left_session_id
-  - Create new enrollment: status = "enrolled", enrolled_at, join_session_id
-  - Update future sessions in current class: attendance_status = "excused"
-  - Generate student_sessions for future sessions in target class
+
+**Luồng 1: Student tự tạo request (Primary Flow)**
+- Student login → My Requests → Create Request
+- Chọn request type = "Transfer"
+- Chọn current_class (đang học)
+- Hệ thống tìm available target classes:
+  - Same course_id (cùng giáo trình)
+  - Status = "scheduled"/"ongoing"
+  - Còn chỗ
+  - Hiển thị: branch, modality, schedule, available_slots
+- Student chọn target_class, chọn effective_date, nhập lý do
+- Submit → status = "pending"
+- Academic Affair review → Check content gap
+- Approve → transaction (xem below)
+
+**Luồng 2: Academic Affair tạo thay mặt Student**
+- Academic Affair nhận request transfer qua WhatsApp/phone
+- Academic Affair tìm target class phù hợp, validate
+- Tạo transfer request → Student confirm → Academic Affair approve
+
+**Approval Transaction:**
+- Update current enrollment: status = "transferred", left_at, left_session_id
+- Create new enrollment: status = "enrolled", enrolled_at, join_session_id
+- Update future sessions in current class: attendance_status = "absent", note = "Transferred to class X"
+- Generate student_sessions for future sessions in target class
+
+**Validation**: Same course_id, target class available, no critical content gaps
 
 ---
 
 #### FR-6: Yêu cầu Giáo viên (Teacher Request Management Module)
 
-**FR-6.1: Leave Request**
-- Teacher chọn session cần xin nghỉ (trong 7 ngày tới) → nhập lý do
-- Academic Affair phải tìm solution trước khi approve:
-  - **Option A: Find Substitute**
-    - Search teachers: skill match, availability (OT registrations first), no conflict
-    - Academic Affair contact candidate → chọn substitute
-    - Approve → update teaching_slot.teacher_id, create OT request for substitute
-  - **Option B: Reschedule Session**
-    - Chọn new date/time → validate resource + teacher availability
-    - Create new session, transfer student_sessions/teaching_slots, cancel old session
-  - **Option C: Cancel Session**
-    - Update session.status = "cancelled", mark all students "excused"
+**FR-6.1: Teacher Absence & Substitute (Swap Request)**
+- **Business Rule**: Teacher nghỉ = phải có trách nhiệm tìm người dạy thay hoặc dạy bù
+- **Luồng 1**: Teacher tự tìm substitute
+  - Teacher liên hệ colleague (ngoài hệ thống)
+  - Colleague đồng ý → Teacher/Academic Affair tạo swap request trong hệ thống
+  - Request type = "swap", replacement_teacher_id, session_id
+  - Replacement teacher confirm → status = "waiting_confirm" → "pending"
+  - Academic Affair approve → update teaching_slot.teacher_id, teaching_slot.status = "substituted"
+  - Track: teacher_request.replacement_teacher_id
 
-**FR-6.2: OT Registration**
-- Teacher đăng ký availability override (date, start_time, end_time)
-- Khi được assign vào session → auto create OT request (for payroll tracking)
+**Luồng 2**: Academic Affair tìm substitute thay
+  - Teacher báo nghỉ gấp (WhatsApp/phone)
+  - Academic Affair tìm available teachers (skill match, availability, no conflict)
+  - Academic Affair tạo swap request → Teacher confirm → Approve
+  - Execute: update teaching_slot
 
-**FR-6.3: Reschedule Request**
-- Teacher chọn session (trong 7 ngày tới) → chọn new date/time/resource
-- Validation: resource available, no student conflicts
-- Academic Affair approve → create new session với type = "teacher_reschedule", cancel old session
-- Track: teacher_request.session_id (old), teacher_request.new_session_id (new)
+**FR-6.2: Reschedule Request (Teacher muốn đổi lịch dạy bù)**
+- **Business Rule**: Nếu không tìm được substitute → phải reschedule để dạy bù
+- **Luồng 1**: Teacher tự tạo request
+  - Teacher login → Requests → Create Request
+  - Request type = "reschedule", chọn session (trong 7 ngày tới)
+  - Chọn new_date, new_time_slot_id, new_resource_id
+  - Submit → status = "pending"
+  - Academic Affair validate (resource available, no conflicts) → Approve
+  - Execute: create new session (type='teacher_reschedule'), cancel old session
+
+**Luồng 2**: Academic Affair tạo thay mặt Teacher
+  - Teacher báo cần đổi lịch
+  - Academic Affair tìm slot available → tạo request → Teacher confirm → Approve
+
+**Approval Transaction:**
+- Cancel old session: session.status = "cancelled"
+- Create new session: (class_id, course_session_id, new_date, new_time_slot, type='teacher_reschedule', status='planned')
+- Transfer teaching_slots, student_sessions sang session mới
+- Track: teacher_request.session_id (old), new_session_id (new)
+
+**FR-6.3: Modality Change Request (Không dạy offline được → chuyển online)**
+- **Use Cases**:
+  - Phòng học hỏng AC/máy chiếu → chuyển online gấp
+  - Teacher ốm nhẹ, không đến được → dạy online từ nhà
+  - Dịch bệnh → chuyển toàn bộ class sang online
+
+**Luồng 1**: Teacher/Academic Affair tạo request
+  - Request type = "modality_change"
+  - Chọn session, chọn new_resource_id (room→zoom or zoom→room)
+  - Submit → Academic Affair validate → Approve
+  - Execute: update session_resource, notify all students
+
+**Validation**: Resource mới phù hợp với modality mới, resource available
+
+**Priority Flow khi Teacher nghỉ:**
+1. Tìm substitute (swap) - Best option
+2. Nếu không có substitute → Reschedule để dạy bù - OK option
+3. Nếu không reschedule được → Modality change (offline→online) - Acceptable
+4. Nếu hết cách → Cancel session (last resort) - session.status = "cancelled"
 
 ---
 
@@ -513,6 +620,17 @@ Các trung tâm đào tạo ngôn ngữ đang đối mặt với những thách 
 - Room occupancy rate (used hours / available hours)
 - Zoom license utilization (concurrent sessions / total licenses)
 - Peak usage times
+
+**FR-7.7: Assessment Dashboard**
+- Schedule vs actual assessment dates (`assessment.scheduled_date` vs `actual_date`)
+- Assessment completion rate by class
+- Average scores by assessment type (quiz/midterm/final)
+- Score distribution by assessment
+
+**FR-7.8: Material Analytics**
+- Material count by type (video/pdf/slide/audio/document)
+- Material coverage by course/phase/session
+- Missing materials warnings (sessions without materials)
 
 ---
 
@@ -618,6 +736,23 @@ Các màn hình chính:
 
 ### 4.2 User Flow
 
+#### Request Management Workflow (2 Luồng)
+
+**Request Status Flow:**
+```
+Luồng 1 (Student/Teacher tự tạo):
+Student/Teacher → Create Request → Submit → [pending] → Academic Affair Review → Approve/Reject → [approved/rejected]
+
+Luồng 2 (Academic Affair tạo thay mặt):
+Academic Affair → Create Request on behalf → Submit → [waiting_confirm] → Student/Teacher Confirm → [pending] → Academic Affair Approve → [approved]
+```
+
+**Request Types & Handlers:**
+- **Student Requests**: absence, makeup, transfer (cả 2 luồng)
+- **Teacher Requests**: swap, reschedule, modality_change (cả 2 luồng)
+
+---
+
 **User Flow 1: Class Creation & Enrollment** (xem `class-creation.md`, `student-enrollment.md`)
 
 ```
@@ -646,32 +781,71 @@ Teacher:
 
 **User Flow 3: Makeup Request** (xem `makeup-request.md`)
 
+**Luồng 1: Student tự tạo (Primary)**
 ```
 Student:
 1. Login → My Requests → Create Request
-2. Select "Makeup" → Select missed session
-3. System finds available makeup sessions (prioritized)
+2. Select "Makeup" → Select missed session (attendance = "absent")
+3. System finds available makeup sessions (same course_session_id, prioritized)
 4. Select preferred makeup session → Fill reason
-5. Submit → Pending approval
+5. Submit → status = "pending"
 6. Academic Affair reviews → Approve
-7. System updates: target session = "excused", create new student_session (is_makeup=true)
+7. System executes: update target session (note), create new student_session (is_makeup=true)
 8. Student nhận email confirmation
 9. Teacher sees student in makeup session với badge "Makeup Student"
 ```
 
-**User Flow 4: Teacher Leave Request** (xem `teacher-reschedule.md` + business-context)
+**Luồng 2: Academic Affair tạo thay mặt (Alternative)**
+```
+Academic Affair:
+1. Nhận request từ Student (WhatsApp/phone)
+2. Tìm makeup sessions phù hợp
+3. Tạo request trong hệ thống → status = "waiting_confirm"
+4. Student confirm → status = "pending"
+5. Academic Affair approve → execute
+6. Notifications sent
+```
 
+**User Flow 4: Teacher Absence Handling** (xem `teacher-reschedule.md`)
+
+**Priority Flow (Teacher có trách nhiệm tìm solution):**
+
+**Option 1: Swap Request (Best)**
 ```
 Teacher:
-1. Login → Requests → Create Request
-2. Select "Leave" → Select session (trong 7 ngày tới)
-3. Fill reason → Submit → Pending
-4. Academic Affair reviews → Find solution:
-   - Option A: Find substitute (from OT teachers)
-   - Option B: Reschedule session
-   - Option C: Cancel session (last resort)
-5. Academic Affair execute solution → Approve request
-6. System updates: teaching_slot, session, notifications
+1. Liên hệ colleague tìm substitute (ngoài hệ thống)
+2. Colleague đồng ý → Teacher/Academic Affair tạo swap request
+3. Request type = "swap", replacement_teacher_id
+4. Substitute confirm → status = "waiting_confirm" → "pending"
+5. Academic Affair approve → update teaching_slot.teacher_id, status = "substituted"
+```
+
+**Option 2: Reschedule Request (OK)**
+```
+Teacher:
+1. Login → Requests → Create Reschedule Request
+2. Select session → Choose new_date, new_time_slot, new_resource
+3. Submit → Pending
+4. Academic Affair validate (conflicts) → Approve
+5. System creates new session (type='teacher_reschedule'), cancels old session
+```
+
+**Option 3: Modality Change (Acceptable)**
+```
+Teacher/Academic Affair:
+1. Không dạy offline được → tạo modality_change request
+2. Select session → Choose new_resource (zoom)
+3. Approve → update session_resource
+4. Notify all students về location change
+```
+
+**Option 4: Cancel Session (Last Resort)**
+```
+Academic Affair:
+1. Không có solution nào khả thi
+2. Update session.status = "cancelled"
+3. Mark all students attendance = "absent", note = "Session cancelled"
+4. Notify students
 ```
 
 ---
@@ -848,10 +1022,22 @@ POST   /api/v1/teacher-requests/{requestId}/find-substitute
 - `enrollment`, `student_session`: Student enrollment & schedule
 - `teaching_slot`: Teacher assignments
 - `resource`, `time_slot_template`, `session_resource`: Resources & scheduling
-- `teacher_availability`: Teacher regular schedule & OT registrations
+- `teacher_availability`: Teacher regular schedule
 - `student_request`, `teacher_request`: Request management
 - `assessment`, `course_assessment`, `score`: Grading
-- `student_feedback`, `qa_report`: Quality assurance
+- `student_feedback`, `student_feedback_response`, `feedback_question`, `qa_report`: Quality assurance
+- `replacement_skill_assessment`: Student placement testing & skill assessment
+
+**Key Schema Features:**
+- **Dual Status Fields**: `course` và `class` có `status` (lifecycle) và `approval_status` (workflow) tách biệt
+- **Material Categorization**: `course_material.material_type` (video/pdf/slide/audio/document/other)
+- **Mapping Control**: Tất cả mappings (PLO-CLO, Session-CLO, Assessment-CLO) có `status` field (active/inactive)
+- **Resource Management**: Unique `code`, `capacity_override` policy, Zoom credentials (url, passcode, account)
+- **Bidirectional Makeup Tracking**: `student_session` có `makeup_session_id` và `original_session_id` để trace relationships
+- **Structured Feedback**: Template-based feedback system (`feedback_question` → `student_feedback_response`)
+- **Request Confirmation**: `request_status` có "waiting_confirm" cho luồng Academic Affair tạo thay mặt
+- **Teacher Contract**: `teacher.contract_type` (full-time/part-time/internship) cho HR management
+- **Branch Details**: `branch.email`, `district`, `city` cho geographic management
 
 **Key Relationships:**
 - `course` → nhiều `course_phase` → nhiều `course_session` (1:N:N)
@@ -862,11 +1048,23 @@ POST   /api/v1/teacher-requests/{requestId}/find-substitute
 
 **Enum Types:**
 - `session_status`: planned, cancelled, done
-- `attendance_status`: planned, present, absent, late, excused, remote
-- `enrollment_status`: enrolled, waitlisted, transferred, dropped, completed
-- `request_status`: pending, waiting_confirm, approved, rejected, cancelled
+- `session_type`: class, teacher_reschedule
+- `attendance_status`: planned, present, absent
+- `enrollment_status`: enrolled, transferred, dropped, completed
+- `request_status`: pending, waiting_confirm, approved, rejected
+- `teacher_request_type`: swap, reschedule, modality_change
+- `student_request_type`: absence, makeup, transfer
 - `modality`: offline, online, hybrid
 - `skill`: general, reading, writing, speaking, listening
+- `teaching_slot_status`: scheduled, on_leave, substituted
+- `class_status`: draft, scheduled, ongoing, completed, cancelled
+- `subject_status`: draft, active, inactive
+- `course_status`: draft, active, inactive
+- `approval_status`: pending, approved, rejected
+- `material_type`: video, pdf, slide, audio, document, other
+- `mapping_status`: active, inactive
+- `assessment_kind`: quiz, midterm, final, assignment, project, oral, practice, other
+- `homework_status`: completed, incomplete, no_homework
 
 ---
 
@@ -1186,8 +1384,10 @@ POST   /api/v1/teacher-requests/{requestId}/find-substitute
 
 **Product:**
 - Q7: Dark mode có phải P0 không? (Dựa trên 68% users sử dụng app vào tối)
-- Q8: Capacity override policy: Ai có quyền override? Có limit không?
-- Q9: Attendance lock policy: Lock sau bao nhiêu giờ? Ai có quyền unlock?
+- Q8: Attendance lock policy: Lock sau bao nhiêu giờ? Ai có quyền unlock?
+- Q9: Request confirmation flow: Student confirm request trong bao lâu trước khi expire? (status = "waiting_confirm")
+- Q10: Teacher absence policy: Nếu không tìm được substitute và không reschedule được, tối đa bao nhiêu buổi có thể cancel?
+- Q11: Makeup session time limit: Học viên có thể xin học bù cho buổi nghỉ cách đây tối đa bao lâu? (hiện tại: X tuần)
 
 ---
 
@@ -1232,9 +1432,16 @@ POST   /api/v1/teacher-requests/{requestId}/find-substitute
 
 | Date | Version | Changes | Author |
 |------|---------|---------|--------|
-| 2025-10-29 | 1.0 | Initial PRD draft created | Product Team |
-| | | - Extracted from business-context.md, schema.sql, and feature drafts | |
-| | | - Structured according to PRD template | |
+| 2025-10-31 | 1.0 | PRD finalized based on schema.sql | Product Team |
+| | | - Dual request flows: Student/Teacher tự tạo + Academic Affair tạo thay mặt | |
+| | | - Request confirmation workflow với status "waiting_confirm" | |
+| | | - Teacher absence handling: swap → reschedule → modality_change → cancel (priority order) | |
+| | | - Attendance simplified: present/absent (track late/excused via note) | |
+| | | - Enrollment có "completed" status để track graduation | |
+| | | - Dual status fields: lifecycle status + approval_status (course, class) | |
+| | | - Structured feedback system với template questions | |
+| | | - Material type categorization (video/pdf/slide/audio/document/other) | |
+| | | - Bidirectional makeup tracking (makeup_session_id ↔ original_session_id) | |
 
 ---
 
