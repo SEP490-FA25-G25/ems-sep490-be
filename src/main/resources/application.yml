@@ -37,7 +37,7 @@ spring:
 
 springdoc:
   api-docs:
-    path: /api-docs
+    path: /v3/api-docs
     enabled: true
   swagger-ui:
     path: /swagger-ui.html
@@ -48,6 +48,7 @@ springdoc:
     doc-expansion: none
     default-models-expand-depth: 1
     default-model-expand-depth: 1
+    try-it-out-enabled: true
   show-actuator: false
   paths-to-match: /api/**
-  packages-to-scan: org.fyp.emssep490be.controllers
+  packages-to-scan: org.fyp.tmssep490be.controllers
