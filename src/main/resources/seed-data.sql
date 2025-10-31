@@ -19,7 +19,6 @@
 INSERT INTO center (id, code, name, description, phone, email, address, created_at, updated_at) VALUES
 (1, 'TMS-EDU', 'TMS Education Center', 'Leading language education center in Vietnam', '+84-24-3999-8888', 'info@tms-edu.vn', '123 Nguyen Trai, Thanh Xuan, Ha Noi', '2024-01-01 08:00:00+07', '2024-01-01 08:00:00+07');
 
--- Roles
 INSERT INTO role (id, code, name) VALUES
 (1, 'ADMIN', 'System Administrator'),
 (2, 'CENTER_HEAD', 'Center Head'),
@@ -28,7 +27,7 @@ INSERT INTO role (id, code, name) VALUES
 (5, 'TEACHER', 'Teacher'),
 (6, 'STUDENT', 'Student'),
 (7, 'QA', 'Quality Assurance'),
-(8, 'SALE', 'Sale Staff');
+(8, 'SUBJECT_LEADER', 'Subject Leader');
 
 -- User Accounts (Staff + Teachers)
 INSERT INTO user_account (id, email, phone, facebook_url, full_name, gender, dob, address, password_hash, status, last_login_at, created_at, updated_at) VALUES
@@ -39,7 +38,7 @@ INSERT INTO user_account (id, email, phone, facebook_url, full_name, gender, dob
 (4, 'staff.huong@tms-edu.vn', '+84-912-000-004', NULL, 'Pham Thi Huong', 'Female', '1988-11-05', 'Ha Noi', '$2a$10$dummyhash004', 'active', '2025-01-28 16:00:00+07', '2024-01-01 08:00:00+07', '2025-01-28 16:00:00+07'),
 (5, 'staff.duc@tms-edu.vn', '+84-912-000-005', NULL, 'Hoang Van Duc', 'Male', '1990-05-18', 'Ha Noi', '$2a$10$dummyhash005', 'active', '2025-01-29 09:00:00+07', '2024-01-01 08:00:00+07', '2025-01-29 09:00:00+07'),
 (6, 'qa.linh@tms-edu.vn', '+84-912-000-006', NULL, 'Vu Thi Linh', 'Female', '1985-09-25', 'Ha Noi', '$2a$10$dummyhash006', 'active', '2025-01-28 14:00:00+07', '2024-01-01 08:00:00+07', '2025-01-28 14:00:00+07'),
-(7, 'sale.nam@tms-edu.vn', '+84-912-000-007', NULL, 'Bui Van Nam', 'Male', '1992-12-30', 'Ha Noi', '$2a$10$dummyhash007', 'active', '2025-01-29 10:00:00+07', '2024-01-01 08:00:00+07', '2025-01-29 10:00:00+07'),
+(7, 'leader.nam@tms-edu.vn', '+84-912-000-007', NULL, 'Bui Van Nam', 'Male', '1992-12-30', 'Ha Noi', '$2a$10$dummyhash007', 'active', '2025-01-29 10:00:00+07', '2024-01-01 08:00:00+07', '2025-01-29 10:00:00+07'),
 
 -- Teachers
 (8, 'john.smith@tms-edu.vn', '+84-912-001-001', NULL, 'John Smith', 'Male', '1985-04-12', 'Ha Noi', '$2a$10$dummyhash008', 'active', '2025-01-29 07:45:00+07', '2024-02-01 08:00:00+07', '2025-01-29 07:45:00+07'),
@@ -169,7 +168,7 @@ INSERT INTO user_role (user_id, role_id) VALUES
 (5, 4),
 -- QA
 (6, 7),
--- Sale
+-- Subject Leader
 (7, 8),
 -- Teachers
 (8, 5), (9, 5), (10, 5), (11, 5), (12, 5), (13, 5), (14, 5), (15, 5);
@@ -572,8 +571,8 @@ SELECT setval('replacement_skill_assessment_id_seq', 20, true);
 -- ========== SUMMARY & COMPLETION NOTES ==========
 -- This seed file provides comprehensive foundation data including:
 -- ✓ 1 Center, 1 Branch (HN01)
--- ✓ All 8 roles defined (Admin, Center Head, Manager, Academic Staff, Teacher, Student, QA, Sale)
--- ✓ 15 staff/admin users (1 admin, 1 center head, 1 manager, 2 academic staff, 1 QA, 1 sale, 8 teachers)
+-- ✓ All 8 roles defined (Admin, Center Head, Manager, Academic Staff, Teacher, Student, QA, Subject Leader)
+-- ✓ 15 staff/admin users (1 admin, 1 center head, 1 manager, 2 academic staff, 1 QA, 1 subject leader, 8 teachers)
 -- ✓ 63 students across 3 levels (Foundation: 23, Intermediate: 20, Advanced: 20)
 -- ✓ 6 time slot templates (Morning/Afternoon/Evening slots)
 -- ✓ 6 resources (4 physical rooms + 2 virtual Zoom rooms)
@@ -1969,41 +1968,4 @@ SELECT setval('score_id_seq', 100, true);
 SELECT setval('qa_report_id_seq', 20, true);
 SELECT setval('student_feedback_id_seq', 30, true);
 SELECT setval('student_feedback_response_id_seq', 150, true);
-
--- ========== SUMMARY OF SEED-DATA-04 ==========
--- This file completes ALL remaining operational data:
--- ✓ Intermediate I1: 20 more sessions (total 30 complete)
--- ✓ Intermediate I2: 30 sessions complete (online)
--- ✓ Intermediate I3: 30 sessions complete (hybrid)
--- ✓ Advanced A1: 26 more sessions (total 36 complete)
--- ✓ Advanced A2: 36 sessions complete (online)
--- ✓ Advanced A3: 36 sessions complete (hybrid)
--- ✓ 200+ session instances added
--- ✓ 200+ attendance records (sample generation)
--- ✓ 3 additional assessments
--- ✓ 9 additional scores
--- ✓ 3 more QA reports
--- ✓ 2 more student feedback submissions
-
--- TOTAL ACROSS ALL 4 SEED FILES:
--- ✓ 9 Classes (100% operational)
--- ✓ 398 Session instances (all classes fully populated)
--- ✓ 400+ Attendance records
--- ✓ 11 Assessment instances
--- ✓ 43 Score records
--- ✓ 12 Student feedback submissions
--- ✓ 8 QA reports
--- ✓ 17 Course materials
-
--- ALL CLASSES NOW HAVE COMPLETE OPERATIONAL DATA! 🎉
--- The system is ready for comprehensive end-to-end testing of:
--- ✓ All modalities (offline, online, hybrid)
--- ✓ All course levels (Foundation, Intermediate, Advanced)
--- ✓ Complete student journey
--- ✓ Full teacher management
--- ✓ Assessment and grading workflows
--- ✓ QA processes
--- ✓ Feedback collection
-
--- ========== END OF SEED-DATA-04 (FINAL) ==========
 

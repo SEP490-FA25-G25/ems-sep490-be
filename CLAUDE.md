@@ -23,8 +23,9 @@ src/main/java/org/fyp/tmssep490be/
 │   └── enums/        # Enum types matching PostgreSQL enums
 ├── dtos/             # Data Transfer Objects
 ├── exceptions/       # Custom exceptions and global error handling
-├── repositories/     # Spring Data JPA repositories (to be created)
-├── services/         # Business logic layer (to be created)
+├── repositories/     # Spring Data JPA repositories
+├── services/         # Business logic layer (service interfaces)
+│   └── impl/         # Service implementations
 └── controllers/      # REST API endpoints (to be created)
 
 src/main/resources/
@@ -327,9 +328,9 @@ The project currently has:
 - ✅ Exception handling structure
 - ✅ Basic DTO pattern
 - ✅ **Repository layer** (39 Spring Data JPA interfaces)
+- ✅ **Service layer** (39 service interfaces with implementations)
 
 Still needed:
-- ⏳ Service layer (business logic implementation)
 - ⏳ Controller layer (REST API endpoints)
 - ⏳ Security configuration (JWT authentication/authorization)
 - ⏳ Unit and integration tests
@@ -369,3 +370,36 @@ All 39 repositories are now available in `src/main/java/org/fyp/tmssep490be/repo
 - StudentRequestRepository, TeacherRequestRepository
 
 All repositories extend `JpaRepository<Entity, Long>` and include `@Repository` annotation for Spring component scanning.
+
+### Service Layer Details
+
+All 39 services are now available in `src/main/java/org/fyp/tmssep490be/services/` (interfaces) and `src/main/java/org/fyp/tmssep490be/services/impl/` (implementations):
+
+**Core & Organization (10 services):**
+- CenterService, BranchService, RoleService
+- UserAccountService, UserRoleService, UserBranchesService
+- TeacherService, StudentService
+- ResourceService, TimeSlotTemplateService
+
+**Curriculum (12 services):**
+- SubjectService, LevelService, CourseService
+- CoursePhaseService, CourseSessionService, CourseMaterialService
+- PLOService, CLOService
+- PLOCLOMappingService, CourseSessionCLOMappingService
+- CourseAssessmentService, CourseAssessmentCLOMappingService
+
+**Operations (8 services):**
+- ClassService, SessionService
+- EnrollmentService, StudentSessionService
+- TeachingSlotService, SessionResourceService
+- TeacherAvailabilityService, TeacherSkillService
+
+**Assessment & Feedback (7 services):**
+- AssessmentService, ScoreService
+- FeedbackQuestionService, StudentFeedbackService, StudentFeedbackResponseService
+- QAReportService, ReplacementSkillAssessmentService
+
+**Requests (2 services):**
+- StudentRequestService, TeacherRequestService
+
+All service implementations use `@Service` annotation, `@RequiredArgsConstructor` for dependency injection, and inject their corresponding repository. The services are currently templates ready for business logic implementation.
