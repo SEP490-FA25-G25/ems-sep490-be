@@ -21,7 +21,7 @@ spring:
   sql:
    init:
      mode: always  # Change to 'always' only on first run to create enum types
-     schema-locations: classpath:schema.sql
+     schema-locations: classpath:enum-init.sql
      data-locations: classpath:seed-data.sql
      continue-on-error: true
 
