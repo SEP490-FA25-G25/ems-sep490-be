@@ -3,10 +3,10 @@ spring:
     name: tms-sep490-be
 
   datasource:
-    # These will be overridden by Testcontainers for integration tests
-    url: jdbc:postgresql://localhost:5432/tms_test
+    # Connect to local PostgreSQL database for integration tests
+    url: jdbc:postgresql://localhost:5432/tms
     username: postgres
-    password: test
+    password: 979712
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -25,11 +25,12 @@ spring:
     init:
       mode: never  # Don't run schema.sql in tests, let Hibernate create schema
 
-# JWT Configuration for tests
-jwt:
-  secret: test-secret-key-for-testing-purposes-only-at-least-256-bits-long
-  access-token-expiration: 900000      # 15 minutes
-  refresh-token-expiration: 604800000  # 7 days
+  # JWT Configuration for tests (must match main application structure)
+  security:
+    jwt:
+      secret: test-secret-key-for-testing-purposes-only-at-least-256-bits-long
+      access-token-expiration: 900000      # 15 minutes
+      refresh-token-expiration: 604800000  # 7 days
 
 # Logging
 logging:

@@ -680,3 +680,170 @@ mvn clean verify jacoco:report
 - Automatic transaction rollback after each test
 - Fluent test data builders for easy setup
 - CI/CD ready (works with GitHub Actions, GitLab CI, etc.)
+
+## Lessons Learned from Authentication Implementation
+
+### Critical Issues Encountered and Solutions
+
+#### 1. **Hibernate Enum Column Definition Conflict**
+
+**Problem:** Using `@Enumerated(EnumType.STRING)` together with `columnDefinition = "enum_type"` causes Hibernate to generate invalid DDL with CHECK constraints using Java enum names (UPPERCASE) instead of PostgreSQL enum values (lowercase).
+
+```java
+// ❌ WRONG - Causes: check (gender in ('MALE','FEMALE','OTHER'))
+@Enumerated(EnumType.STRING)
+@Column(columnDefinition = "gender_enum", nullable = false)
+private Gender gender;
+```
+
+**Solution:** Remove `columnDefinition` for single enum fields. Hibernate will map correctly when enum names match PostgreSQL values:
+
+```java
+// ✅ CORRECT
+@Enumerated(EnumType.STRING)
+@Column(nullable = false)
+private Gender gender;
+```
+
+**Note:** Keep `columnDefinition` for **enum arrays** as Hibernate doesn't auto-map array types:
+```java
+// ✅ CORRECT for arrays
+@Column(columnDefinition = "skill_enum[]")
+@Enumerated(EnumType.STRING)
+private List<Skill> skillSet;
+```
+
+**File:** [UserAccount.java:40,52](src/main/java/org/fyp/tmssep490be/entities/UserAccount.java)
+
+---
+
+#### 2. **PostgreSQL Enum Values Missing**
+
+**Problem:** Java enum `UserStatus` has `ACTIVE, INACTIVE, SUSPENDED` but PostgreSQL enum only had `('active', 'inactive')`, causing save failures.
+
+**Root Cause:** `enum-init.sql` was incomplete.
+
+**Solution:**
+1. Update enum definition in [enum-init.sql:80](src/main/resources/enum-init.sql#L80)
+2. Alter existing database: `ALTER TYPE user_status_enum ADD VALUE 'suspended';`
+
+**Lesson:** Always ensure Java enums and PostgreSQL enum types are **in sync**. When adding new enum values:
+- Update `enum-init.sql`
+- For existing databases, use `ALTER TYPE` to add values
+- Cannot remove enum values in PostgreSQL without recreating the type
+
+---
+
+#### 3. **Role Mapping Using Wrong Field**
+
+**Problem:** Authentication returned wrong role names because `UserPrincipal` used `role.getName()` ("Administrator") instead of `role.getCode()` ("ADMIN").
+
+```java
+// ❌ WRONG
+.map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))
+
+// ✅ CORRECT
+.map(role -> new SimpleGrantedAuthority("ROLE_" + role.getCode()))
+```
+
+**Lesson:** Use `role.getCode()` for authorities and permissions. Use `role.getName()` only for display purposes.
+
+**File:** [UserPrincipal.java:36](src/main/java/org/fyp/tmssep490be/security/UserPrincipal.java#L36)
+
+---
+
+#### 4. **Lazy Loading Not Fetching Related Entities**
+
+**Problem:** `UserAccount.userRoles` collection was empty during authentication because of lazy loading.
+
+**Solution:** Add `@EntityGraph` to eagerly fetch required associations:
+
+```java
+@EntityGraph(attributePaths = {"userRoles", "userRoles.role"})
+Optional<UserAccount> findByEmail(String email);
+
+@EntityGraph(attributePaths = {"userRoles", "userRoles.role"})
+Optional<UserAccount> findById(Long id);
+```
+
+**Lesson:**
+- Use `@EntityGraph` for specific queries needing eager loading
+- Avoid global `EAGER` fetch which loads unnecessarily in all scenarios
+- Specify nested paths when fetching associations of associations
+
+**File:** [UserAccountRepository.java:17,29](src/main/java/org/fyp/tmssep490be/repositories/UserAccountRepository.java)
+
+---
+
+#### 5. **Hibernate Session Duplicate Instance Error**
+
+**Problem:** Test failed with "A different object with the same identifier value was already associated with the session" when adding entity to collection after save.
+
+**Root Cause:** Adding `userRole` to `testUser.getUserRoles()` after `userRoleRepository.save(userRole)` creates duplicate instances in Hibernate session due to cascade operations.
+
+**Wrong Approach:**
+```java
+// ❌ Creates duplicate in session
+userRoleRepository.save(userRole);
+testUser.getUserRoles().add(userRole);  // Conflict!
+entityManager.flush();  // Error here
+```
+
+**Solution:** Don't manually add to collection. Let Hibernate fetch fresh data:
+
+```java
+// ✅ CORRECT
+userRoleRepository.save(userRole);
+entityManager.flush();   // Persist to DB
+entityManager.clear();   // Detach all entities
+
+// Later, when user is loaded, @EntityGraph fetches fresh data
+```
+
+**Lesson:**
+- Don't mix manual collection management with Hibernate-managed entities
+- Use `flush()` + `clear()` to ensure fresh data in tests
+- Trust `@EntityGraph` to load relationships correctly
+
+**File:** [AuthControllerIntegrationTest.java:102,305](src/test/java/org/fyp/tmssep490be/controllers/AuthControllerIntegrationTest.java)
+
+---
+
+### Best Practices Summary
+
+1. **Enum Handling:**
+   - Keep Java enum names matching PostgreSQL enum values (case-sensitive)
+   - Don't use `columnDefinition` for single enums with `@Enumerated(EnumType.STRING)`
+   - Use `columnDefinition` ONLY for enum arrays
+   - Keep `enum-init.sql` and Java enums synchronized
+
+2. **Entity Relationships:**
+   - Use `@EntityGraph` for controlled eager loading
+   - Use `role.getCode()` for authorities, not `role.getName()`
+   - Don't manually manage bidirectional relationships in Hibernate session
+
+3. **Testing with JPA:**
+   - Use `entityManager.flush()` and `clear()` to ensure fresh data
+   - Let `@EntityGraph` handle relationship loading
+   - Avoid mixing manual collection updates with Hibernate-managed entities
+
+4. **Security:**
+   - Always use environment variables for secrets in production
+   - Keep token expiration times reasonable (15min access, 7 days refresh)
+   - Log authentication events for audit trails
+
+---
+
+### Authentication Implementation Checklist
+
+When implementing similar features, ensure:
+
+- [ ] Java enums match PostgreSQL enum values exactly
+- [ ] No `columnDefinition` on single enum fields with `@Enumerated`
+- [ ] Use `role.getCode()` for authorities
+- [ ] Add `@EntityGraph` for required eager loading
+- [ ] Test with `entityManager.flush()/clear()` for fresh data
+- [ ] Comprehensive test coverage (happy path + edge cases + errors)
+- [ ] Proper exception handling with meaningful messages
+- [ ] Security configuration validates token types
+- [ ] Logging for security audit trail

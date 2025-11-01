@@ -28,7 +28,7 @@ spring:
   jpa:
     defer-datasource-initialization: true  # Must be true to run data.sql after Hibernate creates tables
     hibernate:
-      ddl-auto: update   # <--- "create", "create-drop", "update", "validate", "none"
+      ddl-auto: create-drop   # <--- "create", "create-drop", "update", "validate", "none"
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect

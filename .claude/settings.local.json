@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(mvn clean compile:*)",
+      "Bash(cat:*)",
+      "Bash(mvn test:*)",
+      "Bash(docker exec:*)"
     ],
     "deny": [],
     "ask": []

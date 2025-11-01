@@ -4,6 +4,11 @@ import jakarta.persistence.EntityNotFoundException;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -62,6 +67,44 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ResponseObject<Void>> handleEntityNotFoundException(EntityNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ResponseObject.error(e.getMessage()));
+    }
+
+    // Authentication and Security Exceptions
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ResponseObject<Void>> handleBadCredentialsException(BadCredentialsException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ResponseObject.error("Invalid username or password"));
+    }
+
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public ResponseEntity<ResponseObject<Void>> handleUsernameNotFoundException(UsernameNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ResponseObject.error("User not found"));
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<ResponseObject<Void>> handleDisabledException(DisabledException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ResponseObject.error("Account is disabled"));
+    }
+
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<ResponseObject<Void>> handleLockedException(LockedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ResponseObject.error("Account is locked"));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ResponseObject<Void>> handleAccessDeniedException(AccessDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ResponseObject.error("Access denied - insufficient permissions"));
+    }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ResponseObject<Void>> handleInvalidTokenException(InvalidTokenException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ResponseObject.error(e.getMessage()));
     }
 }

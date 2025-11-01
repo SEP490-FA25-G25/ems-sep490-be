@@ -3,6 +3,8 @@ package org.fyp.tmssep490be.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import org.fyp.tmssep490be.entities.base.BaseEntity;
+import org.fyp.tmssep490be.entities.enums.Gender;
+import org.fyp.tmssep490be.entities.enums.UserStatus;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -22,7 +24,7 @@ public class UserAccount extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String email;
 
     @Column(length = 50)
@@ -34,8 +36,9 @@ public class UserAccount extends BaseEntity {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
-    @Column(length = 20)
-    private String gender;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Gender gender;
 
     private LocalDate dob;
 
@@ -45,8 +48,9 @@ public class UserAccount extends BaseEntity {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(length = 50)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserStatus status;
 
     @Column(name = "last_login_at")
     private OffsetDateTime lastLoginAt;

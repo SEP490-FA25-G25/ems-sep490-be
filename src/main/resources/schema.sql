@@ -71,6 +71,8 @@ DROP TYPE IF EXISTS course_status_enum CASCADE;
 DROP TYPE IF EXISTS approval_status_enum CASCADE;
 DROP TYPE IF EXISTS material_type_enum CASCADE;
 DROP TYPE IF EXISTS mapping_status_enum CASCADE;
+DROP TYPE IF EXISTS gender_enum CASCADE;
+DROP TYPE IF EXISTS user_status_enum CASCADE;
 
 -- ========== SECTION 2: ENUM TYPES ==========
 DO $$ BEGIN CREATE TYPE session_status_enum AS ENUM ('planned','cancelled','done'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -94,6 +96,8 @@ DO $$ BEGIN CREATE TYPE course_status_enum AS ENUM ('draft','active','inactive')
 DO $$ BEGIN CREATE TYPE approval_status_enum AS ENUM ('pending','approved','rejected'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE material_type_enum AS ENUM ('video','pdf','slide','audio','document','other'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE mapping_status_enum AS ENUM ('active','inactive'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE gender_enum AS ENUM ('male','female','other'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE user_status_enum AS ENUM ('active','inactive'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- ========== SECTION 3: TABLES (ĐÚNG THỨ TỰ) ==========
 
 -- TIER 1: Independent
@@ -121,11 +125,11 @@ CREATE TABLE user_account (
   phone VARCHAR(50),
   facebook_url VARCHAR(500),
   full_name VARCHAR(255) NOT NULL,
-  gender VARCHAR(20),
+  gender gender_enum NOT NULL DEFAULT 'male',
   dob DATE,
   address TEXT,
   password_hash VARCHAR(255) NOT NULL,
-  status VARCHAR(50),
+  status user_status_enum NOT NULL DEFAULT 'active',
   last_login_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
