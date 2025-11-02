@@ -517,6 +517,8 @@ CREATE TABLE enrollment (
   join_session_id BIGINT, -- session_id mà student bắt đầu tham gia lớp
   left_session_id BIGINT, -- session_id mà student rời khỏi lớp
   enrolled_by BIGINT, -- user_account_id của người thực hiện việc ghi danh
+  capacity_override BOOLEAN NOT NULL DEFAULT false, -- true nếu enrollment này vượt quá max_capacity
+  override_reason TEXT, -- lý do override capacity (required khi capacity_override = true, min 20 chars)
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT fk_enrollment_class FOREIGN KEY(class_id) REFERENCES "class"(id) ON DELETE CASCADE,

@@ -105,6 +105,18 @@ public enum ErrorCode {
     CLASS_NOT_AVAILABLE(1203, "Class is not available for enrollment"),
     CANNOT_UNENROLL_COMPLETED_CLASS(1204, "Cannot remove student from completed class"),
 
+    // Enrollment Import errors (1205-1219)
+    EXCEL_FILE_EMPTY(1205, "Excel file is empty or invalid format"),
+    EXCEL_PARSE_FAILED(1206, "Failed to parse Excel file"),
+    CLASS_NOT_APPROVED(1207, "Class must be approved before enrollment"),
+    CLASS_INVALID_STATUS(1208, "Class must be in 'scheduled' status for enrollment"),
+    NO_FUTURE_SESSIONS(1209, "No future sessions available for enrollment"),
+    OVERRIDE_REASON_REQUIRED(1210, "Override reason required (min 20 characters)"),
+    INVALID_ENROLLMENT_STRATEGY(1211, "Invalid enrollment strategy"),
+    PARTIAL_STRATEGY_MISSING_IDS(1212, "Selected student IDs required for PARTIAL strategy"),
+    SELECTED_STUDENTS_EXCEED_CAPACITY(1213, "Selected students still exceed capacity"),
+    INVALID_FILE_TYPE_XLSX(1214, "Only Excel files (.xlsx) are supported"),
+
     // Class errors (4000-4099)
     CLASS_NOT_FOUND(4000, "Class not found"),
 
