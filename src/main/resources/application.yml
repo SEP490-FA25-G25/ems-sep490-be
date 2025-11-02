@@ -1,3 +1,5 @@
+
+
 spring:
   application:
     name: tms-sep490-be
@@ -20,7 +22,7 @@ spring:
 
   sql:
    init:
-     mode: never
+     mode: always
      schema-locations: classpath:enum-init.sql
      data-locations: classpath:seed-data.sql
      continue-on-error: true
@@ -53,3 +55,5 @@ springdoc:
   show-actuator: false
   paths-to-match: /api/**
   packages-to-scan: org.fyp.tmssep490be.controllers
+server:
+  port: 8080

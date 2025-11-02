@@ -103,38 +103,38 @@ INSERT INTO role (id, code, name) VALUES
 
 -- User Accounts
 -- Password: '12345678' hashed with BCrypt (cost factor 10)
--- Hash: $2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q
+-- Hash: $2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.
 INSERT INTO user_account (id, email, phone, full_name, gender, dob, address, password_hash, status, created_at, updated_at) VALUES
 -- Staff & Management (11 users)
-(1, 'admin@tms-edu.vn', '0912000001', 'Nguyen Van Admin', 'MALE', '1980-01-15', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(2, 'manager.global@tms-edu.vn', '0912000002', 'Le Van Manager', 'MALE', '1982-07-10', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(3, 'head.hn01@tms-edu.vn', '0912000003', 'Tran Thi Lan', 'FEMALE', '1975-03-20', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(4, 'head.hcm01@tms-edu.vn', '0912000004', 'Nguyen Thi Mai', 'FEMALE', '1978-05-22', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(5, 'leader.ielts@tms-edu.vn', '0912000005', 'Bui Van Nam', 'MALE', '1985-12-30', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(6, 'staff.huong.hn@tms-edu.vn', '0912000006', 'Pham Thi Huong', 'FEMALE', '1990-11-05', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(7, 'staff.duc.hn@tms-edu.vn', '0912000007', 'Hoang Van Duc', 'MALE', '1992-05-18', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(8, 'staff.anh.hcm@tms-edu.vn', '0912000008', 'Le Thi Anh', 'FEMALE', '1991-02-15', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(9, 'staff.tuan.hcm@tms-edu.vn', '0912000009', 'Tran Minh Tuan', 'MALE', '1993-08-20', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(10, 'qa.linh@tms-edu.vn', '0912000010', 'Vu Thi Linh', 'FEMALE', '1988-09-25', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(11, 'qa.thanh@tms-edu.vn', '0912000011', 'Dang Ngoc Thanh', 'MALE', '1989-04-10', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(1, 'admin@tms-edu.vn', '0912000001', 'Nguyen Van Admin', 'MALE', '1980-01-15', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(2, 'manager.global@tms-edu.vn', '0912000002', 'Le Van Manager', 'MALE', '1982-07-10', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(3, 'head.hn01@tms-edu.vn', '0912000003', 'Tran Thi Lan', 'FEMALE', '1975-03-20', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(4, 'head.hcm01@tms-edu.vn', '0912000004', 'Nguyen Thi Mai', 'FEMALE', '1978-05-22', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(5, 'leader.ielts@tms-edu.vn', '0912000005', 'Bui Van Nam', 'MALE', '1985-12-30', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(6, 'staff.huong.hn@tms-edu.vn', '0912000006', 'Pham Thi Huong', 'FEMALE', '1990-11-05', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(7, 'staff.duc.hn@tms-edu.vn', '0912000007', 'Hoang Van Duc', 'MALE', '1992-05-18', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(8, 'staff.anh.hcm@tms-edu.vn', '0912000008', 'Le Thi Anh', 'FEMALE', '1991-02-15', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(9, 'staff.tuan.hcm@tms-edu.vn', '0912000009', 'Tran Minh Tuan', 'MALE', '1993-08-20', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(10, 'qa.linh@tms-edu.vn', '0912000010', 'Vu Thi Linh', 'FEMALE', '1988-09-25', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(11, 'qa.thanh@tms-edu.vn', '0912000011', 'Dang Ngoc Thanh', 'MALE', '1989-04-10', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
 
 -- Teachers (16 teachers: 8 per branch)
-(20, 'john.smith@tms-edu.vn', '0912001001', 'John Smith', 'MALE', '1985-04-12', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(21, 'emma.wilson@tms-edu.vn', '0912001002', 'Emma Wilson', 'FEMALE', '1987-08-22', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(22, 'david.lee@tms-edu.vn', '0912001003', 'David Lee', 'MALE', '1983-12-05', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(23, 'sarah.johnson@tms-edu.vn', '0912001004', 'Sarah Johnson', 'FEMALE', '1990-06-14', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(24, 'michael.brown@tms-edu.vn', '0912001005', 'Michael Brown', 'MALE', '1986-02-28', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(25, 'lisa.chen@tms-edu.vn', '0912001006', 'Lisa Chen', 'FEMALE', '1988-10-17', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(26, 'james.taylor@tms-edu.vn', '0912001007', 'James Taylor', 'MALE', '1984-03-09', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(27, 'anna.martinez@tms-edu.vn', '0912001008', 'Anna Martinez', 'FEMALE', '1989-07-21', 'Ha Noi', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(28, 'chris.evans@tms-edu.vn', '0912001009', 'Chris Evans', 'MALE', '1988-01-20', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(29, 'olivia.white@tms-edu.vn', '0912001010', 'Olivia White', 'FEMALE', '1991-03-15', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(30, 'daniel.harris@tms-edu.vn', '0912001011', 'Daniel Harris', 'MALE', '1987-11-30', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(31, 'sophia.clark@tms-edu.vn', '0912001012', 'Sophia Clark', 'FEMALE', '1992-09-05', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(32, 'matthew.lewis@tms-edu.vn', '0912001013', 'Matthew Lewis', 'MALE', '1989-06-27', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(33, 'ava.robinson@tms-edu.vn', '0912001014', 'Ava Robinson', 'FEMALE', '1993-01-10', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(34, 'andrew.walker@tms-edu.vn', '0912001015', 'Andrew Walker', 'MALE', '1986-08-18', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(35, 'isabella.young@tms-edu.vn', '0912001016', 'Isabella Young', 'FEMALE', '1990-04-25', 'TP. HCM', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07');
+(20, 'john.smith@tms-edu.vn', '0912001001', 'John Smith', 'MALE', '1985-04-12', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(21, 'emma.wilson@tms-edu.vn', '0912001002', 'Emma Wilson', 'FEMALE', '1987-08-22', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(22, 'david.lee@tms-edu.vn', '0912001003', 'David Lee', 'MALE', '1983-12-05', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(23, 'sarah.johnson@tms-edu.vn', '0912001004', 'Sarah Johnson', 'FEMALE', '1990-06-14', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(24, 'michael.brown@tms-edu.vn', '0912001005', 'Michael Brown', 'MALE', '1986-02-28', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(25, 'lisa.chen@tms-edu.vn', '0912001006', 'Lisa Chen', 'FEMALE', '1988-10-17', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(26, 'james.taylor@tms-edu.vn', '0912001007', 'James Taylor', 'MALE', '1984-03-09', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(27, 'anna.martinez@tms-edu.vn', '0912001008', 'Anna Martinez', 'FEMALE', '1989-07-21', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(28, 'chris.evans@tms-edu.vn', '0912001009', 'Chris Evans', 'MALE', '1988-01-20', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(29, 'olivia.white@tms-edu.vn', '0912001010', 'Olivia White', 'FEMALE', '1991-03-15', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(30, 'daniel.harris@tms-edu.vn', '0912001011', 'Daniel Harris', 'MALE', '1987-11-30', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(31, 'sophia.clark@tms-edu.vn', '0912001012', 'Sophia Clark', 'FEMALE', '1992-09-05', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(32, 'matthew.lewis@tms-edu.vn', '0912001013', 'Matthew Lewis', 'MALE', '1989-06-27', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(33, 'ava.robinson@tms-edu.vn', '0912001014', 'Ava Robinson', 'FEMALE', '1993-01-10', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(34, 'andrew.walker@tms-edu.vn', '0912001015', 'Andrew Walker', 'MALE', '1986-08-18', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(35, 'isabella.young@tms-edu.vn', '0912001016', 'Isabella Young', 'FEMALE', '1990-04-25', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07');
 
 -- Students (60 students total: 30 per branch for realistic testing)
 INSERT INTO user_account (id, email, phone, full_name, gender, dob, address, password_hash, status, created_at, updated_at) 
@@ -146,7 +146,7 @@ SELECT
     CASE WHEN s.id % 2 = 0 THEN 'FEMALE' ELSE 'MALE' END, 
     make_date(2000 + (s.id % 6), (s.id % 12) + 1, (s.id % 28) + 1),
     CASE WHEN s.id <= 30 THEN 'Ha Noi' ELSE 'TP. HCM' END,
-    '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cyhVHO.7FiGhWZVzZ4JZVQ0FZwL3q',
+    '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.',
     'ACTIVE',
     '2024-03-01 00:00:00+07',
     '2024-03-01 00:00:00+07'
