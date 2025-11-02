@@ -473,7 +473,7 @@ CREATE TABLE teacher_skill (
   specialization VARCHAR(255), -- ví dụ: TOEFL, IELTS,...
   language VARCHAR(255), -- ví dụ: English, Vietnamese, etc.
   level SMALLINT,
-  PRIMARY KEY(teacher_id,skill),
+  PRIMARY KEY(teacher_id, skill, specialization),
   CONSTRAINT fk_teacher_skill_teacher FOREIGN KEY(teacher_id) REFERENCES teacher(id) ON DELETE CASCADE
 );
 
