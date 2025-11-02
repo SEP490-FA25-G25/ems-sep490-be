@@ -154,9 +154,10 @@ docker start some-postgres
 - Password: `979712` (change in production!)
 
 **Hibernate DDL:**
-- Current mode: `update` (recommended for development)
+- Current mode: `create-drop` (drops and recreates schema on each restart)
+- Change to `update` for persistent development (recommended)
 - Change to `validate` for production to prevent auto-schema changes
-- Use `create` only for initial setup (will drop existing tables)
+- Use `create` only for initial setup (will drop existing tables on startup)
 
 **SQL Initialization:**
 - `enum-init.sql` runs first to create PostgreSQL enum types
@@ -553,16 +554,24 @@ The project currently has:
 - ✅ Complete entity layer with all JPA entities (39 entities)
 - ✅ Database schema with enums and seed data
 - ✅ Exception handling structure
-- ✅ Basic DTO pattern
 - ✅ **Repository layer** (39 Spring Data JPA interfaces)
 - ✅ **Service layer** (39 service interfaces with implementations)
 - ✅ **Test infrastructure** (Unit tests, Integration tests with Testcontainers)
+- ✅ **Security configuration** (JWT authentication/authorization)
+- ✅ **Controller layer** (Authentication, Center, UserAccount, Enrollment controllers)
+- ✅ **API documentation** (Swagger/OpenAPI configured)
+
+**Implemented Features:**
+- ✅ Authentication (login, register, refresh token)
+- ✅ Center CRUD operations
+- ✅ User account management
+- ✅ Enrollment bulk import (Excel-based with capacity management)
 
 Still needed:
-- ⏳ Controller layer (REST API endpoints)
-- ⏳ Security configuration (JWT authentication/authorization)
+- ⏳ Expand controller layer (remaining 35 resources)
 - ⏳ Expand test coverage (write tests for all services/repositories)
-- ⏳ API documentation (Swagger/OpenAPI annotations)
+- ⏳ Email service implementation
+- ⏳ Additional business workflows (class generation, session scheduling, etc.)
 
 When implementing new features, follow the pattern: Repository → Service → Controller → Tests
 
@@ -680,6 +689,98 @@ mvn clean verify jacoco:report
 - Automatic transaction rollback after each test
 - Fluent test data builders for easy setup
 - CI/CD ready (works with GitHub Actions, GitLab CI, etc.)
+
+## Security Implementation
+
+### JWT Authentication Architecture
+
+**Implementation:** Spring Security with JWT (Access + Refresh tokens)
+**Location:** `src/main/java/org/fyp/tmssep490be/security/`
+
+**Components:**
+
+1. **JwtTokenProvider** - Token generation and validation
+   - Creates access tokens (15 min) and refresh tokens (7 days)
+   - Validates tokens and extracts user information
+   - Uses HMAC-SHA256 signing algorithm
+
+2. **JwtAuthenticationFilter** - Request interceptor
+   - Extracts JWT from Authorization header
+   - Validates token and loads user details
+   - Sets SecurityContext for authenticated requests
+
+3. **CustomUserDetailsService** - User loading
+   - Loads UserAccount by email
+   - Uses `@EntityGraph` to eagerly fetch roles
+   - Converts to `UserPrincipal` for Spring Security
+
+4. **UserPrincipal** - Security principal
+   - Implements `UserDetails` interface
+   - Contains user ID, email, password, roles, status
+   - **Critical:** Uses `role.getCode()` for authorities, not `role.getName()`
+
+5. **JwtAuthenticationEntryPoint** - Error handling
+   - Returns 401 Unauthorized for authentication failures
+   - Provides clear error messages
+
+**Security Configuration:**
+```java
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+public class SecurityConfig {
+    // Public endpoints: /api/v1/auth/**, /swagger-ui/**, /v3/api-docs/**
+    // Protected endpoints: All others require authentication
+    // Role-based access: Use @PreAuthorize("hasRole('ROLE_NAME')")
+}
+```
+
+**Authentication Endpoints:**
+```bash
+# Register new user
+POST /api/v1/auth/register
+- Input: email, password, fullName, phone, gender, dob
+- Output: JWT tokens + user info
+
+# Login
+POST /api/v1/auth/login
+- Input: email, password
+- Output: JWT tokens + user info
+
+# Refresh access token
+POST /api/v1/auth/refresh
+- Input: refreshToken
+- Output: New access token + refresh token
+
+# Get current user
+GET /api/v1/auth/me
+- Header: Authorization: Bearer <access_token>
+- Output: Current user info
+```
+
+**Role-Based Authorization:**
+```java
+// In controllers:
+@PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+@PostMapping("/enrollments/classes/{classId}/import/preview")
+public ResponseEntity<?> previewImport(...) { ... }
+
+// Available roles (from seed data):
+// - ADMIN
+// - MANAGER
+// - CENTER_HEAD
+// - ACADEMIC_AFFAIR
+// - TEACHER
+// - STUDENT
+```
+
+**Environment Variables:**
+```bash
+# CRITICAL: Change in production!
+JWT_SECRET=your-very-secure-secret-key-here
+```
+
+---
 
 ## Lessons Learned from Authentication Implementation
 
@@ -847,3 +948,164 @@ When implementing similar features, ensure:
 - [ ] Proper exception handling with meaningful messages
 - [ ] Security configuration validates token types
 - [ ] Logging for security audit trail
+
+---
+
+## Lessons Learned from Enrollment Implementation
+
+### Critical Issue: Spring Data JPA Repository Method Naming
+
+**Problem:** Spring Data JPA query methods must use **entity field names**, not database column names. This is one of the most common pitfalls when working with JPA repositories.
+
+#### ❌ Common Mistakes
+
+**Mistake 1: Using database column name instead of entity field name**
+```java
+// Student entity has:
+@OneToOne
+@JoinColumn(name = "user_id")  // DB column name
+private UserAccount userAccount;  // Entity field name
+
+// ❌ WRONG - tries to find property 'userId'
+Optional<Student> findByUserId(Long userId);
+
+// ✅ CORRECT - navigates userAccount.id
+Optional<Student> findByUserAccountId(Long userId);
+```
+
+**Mistake 2: Using Java keyword 'class' as field name**
+```java
+// Session entity has:
+@ManyToOne
+@JoinColumn(name = "class_id")
+private ClassEntity classEntity;  // Not 'class' (Java keyword!)
+
+// ❌ WRONG - 'class' conflicts with Java keyword
+List<Session> findByClassId(Long classId);
+
+// ✅ CORRECT - uses 'classEntity'
+List<Session> findByClassEntityId(Long classId);
+```
+
+**Mistake 3: Incorrect property path navigation**
+```java
+// To query by class.id:
+// ❌ WRONG
+findByClassId()  // Looks for 'class' field (error!)
+
+// ✅ CORRECT
+findByClassEntityId()  // Navigates: session.classEntity.id
+```
+
+#### ✅ Best Practices
+
+1. **Always use entity field names, never database column names**
+   ```java
+   // Entity field: userAccount → findByUserAccount...
+   // Entity field: classEntity → findByClassEntity...
+   // Entity field: student → findByStudent...
+   ```
+
+2. **Use property paths for nested navigation**
+   ```java
+   // To query UserAccount by Role code:
+   findByUserRoles_Role_Code(String code)  // Navigates: userAccount.userRoles.role.code
+   ```
+
+3. **Avoid Java keywords as field names**
+   ```java
+   // ❌ Never: private ClassEntity class;
+   // ✅ Use: private ClassEntity classEntity;
+   ```
+
+4. **Test repository methods before using them**
+   ```java
+   @Test
+   void shouldFindByUserAccountId() {
+       Optional<Student> result = studentRepository.findByUserAccountId(1L);
+       assertThat(result).isPresent();
+   }
+   ```
+
+5. **When in doubt, check the entity class definition**
+   - Look at the actual field name in the entity
+   - Follow the relationship path (use _ in method names for nested paths)
+   - Use IDE autocomplete when possible
+
+**File References:**
+- Fixed methods: [StudentRepository.java](src/main/java/org/fyp/tmssep490be/repositories/StudentRepository.java)
+- Fixed methods: [SessionRepository.java](src/main/java/org/fyp/tmssep490be/repositories/SessionRepository.java)
+- Detailed review: [docs/technical/enrollment-implementation-summary.md](docs/technical/enrollment-implementation-summary.md)
+
+---
+
+### Key Enrollment Features Implemented
+
+**Implementation Date:** 2025-11-02
+**Documentation:** [docs/technical/enrollment-implementation-summary.md](docs/technical/enrollment-implementation-summary.md)
+
+#### Excel-Based Bulk Enrollment
+
+The enrollment feature supports importing students from Excel files with intelligent capacity management:
+
+**Key Features:**
+1. **Two-Step Workflow:** Preview → Execute
+2. **Student Resolution:** Matches by student_code → email → creates new students
+3. **Capacity Management:**
+   - Calculates current enrolled vs max capacity
+   - Provides recommendations (OK, OVERRIDE, PARTIAL, BLOCKED)
+   - Supports capacity override with approval reason
+4. **Enrollment Strategies:**
+   - `ALL`: Enroll all students (validates capacity)
+   - `PARTIAL`: Enroll selected students only
+   - `OVERRIDE`: Enroll all with capacity override (requires 20+ char reason)
+5. **Auto-Generation:** Creates student_session records for all future sessions
+6. **Mid-Course Enrollment:** Tracks join_session_id, only generates future sessions
+
+**Dependencies Added:**
+```xml
+<!-- Apache POI for Excel parsing -->
+<dependency>
+    <groupId>org.apache.poi</groupId>
+    <artifactId>poi-ooxml</artifactId>
+    <version>5.3.0</version>
+</dependency>
+```
+
+**API Endpoints:**
+```bash
+# Preview Excel import
+POST /api/v1/enrollments/classes/{classId}/import/preview
+- Security: ACADEMIC_AFFAIR role
+- Input: Excel file (.xlsx)
+- Output: Preview with capacity analysis + recommendations
+
+# Execute enrollment
+POST /api/v1/enrollments/classes/{classId}/import/execute
+- Security: ACADEMIC_AFFAIR role
+- Input: Strategy (ALL/PARTIAL/OVERRIDE) + students + optional override reason
+- Output: Enrollment results (counts, warnings)
+```
+
+**Excel Format:**
+Columns: `student_code`, `full_name`, `email`, `phone`, `gender`, `dob`, `level`
+
+**Critical Implementation Details:**
+
+1. **Pessimistic Locking:** Uses `@Lock(LockModeType.PESSIMISTIC_WRITE)` to prevent race conditions during enrollment
+2. **Capacity Override Tracking:** Stored directly in `enrollment.capacity_override` + `enrollment.override_reason`
+3. **Audit Logging:** WARN level logs when capacity override is approved
+4. **Batch Operations:** Uses `saveAll()` for optimized performance (100+ records)
+5. **Error Handling:** Uses `CustomException` with specific `ErrorCode` enum (1205-1219)
+
+**Testing:**
+- ✅ 8 unit tests for ExcelParserService
+- ✅ 13 unit tests for EnrollmentService
+- Tests cover: capacity management, strategies, mid-course enrollment, edge cases
+
+**Example Capacity Override Log:**
+```
+WARN CAPACITY_OVERRIDE: Class 1 will enroll 25 students (capacity: 20).
+Reason: High student demand, additional teacher support available.
+Approved by user 3
+```

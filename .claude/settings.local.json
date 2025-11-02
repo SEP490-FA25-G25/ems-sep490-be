@@ -5,7 +5,9 @@
       "Bash(mvn clean compile:*)",
       "Bash(cat:*)",
       "Bash(mvn test:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(dir:*)",
+      "Bash(./mvnw test:*)"
     ],
     "deny": [],
     "ask": []
