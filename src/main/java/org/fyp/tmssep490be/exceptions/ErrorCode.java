@@ -9,6 +9,7 @@ public enum ErrorCode {
     BRANCH_CODE_ALREADY_EXISTS(2001, "Branch code already exists for this center"),
     CENTER_NOT_FOUND(2002, "Center not found"),
     BRANCH_HAS_ACTIVE_CLASSES(2003, "Cannot delete branch with active classes"),
+    BRANCH_ACCESS_DENIED(2004, "Access denied: Branch not in your assigned branches"),
 
     // TimeSlot errors (2100-2199)
     TIMESLOT_NOT_FOUND(2100, "Time slot not found"),
@@ -97,6 +98,7 @@ public enum ErrorCode {
     // Student errors (1100-1199)
     STUDENT_NOT_FOUND(1100, "Student not found"),
     STUDENT_CODE_ALREADY_EXISTS(1101, "Student code already exists"),
+    STUDENT_ACCESS_DENIED(1102, "Access denied: Student not in your assigned branches"),
 
     // Enrollment errors (1200-1299)
     ENROLLMENT_NOT_FOUND(1200, "Enrollment not found"),
@@ -119,6 +121,11 @@ public enum ErrorCode {
 
     // Class errors (4000-4099)
     CLASS_NOT_FOUND(4000, "Class not found"),
+    CLASS_ACCESS_DENIED(4001, "Access denied: Class not in your assigned branches"),
+    CLASS_NOT_APPROVED_FOR_ENROLLMENT(4002, "Class must be approved to be accessible"),
+    CLASS_NOT_SCHEDULED(4003, "Class must be in scheduled status to be accessible"),
+    CLASS_NO_BRANCH_ACCESS(4004, "User does not have access to any branches"),
+    UNAUTHORIZED_ACCESS(4005, "Unauthorized access: Academic staff role required"),
 
     // Teacher errors (3000-3099)
     TEACHER_NOT_FOUND(3000, "Teacher not found"),

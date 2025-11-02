@@ -2,8 +2,14 @@ package org.fyp.tmssep490be.repositories;
 
 import org.fyp.tmssep490be.entities.Enrollment;
 import org.fyp.tmssep490be.entities.enums.EnrollmentStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
@@ -16,4 +22,57 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
      * Check xem student đã enrolled vào class chưa
      */
     boolean existsByClassIdAndStudentIdAndStatus(Long classId, Long studentId, EnrollmentStatus status);
+
+    /**
+     * Find enrolled students for a class with search and pagination
+     */
+    @Query("SELECT e FROM Enrollment e " +
+           "INNER JOIN e.student s " +
+           "INNER JOIN s.userAccount u " +
+           "WHERE e.classId = :classId " +
+           "AND e.status = :status " +
+           "AND (:search IS NULL OR " +
+           "  LOWER(s.studentCode) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "  LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "  LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "  LOWER(u.phone) LIKE LOWER(CONCAT('%', :search, '%'))" +
+           ")")
+    Page<Enrollment> findEnrolledStudentsByClass(
+            @Param("classId") Long classId,
+            @Param("status") EnrollmentStatus status,
+            @Param("search") String search,
+            Pageable pageable
+    );
+
+    /**
+     * Get student enrollment history with pagination
+     */
+    @Query("SELECT e FROM Enrollment e " +
+           "INNER JOIN e.student s " +
+           "INNER JOIN s.userAccount u " +
+           "INNER JOIN e.classEntity c " +
+           "INNER JOIN c.branch b " +
+           "INNER JOIN c.course co " +
+           "WHERE e.studentId = :studentId " +
+           "AND (:branchIds IS NULL OR b.id IN :branchIds) " +
+           "ORDER BY e.enrolledAt DESC")
+    Page<Enrollment> findStudentEnrollmentHistory(
+            @Param("studentId") Long studentId,
+            @Param("branchIds") List<Long> branchIds,
+            Pageable pageable
+    );
+
+    /**
+     * Count active enrollments for a student
+     */
+    int countByStudentIdAndStatus(Long studentId, EnrollmentStatus status);
+
+    /**
+     * Find latest enrollment for a student
+     */
+    @Query("SELECT e FROM Enrollment e " +
+           "WHERE e.studentId = :studentId " +
+           "ORDER BY e.enrolledAt DESC " +
+           "LIMIT 1")
+    Enrollment findLatestEnrollmentByStudent(@Param("studentId") Long studentId);
 }

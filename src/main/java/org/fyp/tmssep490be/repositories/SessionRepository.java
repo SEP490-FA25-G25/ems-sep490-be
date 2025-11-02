@@ -2,7 +2,10 @@ package org.fyp.tmssep490be.repositories;
 
 import org.fyp.tmssep490be.entities.Session;
 import org.fyp.tmssep490be.entities.enums.SessionStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -19,4 +22,12 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
             LocalDate date,
             SessionStatus status
     );
+
+    /**
+     * Get upcoming sessions for a class (next sessions from today)
+     */
+    @Query("SELECT s FROM Session s WHERE s.classEntity.id = :classId " +
+           "AND s.date >= CURRENT_DATE AND s.status = 'PLANNED' " +
+           "ORDER BY s.date ASC")
+    List<Session> findUpcomingSessions(@Param("classId") Long classId, Pageable pageable);
 }
