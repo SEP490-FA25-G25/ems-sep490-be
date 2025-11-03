@@ -6,6 +6,7 @@ import org.fyp.tmssep490be.entities.enums.ClassStatus;
 import org.fyp.tmssep490be.entities.enums.Modality;
 
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Compact class information for list view
@@ -37,8 +38,8 @@ public class ClassListItemDTO {
     private Integer availableSlots;
     private Double utilizationRate;
 
-    // Teacher information (if available)
-    private String teacherName;
+    // Teacher information - all teachers teaching this class
+    private List<TeacherSummaryDTO> teachers;
 
     // Schedule summary
     private String scheduleSummary;

@@ -60,7 +60,6 @@ DROP TYPE IF EXISTS student_request_type_enum CASCADE;
 DROP TYPE IF EXISTS resource_type_enum CASCADE;
 DROP TYPE IF EXISTS modality_enum CASCADE;
 DROP TYPE IF EXISTS skill_enum CASCADE;
-DROP TYPE IF EXISTS teaching_role_enum CASCADE;
 DROP TYPE IF EXISTS branch_status_enum CASCADE;
 DROP TYPE IF EXISTS class_status_enum CASCADE;
 DROP TYPE IF EXISTS subject_status_enum CASCADE;
@@ -85,7 +84,6 @@ DO $$ BEGIN CREATE TYPE student_request_type_enum AS ENUM ('absence','makeup','t
 DO $$ BEGIN CREATE TYPE resource_type_enum AS ENUM ('room','virtual'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE modality_enum AS ENUM ('offline','online','hybrid'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE skill_enum AS ENUM ('general','reading','writing','speaking','listening'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE teaching_role_enum AS ENUM ('primary','assistant'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE branch_status_enum AS ENUM ('active','inactive','closed','planned'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE class_status_enum AS ENUM ('draft','scheduled','ongoing','completed','cancelled'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE subject_status_enum AS ENUM ('draft','active','inactive'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;

@@ -28,13 +28,14 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
     /**
      * Find classes accessible to academic affairs user with filters
      * Filters by user's branch assignments, approval status, and class status
+     * If approvalStatus or status is null, returns all classes regardless of that filter
      */
     @Query("SELECT DISTINCT c FROM ClassEntity c " +
            "INNER JOIN c.branch b " +
            "INNER JOIN c.course co " +
            "WHERE (:branchIds IS NULL OR b.id IN :branchIds) " +
-           "AND c.approvalStatus = :approvalStatus " +
-           "AND c.status = :status " +
+           "AND (:approvalStatus IS NULL OR c.approvalStatus = :approvalStatus) " +
+           "AND (:status IS NULL OR c.status = :status) " +
            "AND (:courseId IS NULL OR co.id = :courseId) " +
            "AND (:modality IS NULL OR c.modality = :modality) " +
            "AND (:search IS NULL OR " +

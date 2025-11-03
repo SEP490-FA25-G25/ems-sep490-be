@@ -1,6 +1,8 @@
 package org.fyp.tmssep490be.services;
 
 import org.fyp.tmssep490be.dtos.classmanagement.*;
+import org.fyp.tmssep490be.entities.enums.ApprovalStatus;
+import org.fyp.tmssep490be.entities.enums.ClassStatus;
 import org.fyp.tmssep490be.entities.enums.Modality;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +21,8 @@ public interface ClassService {
      *
      * @param branchIds List of branch IDs user has access to
      * @param courseId Optional course filter
+     * @param status Optional class status filter (null = all statuses)
+     * @param approvalStatus Optional approval status filter (null = all approval statuses)
      * @param modality Optional modality filter
      * @param search Optional search term (class code, name, course name, branch name)
      * @param pageable Pagination parameters
@@ -28,6 +32,8 @@ public interface ClassService {
     Page<ClassListItemDTO> getClasses(
             List<Long> branchIds,
             Long courseId,
+            ClassStatus status,
+            ApprovalStatus approvalStatus,
             Modality modality,
             String search,
             Pageable pageable,

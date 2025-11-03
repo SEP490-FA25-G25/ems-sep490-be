@@ -47,8 +47,8 @@ public class ClassDetailDTO {
     // Room information
     private String room;
 
-    // Teacher information
-    private String teacherName;
+    // Teacher information - all teachers teaching this class
+    private List<TeacherSummaryDTO> teachers;
 
     // Schedule summary
     private String scheduleSummary;
@@ -120,7 +120,7 @@ public class ClassDetailDTO {
         private LocalDate date;
         private String startTime;
         private String endTime;
-        private String teacherName;
+        private List<TeacherSummaryDTO> teachers;
         private String room;
         private String status;
         private String type;

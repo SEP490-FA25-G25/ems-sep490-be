@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.classmanagement.*;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
+import org.fyp.tmssep490be.entities.enums.ApprovalStatus;
+import org.fyp.tmssep490be.entities.enums.ClassStatus;
 import org.fyp.tmssep490be.entities.enums.Modality;
 import org.fyp.tmssep490be.security.UserPrincipal;
 import org.fyp.tmssep490be.services.ClassService;
@@ -43,7 +45,8 @@ public class ClassController {
     @GetMapping
     @Operation(
             summary = "Get classes list",
-            description = "Retrieve paginated list of classes accessible to the user with filtering options"
+            description = "Retrieve paginated list of classes accessible to the user with filtering options. " +
+                    "By default, returns all classes regardless of status."
     )
     @PreAuthorize("hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<ResponseObject<Page<ClassListItemDTO>>> getClasses(
@@ -52,6 +55,12 @@ public class ClassController {
 
             @Parameter(description = "Filter by course ID")
             @RequestParam(required = false) Long courseId,
+
+            @Parameter(description = "Filter by class status (DRAFT, SCHEDULED, ONGOING, COMPLETED, CANCELLED). If not provided, returns all statuses")
+            @RequestParam(required = false) ClassStatus status,
+
+            @Parameter(description = "Filter by approval status (PENDING, APPROVED, REJECTED). If not provided, returns all approval statuses")
+            @RequestParam(required = false) ApprovalStatus approvalStatus,
 
             @Parameter(description = "Filter by modality (ONLINE, OFFLINE, HYBRID)")
             @RequestParam(required = false) Modality modality,
@@ -73,15 +82,15 @@ public class ClassController {
 
             @AuthenticationPrincipal UserPrincipal currentUser
     ) {
-        log.info("User {} requesting classes list with filters: branchIds={}, courseId={}, modality={}, search={}",
-                currentUser.getId(), branchIds, courseId, modality, search);
+        log.info("User {} requesting classes list with filters: branchIds={}, courseId={}, status={}, approvalStatus={}, modality={}, search={}",
+                currentUser.getId(), branchIds, courseId, status, approvalStatus, modality, search);
 
         // Create pageable with sort
         Sort.Direction direction = sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sort));
 
         Page<ClassListItemDTO> classes = classService.getClasses(
-                branchIds, courseId, modality, search, pageable, currentUser.getId()
+                branchIds, courseId, status, approvalStatus, modality, search, pageable, currentUser.getId()
         );
 
         return ResponseEntity.ok(ResponseObject.<Page<ClassListItemDTO>>builder()

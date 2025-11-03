@@ -16,8 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -41,13 +40,15 @@ public class ClassServiceImpl implements ClassService {
     public Page<ClassListItemDTO> getClasses(
             List<Long> branchIds,
             Long courseId,
+            ClassStatus status,
+            ApprovalStatus approvalStatus,
             Modality modality,
             String search,
             Pageable pageable,
             Long userId
     ) {
-        log.debug("Getting classes for user {} with filters: branchIds={}, courseId={}, modality={}, search={}",
-                userId, branchIds, courseId, modality, search);
+        log.debug("Getting classes for user {} with filters: branchIds={}, courseId={}, status={}, approvalStatus={}, modality={}, search={}",
+                userId, branchIds, courseId, status, approvalStatus, modality, search);
 
         // Get user's branch access
         List<Long> accessibleBranchIds = getUserAccessibleBranches(userId);
@@ -58,11 +59,11 @@ public class ClassServiceImpl implements ClassService {
             throw new CustomException(ErrorCode.CLASS_NO_BRANCH_ACCESS);
         }
 
-        // Query classes with filters
+        // Query classes with filters (null status/approvalStatus = all)
         Page<ClassEntity> classes = classRepository.findClassesForAcademicAffairs(
                 finalBranchIds,
-                ApprovalStatus.APPROVED,
-                ClassStatus.SCHEDULED,
+                approvalStatus,  // null = all approval statuses
+                status,          // null = all class statuses
                 courseId,
                 modality,
                 search,
@@ -79,8 +80,8 @@ public class ClassServiceImpl implements ClassService {
         ClassEntity classEntity = classRepository.findById(classId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CLASS_NOT_FOUND));
 
-        // Validate user has access to this class's branch
-        validateClassAccess(classEntity, userId);
+        // Validate user has access to this class's branch (no status restrictions for detail view)
+        validateClassBranchAccess(classEntity, userId);
 
         // Get enrollment summary
         Integer currentEnrolled = enrollmentRepository.countByClassIdAndStatus(classId, EnrollmentStatus.ENROLLED);
@@ -96,8 +97,8 @@ public class ClassServiceImpl implements ClassService {
                 .map(this::convertToSessionDTO)
                 .collect(Collectors.toList());
 
-        // Get teacher information
-        String teacherName = getTeacherNameForClass(classId);
+        // Get all teachers teaching this class
+        List<TeacherSummaryDTO> teachers = getTeachersForClass(classId);
 
         return ClassDetailDTO.builder()
                 .id(classEntity.getId())
@@ -120,7 +121,7 @@ public class ClassServiceImpl implements ClassService {
                         classEntity.getDecidedAt().toLocalDate() : null)
                 .decidedByName(classEntity.getDecidedBy() != null ?
                         classEntity.getDecidedBy().getFullName() : null)
-                .teacherName(teacherName)
+                .teachers(teachers)
                 .scheduleSummary(formatScheduleSummary(classEntity.getScheduleDays()))
                 .enrollmentSummary(enrollmentSummary)
                 .upcomingSessions(sessionDTOs)
@@ -139,7 +140,7 @@ public class ClassServiceImpl implements ClassService {
         ClassEntity classEntity = classRepository.findById(classId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CLASS_NOT_FOUND));
 
-        // Validate user has access to this class's branch
+        // Validate user has access to this class's branch (with status restrictions for enrollment operations)
         validateClassAccess(classEntity, userId);
 
         // Get enrolled students
@@ -167,14 +168,20 @@ public class ClassServiceImpl implements ClassService {
         Double utilizationRate = maxCapacity > 0 ? (double) currentEnrolled / maxCapacity * 100 : 0.0;
 
         // Determine if enrollment is possible
-        boolean canEnroll = classEntity.getStatus() == ClassStatus.SCHEDULED
+        boolean canEnroll = (classEntity.getStatus() == ClassStatus.SCHEDULED
+                     || classEntity.getStatus() == ClassStatus.ONGOING)
                 && classEntity.getApprovalStatus() == ApprovalStatus.APPROVED
                 && availableSlots > 0;
 
         String restrictionReason = null;
         if (!canEnroll) {
-            if (classEntity.getStatus() != ClassStatus.SCHEDULED) {
-                restrictionReason = "Class is not in scheduled status";
+            if (classEntity.getStatus() == ClassStatus.COMPLETED) {
+                restrictionReason = "Class has completed";
+            } else if (classEntity.getStatus() == ClassStatus.CANCELLED) {
+                restrictionReason = "Class was cancelled";
+            } else if (classEntity.getStatus() != ClassStatus.SCHEDULED
+                    && classEntity.getStatus() != ClassStatus.ONGOING) {
+                restrictionReason = "Class is not available for enrollment";
             } else if (classEntity.getApprovalStatus() != ApprovalStatus.APPROVED) {
                 restrictionReason = "Class is not approved";
             } else if (availableSlots <= 0) {
@@ -207,7 +214,7 @@ public class ClassServiceImpl implements ClassService {
     ) {
         log.debug("Getting available students for class {} by user {} with search: {}", classId, userId, search);
 
-        // Validate class exists and user has access
+        // Validate class exists and user has access (with status restrictions for enrollment operations)
         ClassEntity classEntity = classRepository.findById(classId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CLASS_NOT_FOUND));
         validateClassAccess(classEntity, userId);
@@ -270,6 +277,22 @@ public class ClassServiceImpl implements ClassService {
         return userBranchesRepository.findBranchIdsByUserId(userId);
     }
 
+    /**
+     * Validate user can access class from their branch only (no status restrictions)
+     * Used for read-only operations like viewing class details
+     */
+    private void validateClassBranchAccess(ClassEntity classEntity, Long userId) {
+        List<Long> accessibleBranchIds = getUserAccessibleBranches(userId);
+
+        if (!accessibleBranchIds.contains(classEntity.getBranch().getId())) {
+            throw new CustomException(ErrorCode.CLASS_ACCESS_DENIED);
+        }
+    }
+
+    /**
+     * Validate user can access class with status restrictions
+     * Used for enrollment-related operations (viewing students, enrolling new students)
+     */
     private void validateClassAccess(ClassEntity classEntity, Long userId) {
         List<Long> accessibleBranchIds = getUserAccessibleBranches(userId);
 
@@ -281,7 +304,9 @@ public class ClassServiceImpl implements ClassService {
             throw new CustomException(ErrorCode.CLASS_NOT_APPROVED_FOR_ENROLLMENT);
         }
 
-        if (classEntity.getStatus() != ClassStatus.SCHEDULED) {
+        // Allow enrollment-related operations for SCHEDULED and ONGOING classes
+        if (classEntity.getStatus() != ClassStatus.SCHEDULED
+                && classEntity.getStatus() != ClassStatus.ONGOING) {
             throw new CustomException(ErrorCode.CLASS_NOT_SCHEDULED);
         }
     }
@@ -295,12 +320,13 @@ public class ClassServiceImpl implements ClassService {
         Integer availableSlots = maxCapacity - currentEnrolled;
         Double utilizationRate = maxCapacity > 0 ? (double) currentEnrolled / maxCapacity * 100 : 0.0;
 
-        // Get teacher name
-        String teacherName = getTeacherNameForClass(classEntity.getId());
+        // Get all teachers teaching this class
+        List<TeacherSummaryDTO> teachers = getTeachersForClass(classEntity.getId());
 
         // Determine if enrollment is possible
         boolean canEnroll = availableSlots > 0
-                && classEntity.getStatus() == ClassStatus.SCHEDULED
+                && (classEntity.getStatus() == ClassStatus.SCHEDULED
+                     || classEntity.getStatus() == ClassStatus.ONGOING)
                 && classEntity.getApprovalStatus() == ApprovalStatus.APPROVED;
 
         return ClassListItemDTO.builder()
@@ -320,11 +346,14 @@ public class ClassServiceImpl implements ClassService {
                 .currentEnrolled(currentEnrolled)
                 .availableSlots(availableSlots)
                 .utilizationRate(utilizationRate)
-                .teacherName(teacherName)
+                .teachers(teachers)
                 .scheduleSummary(formatScheduleSummary(classEntity.getScheduleDays()))
                 .canEnrollStudents(canEnroll)
                 .enrollmentRestrictionReason(canEnroll ? null :
-                        availableSlots <= 0 ? "Class is full" : "Class not available for enrollment")
+                        availableSlots <= 0 ? "Class is full" :
+                        classEntity.getStatus() == ClassStatus.COMPLETED ? "Class has completed" :
+                        classEntity.getStatus() == ClassStatus.CANCELLED ? "Class was cancelled" :
+                        "Class not available for enrollment")
                 .build();
     }
 
@@ -385,7 +414,7 @@ public class ClassServiceImpl implements ClassService {
                         session.getTimeSlotTemplate().getStartTime().toString() : null)
                 .endTime(session.getTimeSlotTemplate() != null ?
                         session.getTimeSlotTemplate().getEndTime().toString() : null)
-                .teacherName(getTeacherNameForSession(session))
+                .teachers(getTeachersForSession(session))
                 .room(null) // Room info not available in current entity structure
                 .status(session.getStatus().name())
                 .type(session.getType().name())
@@ -409,22 +438,62 @@ public class ClassServiceImpl implements ClassService {
                 .build();
     }
 
-    private String getTeacherNameForClass(Long classId) {
-        return teachingSlotRepository.findByClassEntityIdAndStatus(classId, TeachingSlotStatus.SCHEDULED)
-                .stream()
-                .findFirst()
+    /**
+     * Get all teachers teaching in a class with their session counts
+     * Groups by teacher and counts how many sessions each teacher teaches
+     */
+    private List<TeacherSummaryDTO> getTeachersForClass(Long classId) {
+        List<TeachingSlot> teachingSlots = teachingSlotRepository
+                .findByClassEntityIdAndStatus(classId, TeachingSlotStatus.SCHEDULED);
+
+        // Group by teacher and count sessions
+        Map<Teacher, Long> teacherSessionCounts = teachingSlots.stream()
                 .filter(slot -> slot.getTeacher() != null)
-                .map(slot -> slot.getTeacher().getUserAccount().getFullName())
-                .orElse("Not assigned");
+                .collect(Collectors.groupingBy(
+                        TeachingSlot::getTeacher,
+                        Collectors.counting()
+                ));
+
+        // Convert to DTOs sorted by session count (descending)
+        return teacherSessionCounts.entrySet().stream()
+                .map(entry -> {
+                    Teacher teacher = entry.getKey();
+                    UserAccount userAccount = teacher.getUserAccount();
+                    return TeacherSummaryDTO.builder()
+                            .id(userAccount.getId())
+                            .teacherId(teacher.getId())
+                            .fullName(userAccount.getFullName())
+                            .email(userAccount.getEmail())
+                            .phone(userAccount.getPhone())
+                            .employeeCode(teacher.getEmployeeCode())
+                            .sessionCount(entry.getValue().intValue())
+                            .build();
+                })
+                .sorted(Comparator.comparing(TeacherSummaryDTO::getSessionCount).reversed())
+                .collect(Collectors.toList());
     }
 
-    private String getTeacherNameForSession(Session session) {
+    /**
+     * Get all teachers teaching in a specific session
+     */
+    private List<TeacherSummaryDTO> getTeachersForSession(Session session) {
         return session.getTeachingSlots().stream()
                 .filter(slot -> slot.getStatus() == TeachingSlotStatus.SCHEDULED)
                 .filter(slot -> slot.getTeacher() != null)
-                .findFirst()
-                .map(slot -> slot.getTeacher().getUserAccount().getFullName())
-                .orElse("Not assigned");
+                .map(slot -> {
+                    Teacher teacher = slot.getTeacher();
+                    UserAccount userAccount = teacher.getUserAccount();
+                    return TeacherSummaryDTO.builder()
+                            .id(userAccount.getId())
+                            .teacherId(teacher.getId())
+                            .fullName(userAccount.getFullName())
+                            .email(userAccount.getEmail())
+                            .phone(userAccount.getPhone())
+                            .employeeCode(teacher.getEmployeeCode())
+                            .sessionCount(1) // Single session context
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     private String formatScheduleSummary(Short[] scheduleDays) {
