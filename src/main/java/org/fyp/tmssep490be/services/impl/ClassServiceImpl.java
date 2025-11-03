@@ -143,9 +143,14 @@ public class ClassServiceImpl implements ClassService {
         // Validate user has access to this class's branch (with status restrictions for enrollment operations)
         validateClassAccess(classEntity, userId);
 
+        // Prepare search parameter with wildcards for LIKE query
+        String searchPattern = (search != null && !search.isBlank()) 
+                ? "%" + search + "%" 
+                : null;
+
         // Get enrolled students
         Page<Enrollment> enrollments = enrollmentRepository.findEnrolledStudentsByClass(
-                classId, EnrollmentStatus.ENROLLED, search, pageable
+                classId, EnrollmentStatus.ENROLLED, searchPattern, pageable
         );
 
         return enrollments.map(this::convertToClassStudentDTO);

@@ -38,7 +38,7 @@ spring:
   jpa:
     defer-datasource-initialization: false
     hibernate:
-      ddl-auto: validate   # Validate entities against existing schema, don't create/drop
+      ddl-auto: none   # Don't validate or create, just use existing schema
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect

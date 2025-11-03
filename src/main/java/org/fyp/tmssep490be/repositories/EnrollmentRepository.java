@@ -25,17 +25,18 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
     /**
      * Find enrolled students for a class with search and pagination
+     * Note: Search parameter should include wildcards (e.g., "%search%")
      */
     @Query("SELECT e FROM Enrollment e " +
            "INNER JOIN e.student s " +
            "INNER JOIN s.userAccount u " +
            "WHERE e.classId = :classId " +
            "AND e.status = :status " +
-           "AND (:search IS NULL OR " +
-           "  LOWER(s.studentCode) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "  LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "  LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "  LOWER(u.phone) LIKE LOWER(CONCAT('%', :search, '%'))" +
+           "AND (:search IS NULL OR :search = '' OR " +
+           "  UPPER(s.studentCode) LIKE UPPER(:search) OR " +
+           "  UPPER(u.fullName) LIKE UPPER(:search) OR " +
+           "  UPPER(u.email) LIKE UPPER(:search) OR " +
+           "  UPPER(u.phone) LIKE UPPER(:search)" +
            ")")
     Page<Enrollment> findEnrolledStudentsByClass(
             @Param("classId") Long classId,
