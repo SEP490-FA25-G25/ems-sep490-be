@@ -292,6 +292,20 @@ INSERT INTO level (id, subject_id, code, name, expected_duration_hours, sort_ord
 (2, 1, 'INTERMEDIATE', 'IELTS Intermediate (5.0-6.0)', 75, 2, '2024-06-01 00:00:00+07', '2024-06-01 00:00:00+07'),
 (3, 1, 'ADVANCED', 'IELTS Advanced (6.5-8.0)', 90, 3, '2024-06-01 00:00:00+07', '2024-06-01 00:00:00+07');
 
+-- Replacement Skill Assessments for initial students
+-- Simulates placement test results before their first enrollment.
+INSERT INTO replacement_skill_assessment (student_id, skill, level_id, score, assessment_date, assessment_type, assessed_by, note)
+SELECT 
+    s.id,
+    'GENERAL'::skill_enum,
+    1, -- Corresponds to 'IELTS Foundation (3.0-4.0)'
+    30 + floor(random() * 16)::int, -- Generates a score between 30 and 45 (equivalent to 3.0-4.5 band)
+    '2025-06-15',
+    'placement_test',
+    6, -- Assessed by 'staff.huong.hn@tms-edu.vn'
+    'Initial placement test score.'
+FROM generate_series(1, 30) AS s(id);
+
 -- PLOs for IELTS Subject
 INSERT INTO plo (id, subject_id, code, description, created_at, updated_at) VALUES
 (1, 1, 'PLO1', 'Demonstrate basic English communication skills in everyday contexts', '2024-06-01 00:00:00+07', '2024-06-01 00:00:00+07'),
@@ -363,6 +377,24 @@ INSERT INTO course_session_clo_mapping (course_session_id, clo_id, status) VALUE
 -- CLO4 (Write simple paragraphs) - Writing sessions
 (4, 4, 'active'), (8, 4, 'active'), (12, 4, 'active'), (16, 4, 'active'), (20, 4, 'active');
 
+-- Course Materials for Foundation Course
+INSERT INTO course_material (course_id, phase_id, course_session_id, title, description, material_type, url, uploaded_by) VALUES
+-- Course-level materials
+(1, NULL, NULL, 'IELTS Foundation - Course Syllabus', 'The complete syllabus for the course.', 'pdf', '/materials/courses/1/syllabus.pdf', 5),
+(1, NULL, NULL, 'Introductory Video', 'A welcome video from the head teacher.', 'video', '/materials/courses/1/intro.mp4', 5),
+-- Phase 1 materials
+(1, 1, NULL, 'Phase 1 Vocabulary List', 'Key vocabulary for the first 4 weeks.', 'document', '/materials/phases/1/vocab.docx', 5),
+-- Session-specific materials
+(1, 1, 1, 'Session 1 - Listening Slides', 'Presentation slides for the first session.', 'slide', '/materials/sessions/1/slides.pptx', 5),
+(1, 1, 2, 'Session 2 - Speaking Practice Audio', 'Audio files for speaking practice.', 'audio', '/materials/sessions/2/practice.mp3', 5),
+(1, 1, 3, 'Session 3 - Reading Passage PDF', 'Reading text for session 3.', 'pdf', '/materials/sessions/3/reading.pdf', 5),
+(1, 1, 4, 'Session 4 - Writing Task 1 Sample', 'A sample for the first writing task.', 'document', '/materials/sessions/4/sample.docx', 5),
+-- Phase 2 materials
+(1, 2, NULL, 'Phase 2 Grammar Guide', 'Advanced grammar rules for the last 4 weeks.', 'pdf', '/materials/phases/2/grammar.pdf', 5),
+-- More session-specific materials
+(1, 2, 13, 'Session 13 - Listening Practice Test', 'A full practice test for listening.', 'audio', '/materials/sessions/13/practice-test.mp3', 5),
+(1, 2, 21, 'Session 21 - Full Practice Test', 'A complete mock test (all sections).', 'pdf', '/materials/sessions/21/mock-test.pdf', 5);
+
 -- Course Assessments for Foundation
 INSERT INTO course_assessment (id, course_id, name, kind, duration_minutes, max_score, skills, created_at, updated_at) VALUES
 (1, 1, 'Listening Quiz 1', 'quiz', 30, 20, ARRAY['listening']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
@@ -399,6 +431,44 @@ INSERT INTO "class" (id, branch_id, course_id, code, name, modality, start_date,
 
 -- HCM Branch - Class 5: ONGOING
 (5, 2, 1, 'HCM-FOUND-O1', 'HCM Foundation 1 (Ongoing)', 'OFFLINE', '2025-10-13', '2025-12-05', NULL, ARRAY[1,3,5]::smallint[], 20, 'ONGOING', 'APPROVED', 8, 4, '2025-10-06 10:00:00+07', '2025-10-07 14:00:00+07', '2025-10-06 10:00:00+07', '2025-10-13 08:00:00+07');
+
+-- Generate Sessions for Class 1 (HN-FOUND-C1) - COMPLETED
+-- Start: 2025-07-07 (Mon), Schedule: Mon/Wed/Fri, 24 sessions over 8 weeks
+DO $$
+DECLARE
+    v_class_id BIGINT := 1;
+    v_start_date DATE := '2025-07-07';
+    v_session_count INT := 24;
+    v_course_session_id INT;
+    v_date DATE;
+    v_week INT;
+    v_day_idx INT;
+    v_session_idx INT := 1;
+BEGIN
+    FOR v_week IN 0..7 LOOP -- 8 weeks
+        FOR v_day_idx IN 1..3 LOOP -- 3 days per week
+            EXIT WHEN v_session_idx > v_session_count;
+            
+            v_course_session_id := v_session_idx;
+            -- Logic to calculate date for Mon/Wed/Fri
+            v_date := v_start_date + (v_week * 7) + CASE v_day_idx WHEN 1 THEN 0 WHEN 2 THEN 2 WHEN 3 THEN 4 END;
+            
+            INSERT INTO session (id, class_id, course_session_id, time_slot_template_id, date, type, status, teacher_note, created_at, updated_at)
+            VALUES (v_session_idx, v_class_id, v_course_session_id, 1, v_date, 'class', 'DONE', 'Session completed as planned.', '2025-07-01 10:00:00+07', v_date);
+            
+            v_session_idx := v_session_idx + 1;
+        END LOOP;
+    END LOOP;
+END $$;
+
+-- Session Resources for Class 1
+INSERT INTO session_resource (session_id, resource_id)
+SELECT id, 2 FROM session WHERE class_id = 1;
+
+-- Teaching Slots for Class 1 (assign Teacher 3)
+INSERT INTO teaching_slot (session_id, teacher_id, status)
+SELECT id, 3, 'scheduled' FROM session WHERE class_id = 1;
+
 
 -- Generate Sessions for Class 2 (HN-FOUND-O1) - Main testing class
 -- Start: 2025-10-06 (Mon), Schedule: Mon/Wed/Fri, 24 sessions over 8 weeks
@@ -489,7 +559,93 @@ SELECT id, 1, 'scheduled' FROM session WHERE class_id = 2;
 INSERT INTO teaching_slot (session_id, teacher_id, status)
 SELECT id, 2, 'scheduled' FROM session WHERE class_id = 3;
 
+-- Generate Sessions for Class 5 (HCM-FOUND-O1) - ONGOING
+-- Start: 2025-10-13 (Mon), Schedule: Mon/Wed/Fri
+DO $$
+DECLARE
+    v_class_id BIGINT := 5;
+    v_start_date DATE := '2025-10-13';
+    v_session_count INT := 24;
+    v_course_session_id INT;
+    v_date DATE;
+    v_week INT;
+    v_day_idx INT;
+    v_session_idx INT := 1;
+    v_status session_status_enum;
+BEGIN
+    FOR v_week IN 0..7 LOOP
+        FOR v_day_idx IN 1..3 LOOP
+            EXIT WHEN v_session_idx > v_session_count;
+            
+            v_course_session_id := v_session_idx;
+            v_date := v_start_date + (v_week * 7) + CASE v_day_idx WHEN 1 THEN 0 WHEN 2 THEN 2 WHEN 3 THEN 4 END;
+            
+            IF v_date < '2025-11-02' THEN
+                v_status := 'DONE';
+            ELSE
+                v_status := 'planned';
+            END IF;
+            
+            INSERT INTO session (id, class_id, course_session_id, time_slot_template_id, date, type, status, created_at, updated_at)
+            VALUES (300 + v_session_idx, v_class_id, v_course_session_id, 6, v_date, 'class', v_status, '2025-10-06 10:00:00+07', CURRENT_TIMESTAMP);
+            
+            v_session_idx := v_session_idx + 1;
+        END LOOP;
+    END LOOP;
+END $$;
+
+-- Session Resources for Class 5
+INSERT INTO session_resource (session_id, resource_id)
+SELECT id, 5 FROM session WHERE class_id = 5;
+
+-- Teaching Slots for Class 5 (assign Teacher 9)
+INSERT INTO teaching_slot (session_id, teacher_id, status)
+SELECT id, 9, 'scheduled' FROM session WHERE class_id = 5;
+
 -- ========== TIER 5: ENROLLMENTS & ATTENDANCE ==========
+
+-- Enrollments for Class 1 (HN-FOUND-C1) - 15 students, all completed
+-- This represents the learning history for students who are now in other classes.
+INSERT INTO enrollment (id, class_id, student_id, status, enrolled_at, enrolled_by, join_session_id, left_at, left_session_id, created_at, updated_at)
+SELECT 
+    (100 + s.id), -- New enrollment IDs to avoid conflict
+    1,
+    s.id,
+    'COMPLETED',
+    '2025-07-01 09:00:00+07',
+    6,
+    1, -- join_session_id
+    '2025-09-01 18:00:00+07', -- left_at
+    24, -- left_session_id
+    '2025-07-01 09:00:00+07',
+    '2025-09-01 18:00:00+07'
+FROM generate_series(1, 15) AS s(id);
+
+-- Student Sessions for Class 1 (COMPLETED)
+INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, homework_status, recorded_at, updated_at)
+SELECT 
+    e.student_id,
+    s.id,
+    false,
+    CASE 
+        WHEN random() < 0.9 THEN 'present'::attendance_status_enum
+        ELSE 'absent'::attendance_status_enum
+    END,
+    CASE 
+        WHEN cs.student_task IS NOT NULL THEN
+            CASE 
+                WHEN random() < 0.85 THEN 'completed'::homework_status_enum
+                ELSE 'incomplete'::homework_status_enum
+            END
+        ELSE NULL
+    END,
+    s.date,
+    CURRENT_TIMESTAMP
+FROM enrollment e
+CROSS JOIN session s
+LEFT JOIN course_session cs ON s.course_session_id = cs.id
+WHERE e.class_id = 1 
+  AND s.class_id = 1;
 
 -- Enrollments for Class 2 (HN-FOUND-O1) - 17 students (including mid-course and transfer candidate)
 INSERT INTO enrollment (id, class_id, student_id, status, enrolled_at, enrolled_by, join_session_id, created_at, updated_at) VALUES
@@ -586,6 +742,44 @@ LEFT JOIN course_session cs ON s.course_session_id = cs.id
 WHERE e.class_id = 3 
   AND s.class_id = 3
   AND (e.join_session_id IS NULL OR s.id >= e.join_session_id);
+
+-- Enrollments for Class 5 (HCM-FOUND-O1) - 15 students
+INSERT INTO enrollment (id, class_id, student_id, status, enrolled_at, enrolled_by, join_session_id, created_at, updated_at)
+SELECT 
+    (200 + s.id), -- New enrollment IDs
+    5,
+    (30 + s.id), -- Students 31-45
+    'ENROLLED',
+    '2025-10-07 09:00:00+07',
+    8, -- enrolled_by HCM staff
+    301, -- join_session_id
+    '2025-10-07 09:00:00+07',
+    '2025-10-07 09:00:00+07'
+FROM generate_series(1, 15) AS s(id);
+
+-- Student Sessions for Class 5
+INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, homework_status, recorded_at, updated_at)
+SELECT 
+    e.student_id,
+    s.id,
+    false,
+    CASE 
+        WHEN s.status = 'DONE' THEN 
+            CASE WHEN random() < 0.9 THEN 'present'::attendance_status_enum ELSE 'absent'::attendance_status_enum END
+        ELSE 'planned'::attendance_status_enum
+    END,
+    CASE 
+        WHEN s.status = 'DONE' AND cs.student_task IS NOT NULL THEN
+            CASE WHEN random() < 0.85 THEN 'completed'::homework_status_enum ELSE 'incomplete'::homework_status_enum END
+        ELSE NULL
+    END,
+    CASE WHEN s.status = 'DONE' THEN s.date ELSE NULL END,
+    CURRENT_TIMESTAMP
+FROM enrollment e
+CROSS JOIN session s
+LEFT JOIN course_session cs ON s.course_session_id = cs.id
+WHERE e.class_id = 5 
+  AND s.class_id = 5;
 
 -- ========== TIER 6: REQUESTS (Test all scenarios) ==========
 
@@ -703,6 +897,37 @@ INSERT INTO score (id, assessment_id, student_id, score, feedback, graded_by, gr
 (13, 2, 3, 16.5, 'Good effort', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07'),
 (14, 2, 4, 15.0, 'Need more practice', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07'),
 (15, 2, 5, 19.0, 'Excellent speaking skills', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07');
+
+-- Assessments for Class 1 (COMPLETED)
+INSERT INTO assessment (id, class_id, course_assessment_id, scheduled_date, actual_date) VALUES
+(10, 1, 1, '2025-07-21 08:00:00+07', '2025-07-21 08:00:00+07'), -- Listening Quiz 1
+(11, 1, 2, '2025-07-28 08:00:00+07', '2025-07-28 08:00:00+07'), -- Speaking Quiz 1
+(12, 1, 3, '2025-08-04 08:00:00+07', '2025-08-04 08:00:00+07'), -- Reading Quiz 1
+(13, 1, 4, '2025-08-11 08:00:00+07', '2025-08-11 08:00:00+07'), -- Writing Assignment 1
+(14, 1, 5, '2025-08-18 08:00:00+07', '2025-08-18 08:00:00+07'), -- Midterm Exam
+(15, 1, 6, '2025-09-01 08:00:00+07', '2025-09-01 08:00:00+07'); -- Final Exam
+
+-- Scores for Class 1, Midterm Exam (assessment_id = 14)
+INSERT INTO score (assessment_id, student_id, score, feedback, graded_by, graded_at)
+SELECT
+    14,
+    s.id,
+    60 + floor(random() * 35)::int, -- Score between 60 and 94
+    'Good overall performance on the midterm.',
+    3, -- Graded by Teacher 3
+    '2025-08-20 10:00:00+07'
+FROM generate_series(1, 15) AS s(id);
+
+-- Scores for Class 1, Final Exam (assessment_id = 15)
+INSERT INTO score (assessment_id, student_id, score, feedback, graded_by, graded_at)
+SELECT
+    15,
+    s.id,
+    65 + floor(random() * 30)::int, -- Score between 65 and 94, showing improvement
+    'Solid performance on the final exam. Well done.',
+    3, -- Graded by Teacher 3
+    '2025-09-03 10:00:00+07'
+FROM generate_series(1, 15) AS s(id);
 
 -- ========== TIER 8: FEEDBACK & QA ==========
 
