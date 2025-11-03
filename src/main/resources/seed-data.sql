@@ -96,7 +96,7 @@ INSERT INTO role (id, code, name) VALUES
 (2, 'MANAGER', 'Manager'),
 (3, 'CENTER_HEAD', 'Center Head'),
 (4, 'SUBJECT_LEADER', 'Subject Leader'),
-(5, 'ACADEMIC_STAFF', 'Academic Staff'),
+(5, 'ACADEMIC_AFFAIR', 'Academic Affair'),
 (6, 'TEACHER', 'Teacher'),
 (7, 'STUDENT', 'Student'),
 (8, 'QA', 'Quality Assurance');

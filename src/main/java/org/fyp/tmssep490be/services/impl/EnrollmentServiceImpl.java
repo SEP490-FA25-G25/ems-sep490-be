@@ -811,4 +811,94 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             // Don't fail student creation if one assessment fails
         }
     }
+
+    /**
+     * Enroll existing students vào class (Tab 1: Select Existing Students)
+     * Multi-select manual enrollment cho ad-hoc enrollment
+     *
+     * @param request Request chứa classId, studentIds, và capacity override info
+     * @param enrolledBy User ID của Academic Affair (for audit)
+     * @return Enrollment result với counts
+     */
+    @Override
+    @Transactional
+    public EnrollmentResult enrollExistingStudents(
+            EnrollExistingStudentsRequest request,
+            Long enrolledBy
+    ) {
+        log.info("Enrolling {} existing students into class {} by user {}",
+                request.getStudentIds().size(), request.getClassId(), enrolledBy);
+
+        // 1. Validate class exists và đủ điều kiện enroll
+        ClassEntity classEntity = validateClassForEnrollment(request.getClassId());
+
+        // 2. Remove duplicates from studentIds
+        List<Long> uniqueStudentIds = request.getStudentIds().stream()
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (uniqueStudentIds.size() < request.getStudentIds().size()) {
+            log.warn("Removed {} duplicate student IDs from request",
+                    request.getStudentIds().size() - uniqueStudentIds.size());
+        }
+
+        // 3. Validate all students exist
+        List<Student> students = studentRepository.findAllById(uniqueStudentIds);
+        if (students.size() != uniqueStudentIds.size()) {
+            List<Long> foundIds = students.stream().map(Student::getId).collect(Collectors.toList());
+            List<Long> missingIds = uniqueStudentIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .collect(Collectors.toList());
+            log.error("Students not found: {}", missingIds);
+            throw new EntityNotFoundException("Some students not found: " + missingIds);
+        }
+
+        // 4. Check capacity
+        int currentEnrolled = enrollmentRepository.countByClassIdAndStatus(
+                request.getClassId(), EnrollmentStatus.ENROLLED
+        );
+        int maxCapacity = classEntity.getMaxCapacity();
+        int availableSlots = maxCapacity - currentEnrolled;
+        int requestedCount = uniqueStudentIds.size();
+
+        log.info("Capacity check: {}/{} enrolled, {} requested, {} available",
+                currentEnrolled, maxCapacity, requestedCount, availableSlots);
+
+        // 5. Validate capacity override
+        boolean needsOverride = requestedCount > availableSlots;
+        boolean hasOverride = Boolean.TRUE.equals(request.getOverrideCapacity());
+
+        if (needsOverride && !hasOverride) {
+            log.error("Class capacity exceeded. Current: {}, Requested: {}, Max: {}",
+                    currentEnrolled, requestedCount, maxCapacity);
+            throw new CustomException(ErrorCode.CLASS_CAPACITY_EXCEEDED);
+        }
+
+        if (hasOverride) {
+            if (request.getOverrideReason() == null || request.getOverrideReason().trim().isEmpty()) {
+                throw new CustomException(ErrorCode.OVERRIDE_REASON_REQUIRED);
+            }
+            if (request.getOverrideReason().length() < 20) {
+                throw new CustomException(ErrorCode.OVERRIDE_REASON_TOO_SHORT);
+            }
+            log.warn("CAPACITY_OVERRIDE: Class {} will enroll {} students (capacity: {}). Reason: '{}'. Approved by user {}",
+                    request.getClassId(), requestedCount, maxCapacity,
+                    request.getOverrideReason(), enrolledBy);
+        }
+
+        // 6. Execute enrollment using core logic
+        EnrollmentResult result = enrollStudents(
+                request.getClassId(),
+                uniqueStudentIds,
+                enrolledBy,
+                hasOverride,
+                request.getOverrideReason()
+        );
+
+        log.info("Successfully enrolled {} students into class {}. Total student_sessions: {}",
+                result.getEnrolledCount(), request.getClassId(), result.getTotalStudentSessionsCreated());
+
+        return result;
+    }
 }
+

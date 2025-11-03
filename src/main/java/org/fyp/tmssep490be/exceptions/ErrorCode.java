@@ -114,6 +114,7 @@ public enum ErrorCode {
     CLASS_INVALID_STATUS(1208, "Class must be in 'scheduled' status for enrollment"),
     NO_FUTURE_SESSIONS(1209, "No future sessions available for enrollment"),
     OVERRIDE_REASON_REQUIRED(1210, "Override reason required (min 20 characters)"),
+    OVERRIDE_REASON_TOO_SHORT(1215, "Override reason must be at least 20 characters"),
     INVALID_ENROLLMENT_STRATEGY(1211, "Invalid enrollment strategy"),
     PARTIAL_STRATEGY_MISSING_IDS(1212, "Selected student IDs required for PARTIAL strategy"),
     SELECTED_STUDENTS_EXCEED_CAPACITY(1213, "Selected students still exceed capacity"),

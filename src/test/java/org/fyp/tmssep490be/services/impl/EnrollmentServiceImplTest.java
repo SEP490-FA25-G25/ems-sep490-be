@@ -428,7 +428,12 @@ class EnrollmentServiceImplTest {
                 .phone("090123456" + code.substring(code.length() - 1))
                 .gender(Gender.MALE)
                 .dob(LocalDate.of(1995, 1, 1))
-                .initialLevel("A1")
+                // Skill assessments format: "Level-Score"
+                .general("A1-70")
+                .reading("A1-68")
+                .writing("A1-65")
+                .speaking("A1-72")
+                .listening("A1-70")
                 .status(status)
                 .build();
     }
@@ -480,5 +485,405 @@ class EnrollmentServiceImplTest {
         role.setCode("STUDENT");
         role.setName("Student");
         return role;
+    }
+
+    // ==================== Enroll Existing Students Tests ====================
+
+    @Test
+    @DisplayName("Should enroll existing students successfully")
+    void shouldEnrollExistingStudentsSuccessfully() {
+        // Arrange
+        List<Long> studentIds = Arrays.asList(1L, 2L, 3L);
+        List<Student> students = Arrays.asList(
+                createStudent(1L),
+                createStudent(2L),
+                createStudent(3L)
+        );
+        List<Session> futureSessions = createFutureSessions(5);
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIds)
+                .overrideCapacity(false)
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+        when(studentRepository.findAllById(studentIds)).thenReturn(students);
+        when(enrollmentRepository.countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED)).thenReturn(10);
+        when(sessionRepository.findByClassEntityIdAndDateGreaterThanEqualAndStatusOrderByDateAsc(
+                eq(1L), any(LocalDate.class), eq(SessionStatus.PLANNED)
+        )).thenReturn(futureSessions);
+        when(enrollmentRepository.existsByClassIdAndStudentIdAndStatus(anyLong(), anyLong(), any()))
+                .thenReturn(false);
+        when(enrollmentRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(studentSessionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        EnrollmentResult result = enrollmentService.enrollExistingStudents(request, 100L);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getEnrolledCount()).isEqualTo(3);
+        assertThat(result.getSessionsGeneratedPerStudent()).isEqualTo(5);
+        assertThat(result.getTotalStudentSessionsCreated()).isEqualTo(15); // 3 students × 5 sessions
+
+        verify(classRepository, atLeastOnce()).findById(1L); // Called in validateClassForEnrollment and enrollStudents
+        verify(studentRepository).findAllById(studentIds);
+        verify(enrollmentRepository).countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED);
+        verify(enrollmentRepository).saveAll(anyList());
+        verify(studentSessionRepository).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when enrolling with insufficient capacity")
+    void shouldThrowExceptionWhenInsufficientCapacity() {
+        // Arrange
+        List<Long> studentIds = Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L); // 6 students
+        List<Student> students = Arrays.asList(
+                createStudent(1L), createStudent(2L), createStudent(3L),
+                createStudent(4L), createStudent(5L), createStudent(6L)
+        );
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIds)
+                .overrideCapacity(false) // No override
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+        when(studentRepository.findAllById(studentIds)).thenReturn(students);
+        when(enrollmentRepository.countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED))
+                .thenReturn(17); // 17 enrolled + 6 requested = 23 > 20 capacity
+
+        // Act & Assert
+        assertThatThrownBy(() -> enrollmentService.enrollExistingStudents(request, 100L))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", org.fyp.tmssep490be.exceptions.ErrorCode.CLASS_CAPACITY_EXCEEDED);
+
+        verify(classRepository).findById(1L);
+        verify(studentRepository).findAllById(studentIds);
+        verify(enrollmentRepository).countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED);
+        verify(enrollmentRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Should enroll with capacity override when reason provided")
+    void shouldEnrollWithCapacityOverride() {
+        // Arrange
+        List<Long> studentIds = Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L);
+        List<Student> students = Arrays.asList(
+                createStudent(1L), createStudent(2L), createStudent(3L),
+                createStudent(4L), createStudent(5L), createStudent(6L)
+        );
+        List<Session> futureSessions = createFutureSessions(5);
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIds)
+                .overrideCapacity(true)
+                .overrideReason("High demand for this class. We have additional resources available.")
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+        when(studentRepository.findAllById(studentIds)).thenReturn(students);
+        when(enrollmentRepository.countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED))
+                .thenReturn(17); // 17 + 6 = 23 > 20
+        when(sessionRepository.findByClassEntityIdAndDateGreaterThanEqualAndStatusOrderByDateAsc(
+                eq(1L), any(LocalDate.class), eq(SessionStatus.PLANNED)
+        )).thenReturn(futureSessions);
+        when(enrollmentRepository.existsByClassIdAndStudentIdAndStatus(anyLong(), anyLong(), any()))
+                .thenReturn(false);
+        when(enrollmentRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(studentSessionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        EnrollmentResult result = enrollmentService.enrollExistingStudents(request, 100L);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getEnrolledCount()).isEqualTo(6);
+        assertThat(result.getTotalStudentSessionsCreated()).isEqualTo(30); // 6 × 5
+
+        verify(enrollmentRepository).saveAll(anyList());
+        verify(studentSessionRepository).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when override reason is missing")
+    void shouldThrowExceptionWhenOverrideReasonMissing() {
+        // Arrange
+        List<Long> studentIds = Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L);
+        List<Student> students = Arrays.asList(
+                createStudent(1L), createStudent(2L), createStudent(3L),
+                createStudent(4L), createStudent(5L), createStudent(6L)
+        );
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIds)
+                .overrideCapacity(true)
+                .overrideReason(null) // Missing reason
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+        when(studentRepository.findAllById(studentIds)).thenReturn(students);
+        when(enrollmentRepository.countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED))
+                .thenReturn(17);
+
+        // Act & Assert
+        assertThatThrownBy(() -> enrollmentService.enrollExistingStudents(request, 100L))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", org.fyp.tmssep490be.exceptions.ErrorCode.OVERRIDE_REASON_REQUIRED);
+
+        verify(enrollmentRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when override reason is too short for existing students")
+    void shouldThrowExceptionWhenOverrideReasonTooShortForExistingStudents() {
+        // Arrange
+        List<Long> studentIds = Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L);
+        List<Student> students = Arrays.asList(
+                createStudent(1L), createStudent(2L), createStudent(3L),
+                createStudent(4L), createStudent(5L), createStudent(6L)
+        );
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIds)
+                .overrideCapacity(true)
+                .overrideReason("Too short") // Less than 20 characters
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+        when(studentRepository.findAllById(studentIds)).thenReturn(students);
+        when(enrollmentRepository.countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED))
+                .thenReturn(17);
+
+        // Act & Assert
+        assertThatThrownBy(() -> enrollmentService.enrollExistingStudents(request, 100L))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", org.fyp.tmssep490be.exceptions.ErrorCode.OVERRIDE_REASON_TOO_SHORT);
+
+        verify(enrollmentRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Should remove duplicate student IDs from request")
+    void shouldRemoveDuplicateStudentIds() {
+        // Arrange
+        List<Long> studentIdsWithDuplicates = Arrays.asList(1L, 2L, 3L, 2L, 1L); // Duplicates: 1, 2
+        List<Student> students = Arrays.asList(
+                createStudent(1L),
+                createStudent(2L),
+                createStudent(3L)
+        );
+        List<Session> futureSessions = createFutureSessions(5);
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIdsWithDuplicates)
+                .overrideCapacity(false)
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+        when(studentRepository.findAllById(anyList())).thenReturn(students);
+        when(enrollmentRepository.countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED)).thenReturn(10);
+        when(sessionRepository.findByClassEntityIdAndDateGreaterThanEqualAndStatusOrderByDateAsc(
+                eq(1L), any(LocalDate.class), eq(SessionStatus.PLANNED)
+        )).thenReturn(futureSessions);
+        when(enrollmentRepository.existsByClassIdAndStudentIdAndStatus(anyLong(), anyLong(), any()))
+                .thenReturn(false);
+        when(enrollmentRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(studentSessionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        EnrollmentResult result = enrollmentService.enrollExistingStudents(request, 100L);
+
+        // Assert
+        assertThat(result.getEnrolledCount()).isEqualTo(3); // Only 3 unique students
+        verify(studentRepository).findAllById(argThat(ids -> ((java.util.Collection<?>) ids).size() == 3)); // Should query only 3
+    }
+
+    @Test
+    @DisplayName("Should throw exception when some students not found")
+    void shouldThrowExceptionWhenStudentsNotFound() {
+        // Arrange
+        List<Long> studentIds = Arrays.asList(1L, 2L, 999L); // 999 doesn't exist
+        List<Student> students = Arrays.asList(
+                createStudent(1L),
+                createStudent(2L)
+                // Student 999 not found
+        );
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIds)
+                .overrideCapacity(false)
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+        when(studentRepository.findAllById(studentIds)).thenReturn(students);
+
+        // Act & Assert
+        assertThatThrownBy(() -> enrollmentService.enrollExistingStudents(request, 100L))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("Some students not found");
+
+        verify(enrollmentRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when class not approved for existing students enrollment")
+    void shouldThrowExceptionWhenClassNotApprovedForExistingStudents() {
+        // Arrange
+        testClass.setApprovalStatus(ApprovalStatus.PENDING);
+
+        List<Long> studentIds = Arrays.asList(1L, 2L);
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIds)
+                .overrideCapacity(false)
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+
+        // Act & Assert
+        assertThatThrownBy(() -> enrollmentService.enrollExistingStudents(request, 100L))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", org.fyp.tmssep490be.exceptions.ErrorCode.CLASS_NOT_APPROVED);
+
+        verify(studentRepository, never()).findAllById(anyList());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when class not in scheduled status for existing students")
+    void shouldThrowExceptionWhenClassNotScheduledForExistingStudents() {
+        // Arrange
+        testClass.setStatus(ClassStatus.DRAFT);
+
+        List<Long> studentIds = Arrays.asList(1L, 2L);
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIds)
+                .overrideCapacity(false)
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+
+        // Act & Assert
+        assertThatThrownBy(() -> enrollmentService.enrollExistingStudents(request, 100L))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", org.fyp.tmssep490be.exceptions.ErrorCode.CLASS_INVALID_STATUS);
+
+        verify(studentRepository, never()).findAllById(anyList());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when existing student already enrolled in class")
+    void shouldThrowExceptionWhenExistingStudentAlreadyEnrolled() {
+        // Arrange
+        List<Long> studentIds = Arrays.asList(1L, 2L);
+        List<Student> students = Arrays.asList(
+                createStudent(1L),
+                createStudent(2L)
+        );
+        List<Session> futureSessions = createFutureSessions(5);
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIds)
+                .overrideCapacity(false)
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+        when(studentRepository.findAllById(studentIds)).thenReturn(students);
+        when(enrollmentRepository.countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED)).thenReturn(10);
+        when(sessionRepository.findByClassEntityIdAndDateGreaterThanEqualAndStatusOrderByDateAsc(
+                eq(1L), any(LocalDate.class), eq(SessionStatus.PLANNED)
+        )).thenReturn(futureSessions);
+        when(enrollmentRepository.existsByClassIdAndStudentIdAndStatus(eq(1L), eq(1L), any()))
+                .thenReturn(true); // Student 1 already enrolled
+
+        // Act & Assert
+        assertThatThrownBy(() -> enrollmentService.enrollExistingStudents(request, 100L))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", org.fyp.tmssep490be.exceptions.ErrorCode.ENROLLMENT_ALREADY_EXISTS);
+
+        verify(enrollmentRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when no future sessions available")
+    void shouldThrowExceptionWhenNoFutureSessions() {
+        // Arrange
+        List<Long> studentIds = Arrays.asList(1L, 2L);
+        List<Student> students = Arrays.asList(
+                createStudent(1L),
+                createStudent(2L)
+        );
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIds)
+                .overrideCapacity(false)
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+        when(studentRepository.findAllById(studentIds)).thenReturn(students);
+        when(enrollmentRepository.countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED)).thenReturn(10);
+        when(sessionRepository.findByClassEntityIdAndDateGreaterThanEqualAndStatusOrderByDateAsc(
+                eq(1L), any(LocalDate.class), eq(SessionStatus.PLANNED)
+        )).thenReturn(Collections.emptyList()); // No future sessions
+
+        // Act & Assert
+        assertThatThrownBy(() -> enrollmentService.enrollExistingStudents(request, 100L))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", org.fyp.tmssep490be.exceptions.ErrorCode.NO_FUTURE_SESSIONS);
+
+        verify(enrollmentRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("Should handle mid-course enrollment correctly")
+    void shouldHandleMidCourseEnrollment() {
+        // Arrange
+        testClass.setStartDate(LocalDate.now().minusDays(10)); // Class already started
+
+        List<Long> studentIds = Arrays.asList(1L, 2L);
+        List<Student> students = Arrays.asList(
+                createStudent(1L),
+                createStudent(2L)
+        );
+        List<Session> futureSessions = createFutureSessions(5);
+
+        EnrollExistingStudentsRequest request = EnrollExistingStudentsRequest.builder()
+                .classId(1L)
+                .studentIds(studentIds)
+                .overrideCapacity(false)
+                .build();
+
+        when(classRepository.findById(1L)).thenReturn(Optional.of(testClass));
+        when(studentRepository.findAllById(studentIds)).thenReturn(students);
+        when(enrollmentRepository.countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED)).thenReturn(10);
+        when(sessionRepository.findByClassEntityIdAndDateGreaterThanEqualAndStatusOrderByDateAsc(
+                eq(1L), any(LocalDate.class), eq(SessionStatus.PLANNED)
+        )).thenReturn(futureSessions);
+        when(enrollmentRepository.existsByClassIdAndStudentIdAndStatus(anyLong(), anyLong(), any()))
+                .thenReturn(false);
+        when(enrollmentRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(studentSessionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        EnrollmentResult result = enrollmentService.enrollExistingStudents(request, 100L);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getWarnings()).contains("Mid-course enrollment: Students will only be enrolled in future sessions");
+
+        verify(enrollmentRepository).saveAll(anyList());
+        verify(studentSessionRepository).saveAll(anyList());
     }
 }

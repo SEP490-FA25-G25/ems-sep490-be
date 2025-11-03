@@ -2,6 +2,7 @@ package org.fyp.tmssep490be.services;
 
 import org.fyp.tmssep490be.dtos.enrollment.ClassEnrollmentImportExecuteRequest;
 import org.fyp.tmssep490be.dtos.enrollment.ClassEnrollmentImportPreview;
+import org.fyp.tmssep490be.dtos.enrollment.EnrollExistingStudentsRequest;
 import org.fyp.tmssep490be.dtos.enrollment.EnrollmentResult;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,6 +32,19 @@ public interface EnrollmentService {
      */
     EnrollmentResult executeClassEnrollmentImport(
             ClassEnrollmentImportExecuteRequest request,
+            Long enrolledBy
+    );
+
+    /**
+     * Enroll existing students vào class (Tab 1: Select Existing Students)
+     * Multi-select manual enrollment từ danh sách students đã có trong DB
+     *
+     * @param request Request chứa classId, studentIds, và capacity override info
+     * @param enrolledBy User ID của Academic Affair (for audit)
+     * @return Enrollment result với counts
+     */
+    EnrollmentResult enrollExistingStudents(
+            EnrollExistingStudentsRequest request,
             Long enrolledBy
     );
 }

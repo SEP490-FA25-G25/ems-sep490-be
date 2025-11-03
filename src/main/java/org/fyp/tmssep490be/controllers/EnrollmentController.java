@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
 import org.fyp.tmssep490be.dtos.enrollment.ClassEnrollmentImportExecuteRequest;
 import org.fyp.tmssep490be.dtos.enrollment.ClassEnrollmentImportPreview;
+import org.fyp.tmssep490be.dtos.enrollment.EnrollExistingStudentsRequest;
 import org.fyp.tmssep490be.dtos.enrollment.EnrollmentResult;
 import org.fyp.tmssep490be.exceptions.CustomException;
 import org.fyp.tmssep490be.exceptions.ErrorCode;
@@ -127,6 +128,53 @@ public class EnrollmentController {
         return ResponseEntity.ok(ResponseObject.builder()
                 .success(true)
                 .message(String.format("Successfully enrolled %d students", result.getEnrolledCount()))
+                .data(result)
+                .build());
+    }
+
+    /**
+     * Enroll existing students vào class (Tab 1: Select Existing Students)
+     * POST /api/v1/enrollments/classes/{classId}/students
+     *
+     * Use case: Manual multi-select enrollment từ danh sách students đã có trong DB
+     * Workflow:
+     * 1. Validate class status và capacity
+     * 2. Validate all students exist
+     * 3. Check for duplicate enrollments
+     * 4. Handle capacity override nếu cần
+     * 5. Create enrollment records
+     * 6. Auto-generate student_session records
+     */
+    @PostMapping("/classes/{classId}/students")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    @Operation(
+            summary = "Enroll existing students into class",
+            description = "Multi-select enrollment for existing students. Supports capacity override with reason."
+    )
+    public ResponseEntity<ResponseObject<EnrollmentResult>> enrollExistingStudents(
+            @PathVariable Long classId,
+            @RequestBody @Valid EnrollExistingStudentsRequest request,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("Enroll existing students request for class {} with {} students by user {}",
+                classId, request.getStudentIds().size(), currentUser.getId());
+
+        // Validate classId match
+        if (!classId.equals(request.getClassId())) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        EnrollmentResult result = enrollmentService.enrollExistingStudents(
+                request,
+                currentUser.getId()
+        );
+
+        log.info("Enrollment completed for class {}. Enrolled: {}, Total sessions: {}",
+                classId, result.getEnrolledCount(), result.getTotalStudentSessionsCreated());
+
+        return ResponseEntity.ok(ResponseObject.<EnrollmentResult>builder()
+                .success(true)
+                .message(String.format("Successfully enrolled %d students into class", result.getEnrolledCount()))
                 .data(result)
                 .build());
     }

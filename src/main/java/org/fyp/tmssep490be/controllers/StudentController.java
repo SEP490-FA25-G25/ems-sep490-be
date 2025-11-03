@@ -45,7 +45,7 @@ public class StudentController {
             summary = "Get students list",
             description = "Retrieve paginated list of students accessible to the user with filtering options"
     )
-    @PreAuthorize("hasRole('ACADEMIC_STAFF')")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
     public ResponseEntity<ResponseObject<Page<StudentListItemDTO>>> getStudents(
             @Parameter(description = "Filter by branch ID(s). If not provided, uses user's accessible branches")
             @RequestParam(required = false) List<Long> branchIds,
@@ -100,7 +100,7 @@ public class StudentController {
             summary = "Get student details",
             description = "Retrieve comprehensive information about a specific student including enrollment history and current classes"
     )
-    @PreAuthorize("hasRole('ACADEMIC_STAFF')")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
     public ResponseEntity<ResponseObject<StudentDetailDTO>> getStudentDetail(
             @Parameter(description = "Student ID")
             @PathVariable Long studentId,
@@ -127,7 +127,7 @@ public class StudentController {
             summary = "Get student enrollment history",
             description = "Retrieve comprehensive enrollment history for a specific student including current and past enrollments"
     )
-    @PreAuthorize("hasRole('ACADEMIC_STAFF')")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
     public ResponseEntity<ResponseObject<Page<StudentEnrollmentHistoryDTO>>> getStudentEnrollmentHistory(
             @Parameter(description = "Student ID")
             @PathVariable Long studentId,

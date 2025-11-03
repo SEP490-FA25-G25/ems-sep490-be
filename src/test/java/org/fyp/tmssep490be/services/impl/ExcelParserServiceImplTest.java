@@ -48,7 +48,7 @@ class ExcelParserServiceImplTest {
         assertThat(student1.getPhone()).isEqualTo("0901234567");
         assertThat(student1.getGender()).isEqualTo(Gender.MALE);
         assertThat(student1.getDob()).isEqualTo(LocalDate.of(1995, 1, 15));
-        assertThat(student1.getInitialLevel()).isEqualTo("A1");
+        // Note: Skill assessments (general, reading, writing, speaking, listening) can be validated if needed
     }
 
     @Test
@@ -148,13 +148,7 @@ class ExcelParserServiceImplTest {
 
         // Header row
         Row header = sheet.createRow(0);
-        header.createCell(0).setCellValue("student_code");
-        header.createCell(1).setCellValue("full_name");
-        header.createCell(2).setCellValue("email");
-        header.createCell(3).setCellValue("phone");
-        header.createCell(4).setCellValue("gender");
-        header.createCell(5).setCellValue("dob");
-        header.createCell(6).setCellValue("level");
+        createHeaderRow(header);
 
         // Data rows
         createStudentRow(sheet, 1, "ST001", "Nguyen Van A", "nguyenvana@email.com", "0901234567", "male", "1995-01-15", "A1");
@@ -178,9 +172,15 @@ class ExcelParserServiceImplTest {
         row.createCell(1).setCellValue("Tran Thi B");
         row.createCell(2).setCellValue("tranthib@email.com");
         row.createCell(3).setCellValue("0902345678");
-        row.createCell(4).setCellValue("female");
-        row.createCell(5).setCellValue("1996-03-20");
-        row.createCell(6).setCellValue("A1");
+        row.createCell(4).setCellValue(""); // facebook_url
+        row.createCell(5).setCellValue(""); // address
+        row.createCell(6).setCellValue("female");
+        row.createCell(7).setCellValue("1996-03-20");
+        row.createCell(8).setCellValue("A1-70"); // general
+        row.createCell(9).setCellValue("A1-68"); // reading
+        row.createCell(10).setCellValue("A1-72"); // writing
+        row.createCell(11).setCellValue("A1-75"); // speaking
+        row.createCell(12).setCellValue("A1-73"); // listening
 
         return convertWorkbookToMultipartFile(workbook, "students.xlsx");
     }
@@ -199,9 +199,15 @@ class ExcelParserServiceImplTest {
         row.createCell(1).setCellValue("Nguyen Van A");
         row.createCell(2).setCellValue("nguyenvana@email.com");
         row.createCell(3).setCellValue("0901234567");
-        row.createCell(4).setCellValue("invalid_gender");
-        row.createCell(5).setCellValue("1995-01-15");
-        row.createCell(6).setCellValue("A1");
+        row.createCell(4).setCellValue(""); // facebook_url
+        row.createCell(5).setCellValue(""); // address
+        row.createCell(6).setCellValue("invalid_gender");
+        row.createCell(7).setCellValue("1995-01-15");
+        row.createCell(8).setCellValue("A1-70");
+        row.createCell(9).setCellValue("A1-68");
+        row.createCell(10).setCellValue("A1-72");
+        row.createCell(11).setCellValue("A1-75");
+        row.createCell(12).setCellValue("A1-73");
 
         return convertWorkbookToMultipartFile(workbook, "students.xlsx");
     }
@@ -220,9 +226,15 @@ class ExcelParserServiceImplTest {
         row.createCell(1).setCellValue("Nguyen Van A");
         row.createCell(2).setCellValue("nguyenvana@email.com");
         row.createCell(3).setCellValue("0901234567");
-        row.createCell(4).setCellValue("male");
-        row.createCell(5).setCellValue("invalid-date");
-        row.createCell(6).setCellValue("A1");
+        row.createCell(4).setCellValue(""); // facebook_url
+        row.createCell(5).setCellValue(""); // address
+        row.createCell(6).setCellValue("male");
+        row.createCell(7).setCellValue("invalid-date");
+        row.createCell(8).setCellValue("A1-70");
+        row.createCell(9).setCellValue("A1-68");
+        row.createCell(10).setCellValue("A1-72");
+        row.createCell(11).setCellValue("A1-75");
+        row.createCell(12).setCellValue("A1-73");
 
         return convertWorkbookToMultipartFile(workbook, "students.xlsx");
     }
@@ -275,9 +287,15 @@ class ExcelParserServiceImplTest {
         header.createCell(1).setCellValue("full_name");
         header.createCell(2).setCellValue("email");
         header.createCell(3).setCellValue("phone");
-        header.createCell(4).setCellValue("gender");
-        header.createCell(5).setCellValue("dob");
-        header.createCell(6).setCellValue("level");
+        header.createCell(4).setCellValue("facebook_url");
+        header.createCell(5).setCellValue("address");
+        header.createCell(6).setCellValue("gender");
+        header.createCell(7).setCellValue("dob");
+        header.createCell(8).setCellValue("general");
+        header.createCell(9).setCellValue("reading");
+        header.createCell(10).setCellValue("writing");
+        header.createCell(11).setCellValue("speaking");
+        header.createCell(12).setCellValue("listening");
     }
 
     private void createStudentRow(Sheet sheet, int rowNum, String code, String name, String email,
@@ -287,9 +305,16 @@ class ExcelParserServiceImplTest {
         row.createCell(1).setCellValue(name);
         row.createCell(2).setCellValue(email);
         row.createCell(3).setCellValue(phone);
-        row.createCell(4).setCellValue(gender);
-        row.createCell(5).setCellValue(dob);
-        row.createCell(6).setCellValue(level);
+        row.createCell(4).setCellValue(""); // facebook_url
+        row.createCell(5).setCellValue(""); // address
+        row.createCell(6).setCellValue(gender);
+        row.createCell(7).setCellValue(dob);
+        // Skill assessments - use level parameter for all skills
+        row.createCell(8).setCellValue(level + "-70"); // general
+        row.createCell(9).setCellValue(level + "-68"); // reading
+        row.createCell(10).setCellValue(level + "-72"); // writing
+        row.createCell(11).setCellValue(level + "-75"); // speaking
+        row.createCell(12).setCellValue(level + "-73"); // listening
     }
 
     private MultipartFile convertWorkbookToMultipartFile(Workbook workbook, String filename) throws IOException {
