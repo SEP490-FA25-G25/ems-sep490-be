@@ -2,9 +2,9 @@ package org.fyp.tmssep490be.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.fyp.tmssep490be.entities.base.BaseEntity;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,7 +15,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Teacher extends BaseEntity {
+public class Teacher {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -56,4 +56,10 @@ public class Teacher extends BaseEntity {
     @OneToMany(mappedBy = "replacementTeacher")
     @Builder.Default
     private Set<TeacherRequest> replacementRequests = new HashSet<>();
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

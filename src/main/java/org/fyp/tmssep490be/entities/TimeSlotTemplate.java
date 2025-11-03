@@ -2,9 +2,8 @@ package org.fyp.tmssep490be.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.fyp.tmssep490be.entities.base.BaseEntity;
-
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,7 +14,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class TimeSlotTemplate extends BaseEntity {
+public class TimeSlotTemplate {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,4 +40,10 @@ public class TimeSlotTemplate extends BaseEntity {
     @OneToMany(mappedBy = "timeSlotTemplate", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<TeacherAvailability> teacherAvailabilities = new HashSet<>();
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

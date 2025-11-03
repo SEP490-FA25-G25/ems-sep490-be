@@ -2,9 +2,9 @@ package org.fyp.tmssep490be.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.fyp.tmssep490be.entities.base.BaseEntity;
 import org.fyp.tmssep490be.entities.enums.Skill;
 
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -17,7 +17,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CourseSession extends BaseEntity {
+public class CourseSession {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,4 +51,10 @@ public class CourseSession extends BaseEntity {
     @OneToMany(mappedBy = "courseSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<Session> sessions = new HashSet<>();
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

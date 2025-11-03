@@ -2,7 +2,6 @@ package org.fyp.tmssep490be.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.fyp.tmssep490be.entities.base.BaseEntity;
 import org.fyp.tmssep490be.entities.enums.ApprovalStatus;
 import org.fyp.tmssep490be.entities.enums.CourseStatus;
 
@@ -19,7 +18,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Course extends BaseEntity {
+public class Course {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -120,4 +119,10 @@ public class Course extends BaseEntity {
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<ClassEntity> classes = new HashSet<>();
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

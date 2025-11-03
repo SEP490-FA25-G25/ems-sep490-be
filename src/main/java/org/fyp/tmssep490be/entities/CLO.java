@@ -2,8 +2,8 @@ package org.fyp.tmssep490be.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.fyp.tmssep490be.entities.base.BaseEntity;
 
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -16,7 +16,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CLO extends BaseEntity {
+public class CLO {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,4 +43,10 @@ public class CLO extends BaseEntity {
     @OneToMany(mappedBy = "clo", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<CourseAssessmentCLOMapping> courseAssessmentCLOMappings = new HashSet<>();
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

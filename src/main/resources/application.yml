@@ -16,22 +16,29 @@ spring:
     # docker run --name some-postgres -e POSTGRES_PASSWORD=979712 -p 5432:5432 -d postgres 
     # docker exec -it some-postgres psql -U postgres
     # CREATE DATABASE tms;
+    # 1. Tạo enums
+    #Get-Content "d:/Workspace/projects/tms-sep490-fa25/tms-sep490-be/src/main/resources/enum-init.sql" | docker exec -i tms-postgres psql -U postgres -d tms
+
+    # 2. Tạo schema và tables
+    #Get-Content "d:/Workspace/projects/tms-sep490-fa25/tms-sep490-be/src/main/resources/schema.sql" | docker exec -i tms-postgres psql -U postgres -d tms
+
+    # 3. Import seed data
+    #Get-Content "d:/Workspace/projects/tms-sep490-fa25/tms-sep490-be/src/main/resources/schema.sql" | docker exec -i tms-postgres psql -U postgres -d tms
+
+    # optional chay ca schema và seed data
+    #Get-Content "d:/Workspace/projects/tms-sep490-fa25/tms-sep490-be/src/main/resources/schema.sql", "d:/Workspace/projects/tms-sep490-fa25/tms-sep490-be/src/main/resources/seed-data.sql" | docker exec -i tms-postgres psql -U postgres -d tms
     username: postgres
     url: jdbc:postgresql://localhost:5432/tms 
     password: 979712
 
+    # Auto-initialization when starting
   sql:
-   init:
-     mode: always
-     schema-locations: classpath:enum-init.sql
-     data-locations: classpath:seed-data.sql
-     continue-on-error: true
-
-
+     init:
+       mode: never    # Disable since we'll use manual setup
   jpa:
-    defer-datasource-initialization: true  # Must be true to run data.sql after Hibernate creates tables
+    defer-datasource-initialization: false
     hibernate:
-      ddl-auto: create-drop   # <--- "create", "create-drop", "update", "validate", "none"
+      ddl-auto: validate   # Validate entities against existing schema, don't create/drop
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect

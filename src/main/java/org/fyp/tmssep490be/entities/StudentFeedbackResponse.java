@@ -2,6 +2,7 @@ package org.fyp.tmssep490be.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "student_feedback_response")
@@ -26,4 +27,10 @@ public class StudentFeedbackResponse {
 
     @Column(name = "rating")
     private Short rating;
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

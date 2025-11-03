@@ -2,8 +2,9 @@ package org.fyp.tmssep490be.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.fyp.tmssep490be.entities.base.BaseEntity;
 import org.fyp.tmssep490be.entities.enums.MaterialType;
+
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "course_material")
@@ -12,7 +13,7 @@ import org.fyp.tmssep490be.entities.enums.MaterialType;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CourseMaterial extends BaseEntity {
+public class CourseMaterial {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,4 +47,10 @@ public class CourseMaterial extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploaded_by")
     private UserAccount uploadedBy;
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

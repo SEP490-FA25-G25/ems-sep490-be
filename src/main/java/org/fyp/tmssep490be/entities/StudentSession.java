@@ -57,9 +57,11 @@ public class StudentSession implements Serializable {
     @Column(name = "recorded_at")
     private OffsetDateTime recordedAt;
 
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
     @Column(name = "updated_at")
-    @Builder.Default
-    private OffsetDateTime updatedAt = OffsetDateTime.now();
+    private OffsetDateTime updatedAt;
 
     @Embeddable
     @Getter

@@ -42,7 +42,9 @@ public class Score {
     @Column(name = "graded_at")
     private OffsetDateTime gradedAt;
 
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
     @Column(name = "updated_at")
-    @Builder.Default
-    private OffsetDateTime updatedAt = OffsetDateTime.now();
+    private OffsetDateTime updatedAt;
 }

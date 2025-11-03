@@ -2,7 +2,7 @@ package org.fyp.tmssep490be.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.fyp.tmssep490be.entities.base.BaseEntity;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "qa_report")
@@ -11,10 +11,11 @@ import org.fyp.tmssep490be.entities.base.BaseEntity;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class QAReport extends BaseEntity {
+public class QAReport {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -44,4 +45,10 @@ public class QAReport extends BaseEntity {
 
     @Column(name = "action_items", columnDefinition = "TEXT")
     private String actionItems;
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

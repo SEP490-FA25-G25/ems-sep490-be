@@ -2,7 +2,6 @@ package org.fyp.tmssep490be.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.fyp.tmssep490be.entities.base.BaseEntity;
 import org.fyp.tmssep490be.entities.enums.EnrollmentStatus;
 
 import java.time.OffsetDateTime;
@@ -14,7 +13,7 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Enrollment extends BaseEntity {
+public class Enrollment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,7 +34,7 @@ public class Enrollment extends BaseEntity {
     private Student student;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "enrollment_status_enum")
     @Builder.Default
     private EnrollmentStatus status = EnrollmentStatus.ENROLLED;
 
@@ -80,4 +79,10 @@ public class Enrollment extends BaseEntity {
      */
     @Column(name = "override_reason", columnDefinition = "TEXT")
     private String overrideReason;
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

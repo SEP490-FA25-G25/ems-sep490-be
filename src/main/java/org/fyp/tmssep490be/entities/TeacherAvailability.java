@@ -2,10 +2,9 @@ package org.fyp.tmssep490be.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.fyp.tmssep490be.entities.base.BaseEntity;
-
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "teacher_availability")
@@ -14,7 +13,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class TeacherAvailability extends BaseEntity implements Serializable {
+public class TeacherAvailability implements Serializable {
 
     @EmbeddedId
     private TeacherAvailabilityId id;
@@ -34,6 +33,12 @@ public class TeacherAvailability extends BaseEntity implements Serializable {
 
     @Column(columnDefinition = "TEXT")
     private String note;
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 
     @Embeddable
     @Getter

@@ -45,4 +45,10 @@ public class StudentFeedback {
     @OneToMany(mappedBy = "feedback", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<StudentFeedbackResponse> studentFeedbackResponses = new HashSet<>();
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 }

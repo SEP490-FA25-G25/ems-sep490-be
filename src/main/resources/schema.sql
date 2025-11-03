@@ -74,28 +74,28 @@ DROP TYPE IF EXISTS gender_enum CASCADE;
 DROP TYPE IF EXISTS user_status_enum CASCADE;
 
 -- ========== SECTION 2: ENUM TYPES ==========
-DO $$ BEGIN CREATE TYPE session_status_enum AS ENUM ('planned','cancelled','done'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE session_type_enum   AS ENUM ('class','teacher_reschedule'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE attendance_status_enum AS ENUM ('planned','present','absent'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE enrollment_status_enum AS ENUM ('enrolled','transferred','dropped','completed'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE request_status_enum AS ENUM ('pending','waiting_confirm','approved','rejected'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE teacher_request_type_enum AS ENUM ('swap','reschedule', 'modality_change'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE student_request_type_enum AS ENUM ('absence','makeup','transfer'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE resource_type_enum AS ENUM ('room','virtual'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE modality_enum AS ENUM ('offline','online','hybrid'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE skill_enum AS ENUM ('general','reading','writing','speaking','listening'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE branch_status_enum AS ENUM ('active','inactive','closed','planned'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE class_status_enum AS ENUM ('draft','scheduled','ongoing','completed','cancelled'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE subject_status_enum AS ENUM ('draft','active','inactive'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE assessment_kind_enum AS ENUM ('quiz','midterm','final','assignment','project','oral','practice','other'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE teaching_slot_status_enum AS ENUM ('scheduled','on_leave','substituted'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE homework_status_enum AS ENUM ('completed','incomplete','no_homework'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE course_status_enum AS ENUM ('draft','active','inactive'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE approval_status_enum AS ENUM ('pending','approved','rejected'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE material_type_enum AS ENUM ('video','pdf','slide','audio','document','other'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE mapping_status_enum AS ENUM ('active','inactive'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE gender_enum AS ENUM ('male','female','other'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE user_status_enum AS ENUM ('active','inactive'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE session_status_enum AS ENUM ('PLANNED','CANCELLED','DONE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE session_type_enum   AS ENUM ('CLASS','TEACHER_RESCHEDULE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE attendance_status_enum AS ENUM ('PLANNED','PRESENT','ABSENT'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE enrollment_status_enum AS ENUM ('ENROLLED','TRANSFERRED','DROPPED','COMPLETED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE request_status_enum AS ENUM ('PENDING','WAITING_CONFIRM','APPROVED','REJECTED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE teacher_request_type_enum AS ENUM ('SWAP','RESCHEDULE','MODALITY_CHANGE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE student_request_type_enum AS ENUM ('ABSENCE','MAKEUP','TRANSFER'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE resource_type_enum AS ENUM ('ROOM','VIRTUAL'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE modality_enum AS ENUM ('OFFLINE','ONLINE','HYBRID'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE skill_enum AS ENUM ('GENERAL','READING','WRITING','SPEAKING','LISTENING'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE branch_status_enum AS ENUM ('ACTIVE','INACTIVE','CLOSED','PLANNED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE class_status_enum AS ENUM ('DRAFT','SCHEDULED','ONGOING','COMPLETED','CANCELLED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE subject_status_enum AS ENUM ('DRAFT','ACTIVE','INACTIVE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE assessment_kind_enum AS ENUM ('QUIZ','MIDTERM','FINAL','ASSIGNMENT','PROJECT','ORAL','PRACTICE','OTHER'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE teaching_slot_status_enum AS ENUM ('SCHEDULED','ON_LEAVE','SUBSTITUTED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE homework_status_enum AS ENUM ('COMPLETED','INCOMPLETE','NO_HOMEWORK'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE course_status_enum AS ENUM ('DRAFT','ACTIVE','INACTIVE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE approval_status_enum AS ENUM ('PENDING','APPROVED','REJECTED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE material_type_enum AS ENUM ('VIDEO','PDF','SLIDE','AUDIO','DOCUMENT','OTHER'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE mapping_status_enum AS ENUM ('ACTIVE','INACTIVE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE gender_enum AS ENUM ('MALE','FEMALE','OTHER'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE user_status_enum AS ENUM ('ACTIVE','INACTIVE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- ========== SECTION 3: TABLES (ĐÚNG THỨ TỰ) ==========
 
 -- TIER 1: Independent
@@ -123,11 +123,11 @@ CREATE TABLE user_account (
   phone VARCHAR(50),
   facebook_url VARCHAR(500),
   full_name VARCHAR(255) NOT NULL,
-  gender gender_enum NOT NULL DEFAULT 'male',
+  gender gender_enum NOT NULL DEFAULT 'MALE',
   dob DATE,
   address TEXT,
   password_hash VARCHAR(255) NOT NULL,
-  status user_status_enum NOT NULL DEFAULT 'active',
+  status user_status_enum NOT NULL DEFAULT 'ACTIVE',
   last_login_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -144,7 +144,7 @@ CREATE TABLE branch (
   email VARCHAR(255),
   district VARCHAR(255),
   city VARCHAR(255),
-  status branch_status_enum NOT NULL DEFAULT 'active',
+  status branch_status_enum NOT NULL DEFAULT 'ACTIVE',
   opening_date DATE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -157,7 +157,7 @@ CREATE TABLE subject (
   code VARCHAR(50) NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
   description TEXT,
-  status subject_status_enum NOT NULL DEFAULT 'draft', 
+  status subject_status_enum NOT NULL DEFAULT 'DRAFT', 
   -- draft -> tạo course với subject đang draft -> submit -> manager duyệt -> active
   -- inactive khi không còn một class đang học với subject đó
   created_by BIGINT,
@@ -293,9 +293,9 @@ CREATE TABLE course (
   target_audience TEXT,-- ví dụ: learners targeting HSK3 certification
   teaching_methods TEXT, -- ví dụ: task-based learning, drills, mock tests, feedback
   effective_date DATE, -- ngày hiệu lực của course (ví dụ: ngày bắt đầu mở course) -> cronjob vào ngày cập nhật status là active
-  status course_status_enum NOT NULL DEFAULT 'draft', 
+  status course_status_enum NOT NULL DEFAULT 'DRAFT', 
   -- draft -> tạo course với subject đang draft -> submit -> manager duyệt -> approved -> không cập nhật status
-  approval_status approval_status_enum NOT NULL DEFAULT 'pending',
+  approval_status approval_status_enum NOT NULL DEFAULT 'PENDING',
   -- pending -> subject leader submit -> manager duyệt -> approved -> course_status_enum vẫn là draft
   -- rejected -> subject leader submit -> manager duyệt -> rejected -> course_status_enum vẫn là draft
   decided_by_manager BIGINT,
@@ -348,6 +348,7 @@ CREATE TABLE course_material (
   url VARCHAR(1000) NOT NULL, -- link đến tài liệu (có thể là link nội bộ hoặc link bên ngoài)
   uploaded_by BIGINT, -- người upload tài liệu
   uploaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT fk_course_material_course FOREIGN KEY(course_id) REFERENCES course(id) ON DELETE CASCADE,
   CONSTRAINT fk_course_material_phase FOREIGN KEY(phase_id) REFERENCES course_phase(id) ON DELETE CASCADE,
@@ -432,8 +433,8 @@ CREATE TABLE "class" (
   actual_end_date DATE, -- ngày kết thúc thực tế
   schedule_days SMALLINT[], -- mảng các ngày trong tuần (1-7) lớp học (ví dụ: [2,4,6] cho thứ 3,5,7)
   max_capacity integer, -- policy về sức chứa tối đa của lớp
-  status class_status_enum NOT NULL DEFAULT 'draft', -- draft -> scheduled -> ongoing -> completed
-  approval_status approval_status_enum NOT NULL DEFAULT 'pending', -- pending -> academic affair submit -> centerhead duyệt -> approved/rejected
+  status class_status_enum NOT NULL DEFAULT 'DRAFT', -- draft -> scheduled -> ongoing -> completed
+  approval_status approval_status_enum NOT NULL DEFAULT 'PENDING', -- pending -> academic affair submit -> centerhead duyệt -> approved/rejected
   created_by BIGINT, -- tạo bởi giáo vụ nào
   submitted_at TIMESTAMPTZ, -- thời gian giáo vụ submit để duyệt
   decided_by BIGINT, -- duyệt bởi centerhead nào
@@ -454,8 +455,8 @@ CREATE TABLE session (
   course_session_id BIGINT,
   time_slot_template_id BIGINT,
   date DATE NOT NULL,
-  type session_type_enum NOT NULL DEFAULT 'class', -- class là theo lịch bình thường, other là buổi học đặc biệt khác, teacher_reschedule là lịch dạy của giáo viên (không liên quan đến lớp học)
-  status session_status_enum NOT NULL DEFAULT 'planned',
+  type session_type_enum NOT NULL DEFAULT 'CLASS', -- class là theo lịch bình thường, other là buổi học đặc biệt khác, teacher_reschedule là lịch dạy của giáo viên (không liên quan đến lớp học)
+  status session_status_enum NOT NULL DEFAULT 'PLANNED',
   teacher_note TEXT, -- teacher báo cáo sau buổi học
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -498,7 +499,7 @@ CREATE TABLE session_resource (
 CREATE TABLE teaching_slot (
   session_id BIGINT NOT NULL,
   teacher_id BIGINT NOT NULL,
-  status teaching_slot_status_enum NOT NULL DEFAULT 'scheduled', -- on_leave - session đó giáo viên nghỉ/substituted - session đó giáo viên khác dạy thay/scheduled - session giáo viên dạy đúng lịch
+  status teaching_slot_status_enum NOT NULL DEFAULT 'SCHEDULED', -- on_leave - session đó giáo viên nghỉ/substituted - session đó giáo viên khác dạy thay/scheduled - session giáo viên dạy đúng lịch
   PRIMARY KEY(session_id,teacher_id),
   CONSTRAINT fk_teaching_slot_session FOREIGN KEY(session_id) REFERENCES session(id) ON DELETE CASCADE,
   CONSTRAINT fk_teaching_slot_teacher FOREIGN KEY(teacher_id) REFERENCES teacher(id) ON DELETE CASCADE
@@ -508,7 +509,7 @@ CREATE TABLE enrollment (
   id BIGSERIAL PRIMARY KEY,
   class_id BIGINT NOT NULL,
   student_id BIGINT NOT NULL,
-  status enrollment_status_enum NOT NULL DEFAULT 'enrolled',
+  status enrollment_status_enum NOT NULL DEFAULT 'ENROLLED',
   enrolled_at TIMESTAMPTZ,
   left_at TIMESTAMPTZ,
   join_session_id BIGINT, -- session_id mà student bắt đầu tham gia lớp
@@ -522,7 +523,7 @@ CREATE TABLE enrollment (
   CONSTRAINT fk_enrollment_enrolled_by FOREIGN KEY(enrolled_by) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT fk_enrollment_student FOREIGN KEY(student_id) REFERENCES student(id) ON DELETE CASCADE,
   CONSTRAINT fk_enrollment_join_session FOREIGN KEY(join_session_id) REFERENCES session(id) ON DELETE SET NULL,
-  CONSTRAINT fk_enrollment_left_session FOREIGN KEY(left_session_id) REFERENCES session(id) ON DELETE SET NULL,
+  CONSTRAINT fk_enrollment_left_session FOREIGN KEY(left_session_id) REFERENCES session(id) ON DELETE SET NULL
 );
 
 CREATE TABLE student_session (
@@ -531,10 +532,11 @@ CREATE TABLE student_session (
   is_makeup BOOLEAN DEFAULT false,
   makeup_session_id BIGINT, -- nếu là buổi học bù thì lưu session bù
   original_session_id BIGINT, -- nếu là buổi học bù thì lưu session gốc
-  attendance_status attendance_status_enum NOT NULL DEFAULT 'planned',
+  attendance_status attendance_status_enum NOT NULL DEFAULT 'PLANNED',
   homework_status homework_status_enum,
   note TEXT,
   recorded_at TIMESTAMPTZ, -- thời gian ghi nhận trạng thái điểm danh/homework
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   PRIMARY KEY(student_id,session_id),
   CONSTRAINT fk_student_session_makeup FOREIGN KEY(makeup_session_id) REFERENCES session(id) ON DELETE SET NULL,
@@ -550,6 +552,8 @@ CREATE TABLE assessment (
   course_assessment_id BIGINT,
   scheduled_date TIMESTAMPTZ NOT NULL,
   actual_date TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT fk_assessment_class FOREIGN KEY(class_id) REFERENCES "class"(id) ON DELETE CASCADE,
   CONSTRAINT fk_assessment_course_assessment FOREIGN KEY(course_assessment_id) REFERENCES course_assessment(id) ON DELETE SET NULL
 );
@@ -562,6 +566,7 @@ CREATE TABLE score (
   feedback TEXT,
   graded_by BIGINT,
   graded_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT fk_score_assessment FOREIGN KEY(assessment_id) REFERENCES assessment(id) ON DELETE CASCADE,
   CONSTRAINT fk_score_student FOREIGN KEY(student_id) REFERENCES student(id) ON DELETE CASCADE,
@@ -587,6 +592,8 @@ CREATE TABLE student_feedback (
   is_feedback BOOLEAN DEFAULT false,
   submitted_at TIMESTAMPTZ,
   response TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT fk_student_feedback_student FOREIGN KEY(student_id) REFERENCES student(id) ON DELETE CASCADE,
   CONSTRAINT fk_student_feedback_class FOREIGN KEY(class_id) REFERENCES "class"(id) ON DELETE CASCADE,
   CONSTRAINT fk_student_feedback_phase FOREIGN KEY(phase_id) REFERENCES course_phase(id) ON DELETE SET NULL
@@ -597,6 +604,8 @@ CREATE TABLE student_feedback_response (
   feedback_id BIGINT NOT NULL,
   question_id BIGINT NOT NULL,
   rating SMALLINT CHECK (rating BETWEEN 1 AND 5),
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT fk_feedback_response_feedback FOREIGN KEY(feedback_id) REFERENCES student_feedback(id) ON DELETE CASCADE,
   CONSTRAINT fk_feedback_response_question FOREIGN KEY(question_id) REFERENCES feedback_question(id) ON DELETE CASCADE
 );
@@ -630,7 +639,7 @@ CREATE TABLE student_request (
   makeup_session_id BIGINT, -- dành buổi học bù mình muốn học bù
   effective_date DATE, -- ngày có hiệu lực của request (dành cho transfer request)
   effective_session_id BIGINT, -- buổi học có hiệu lực (dành cho transfer request)
-  status request_status_enum NOT NULL DEFAULT 'pending',
+  status request_status_enum NOT NULL DEFAULT 'PENDING',
   submitted_at TIMESTAMPTZ,
   submitted_by BIGINT,
   decided_by BIGINT,
@@ -657,7 +666,7 @@ CREATE TABLE teacher_request (
   request_type teacher_request_type_enum NOT NULL,
   replacement_teacher_id BIGINT, -- giáo viên thay thế (nếu có)
   new_session_id BIGINT, -- teacher đổi buổi sang buổi này
-  status request_status_enum NOT NULL DEFAULT 'pending',
+  status request_status_enum NOT NULL DEFAULT 'PENDING',
   submitted_at TIMESTAMPTZ,
   submitted_by BIGINT,
   decided_by BIGINT,
@@ -764,19 +773,19 @@ CREATE INDEX idx_teacher_request_decided_by ON teacher_request(decided_by);
 -- Indexes cho các query filter thường dùng (status, date ranges)
 
 -- Status filters (frequent WHERE clauses)
-CREATE INDEX idx_branch_status ON branch(status) WHERE status = 'active';
+CREATE INDEX idx_branch_status ON branch(status) WHERE status = 'ACTIVE';
 CREATE INDEX idx_subject_status ON subject(status);
 CREATE INDEX idx_course_status ON course(status);
-CREATE INDEX idx_course_approval_status ON course(approval_status) WHERE approval_status = 'pending';
+CREATE INDEX idx_course_approval_status ON course(approval_status) WHERE approval_status = 'PENDING';
 CREATE INDEX idx_class_status ON "class"(status);
-CREATE INDEX idx_class_approval_status ON "class"(approval_status) WHERE approval_status = 'pending';
+CREATE INDEX idx_class_approval_status ON "class"(approval_status) WHERE approval_status = 'PENDING';
 CREATE INDEX idx_session_status ON session(status);
 CREATE INDEX idx_session_type ON session(type);
-CREATE INDEX idx_enrollment_status ON enrollment(status) WHERE status = 'enrolled';
+CREATE INDEX idx_enrollment_status ON enrollment(status) WHERE status = 'ENROLLED';
 CREATE INDEX idx_student_session_attendance ON student_session(attendance_status);
 CREATE INDEX idx_teaching_slot_status ON teaching_slot(status);
-CREATE INDEX idx_student_request_status ON student_request(status) WHERE status IN ('pending', 'waiting_confirm');
-CREATE INDEX idx_teacher_request_status ON teacher_request(status) WHERE status IN ('pending', 'waiting_confirm');
+CREATE INDEX idx_student_request_status ON student_request(status) WHERE status IN ('PENDING', 'WAITING_CONFIRM');
+CREATE INDEX idx_teacher_request_status ON teacher_request(status) WHERE status IN ('PENDING', 'WAITING_CONFIRM');
 
 -- Date range queries (frequent in reports and scheduling)
 CREATE INDEX idx_session_date ON session(date);
@@ -819,7 +828,7 @@ CREATE INDEX idx_student_session_student_attendance ON student_session(student_i
 CREATE INDEX idx_session_resource_date ON session_resource(resource_id, session_id);
 
 -- Enrollment active students: "Danh sách học sinh đang học ở class X"
-CREATE INDEX idx_enrollment_class_status ON enrollment(class_id, status) WHERE status = 'enrolled';
+CREATE INDEX idx_enrollment_class_status ON enrollment(class_id, status) WHERE status = 'ENROLLED';
 
 -- Request processing queries: "Pending requests của student X"
 CREATE INDEX idx_student_request_student_status ON student_request(student_id, status);
@@ -829,7 +838,7 @@ CREATE INDEX idx_teacher_request_teacher_status ON teacher_request(teacher_id, s
 CREATE INDEX idx_class_branch_status ON "class"(branch_id, status);
 
 -- Course approval workflow: "Courses đang chờ duyệt của subject X"
-CREATE INDEX idx_course_subject_approval ON course(subject_id, approval_status) WHERE approval_status = 'pending';
+CREATE INDEX idx_course_subject_approval ON course(subject_id, approval_status) WHERE approval_status = 'PENDING';
 
 -- Assessment grading: "Điểm của học sinh X trong assessment Y"
 CREATE INDEX idx_score_student_assessment ON score(student_id, assessment_id);
@@ -864,4 +873,4 @@ CREATE INDEX idx_user_account_fullname_gin ON user_account USING gin(to_tsvector
 -- comment out constraint uq_enrollment_class_student và uncomment index này:
 -- CREATE UNIQUE INDEX uq_enrollment_active_class_student
 --   ON enrollment(class_id, student_id)
---   WHERE status = 'enrolled';
+--   WHERE status = 'ENROLLED';

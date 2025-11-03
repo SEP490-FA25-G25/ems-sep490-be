@@ -106,35 +106,35 @@ INSERT INTO role (id, code, name) VALUES
 -- Hash: $2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.
 INSERT INTO user_account (id, email, phone, full_name, gender, dob, address, password_hash, status, created_at, updated_at) VALUES
 -- Staff & Management (11 users)
-(1, 'admin@tms-edu.vn', '0912000001', 'Nguyen Van Admin', 'MALE', '1980-01-15', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(2, 'manager.global@tms-edu.vn', '0912000002', 'Le Van Manager', 'MALE', '1982-07-10', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(3, 'head.hn01@tms-edu.vn', '0912000003', 'Tran Thi Lan', 'FEMALE', '1975-03-20', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(4, 'head.hcm01@tms-edu.vn', '0912000004', 'Nguyen Thi Mai', 'FEMALE', '1978-05-22', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(5, 'leader.ielts@tms-edu.vn', '0912000005', 'Bui Van Nam', 'MALE', '1985-12-30', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(6, 'staff.huong.hn@tms-edu.vn', '0912000006', 'Pham Thi Huong', 'FEMALE', '1990-11-05', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(7, 'staff.duc.hn@tms-edu.vn', '0912000007', 'Hoang Van Duc', 'MALE', '1992-05-18', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(8, 'staff.anh.hcm@tms-edu.vn', '0912000008', 'Le Thi Anh', 'FEMALE', '1991-02-15', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(9, 'staff.tuan.hcm@tms-edu.vn', '0912000009', 'Tran Minh Tuan', 'MALE', '1993-08-20', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(10, 'qa.linh@tms-edu.vn', '0912000010', 'Vu Thi Linh', 'FEMALE', '1988-09-25', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(11, 'qa.thanh@tms-edu.vn', '0912000011', 'Dang Ngoc Thanh', 'MALE', '1989-04-10', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(1, 'admin@tms-edu.vn', '0912000001', 'Nguyen Van Admin',  'MALE'::gender_enum, '1980-01-15', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(2, 'manager.global@tms-edu.vn', '0912000002', 'Le Van Manager',  'MALE'::gender_enum, '1982-07-10', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(3, 'head.hn01@tms-edu.vn', '0912000003', 'Tran Thi Lan',  'FEMALE'::gender_enum, '1975-03-20', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(4, 'head.hcm01@tms-edu.vn', '0912000004', 'Nguyen Thi Mai',  'FEMALE'::gender_enum, '1978-05-22', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(5, 'leader.ielts@tms-edu.vn', '0912000005', 'Bui Van Nam',  'MALE'::gender_enum, '1985-12-30', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(6, 'staff.huong.hn@tms-edu.vn', '0912000006', 'Pham Thi Huong',  'FEMALE'::gender_enum, '1990-11-05', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(7, 'staff.duc.hn@tms-edu.vn', '0912000007', 'Hoang Van Duc',  'MALE'::gender_enum, '1992-05-18', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(8, 'staff.anh.hcm@tms-edu.vn', '0912000008', 'Le Thi Anh',  'FEMALE'::gender_enum, '1991-02-15', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(9, 'staff.tuan.hcm@tms-edu.vn', '0912000009', 'Tran Minh Tuan',  'MALE'::gender_enum, '1993-08-20', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(10, 'qa.linh@tms-edu.vn', '0912000010', 'Vu Thi Linh',  'FEMALE'::gender_enum, '1988-09-25', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(11, 'qa.thanh@tms-edu.vn', '0912000011', 'Dang Ngoc Thanh',  'MALE'::gender_enum, '1989-04-10', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
 
 -- Teachers (16 teachers: 8 per branch)
-(20, 'john.smith@tms-edu.vn', '0912001001', 'John Smith', 'MALE', '1985-04-12', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(21, 'emma.wilson@tms-edu.vn', '0912001002', 'Emma Wilson', 'FEMALE', '1987-08-22', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(22, 'david.lee@tms-edu.vn', '0912001003', 'David Lee', 'MALE', '1983-12-05', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(23, 'sarah.johnson@tms-edu.vn', '0912001004', 'Sarah Johnson', 'FEMALE', '1990-06-14', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(24, 'michael.brown@tms-edu.vn', '0912001005', 'Michael Brown', 'MALE', '1986-02-28', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(25, 'lisa.chen@tms-edu.vn', '0912001006', 'Lisa Chen', 'FEMALE', '1988-10-17', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(26, 'james.taylor@tms-edu.vn', '0912001007', 'James Taylor', 'MALE', '1984-03-09', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(27, 'anna.martinez@tms-edu.vn', '0912001008', 'Anna Martinez', 'FEMALE', '1989-07-21', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(28, 'chris.evans@tms-edu.vn', '0912001009', 'Chris Evans', 'MALE', '1988-01-20', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(29, 'olivia.white@tms-edu.vn', '0912001010', 'Olivia White', 'FEMALE', '1991-03-15', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(30, 'daniel.harris@tms-edu.vn', '0912001011', 'Daniel Harris', 'MALE', '1987-11-30', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(31, 'sophia.clark@tms-edu.vn', '0912001012', 'Sophia Clark', 'FEMALE', '1992-09-05', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(32, 'matthew.lewis@tms-edu.vn', '0912001013', 'Matthew Lewis', 'MALE', '1989-06-27', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(33, 'ava.robinson@tms-edu.vn', '0912001014', 'Ava Robinson', 'FEMALE', '1993-01-10', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(34, 'andrew.walker@tms-edu.vn', '0912001015', 'Andrew Walker', 'MALE', '1986-08-18', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(35, 'isabella.young@tms-edu.vn', '0912001016', 'Isabella Young', 'FEMALE', '1990-04-25', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07');
+(20, 'john.smith@tms-edu.vn', '0912001001', 'John Smith',  'MALE'::gender_enum, '1985-04-12', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(21, 'emma.wilson@tms-edu.vn', '0912001002', 'Emma Wilson',  'FEMALE'::gender_enum, '1987-08-22', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(22, 'david.lee@tms-edu.vn', '0912001003', 'David Lee',  'MALE'::gender_enum, '1983-12-05', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(23, 'sarah.johnson@tms-edu.vn', '0912001004', 'Sarah Johnson',  'FEMALE'::gender_enum, '1990-06-14', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(24, 'michael.brown@tms-edu.vn', '0912001005', 'Michael Brown',  'MALE'::gender_enum, '1986-02-28', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(25, 'lisa.chen@tms-edu.vn', '0912001006', 'Lisa Chen',  'FEMALE'::gender_enum, '1988-10-17', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(26, 'james.taylor@tms-edu.vn', '0912001007', 'James Taylor',  'MALE'::gender_enum, '1984-03-09', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(27, 'anna.martinez@tms-edu.vn', '0912001008', 'Anna Martinez',  'FEMALE'::gender_enum, '1989-07-21', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(28, 'chris.evans@tms-edu.vn', '0912001009', 'Chris Evans',  'MALE'::gender_enum, '1988-01-20', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(29, 'olivia.white@tms-edu.vn', '0912001010', 'Olivia White',  'FEMALE'::gender_enum, '1991-03-15', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(30, 'daniel.harris@tms-edu.vn', '0912001011', 'Daniel Harris',  'MALE'::gender_enum, '1987-11-30', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(31, 'sophia.clark@tms-edu.vn', '0912001012', 'Sophia Clark',  'FEMALE'::gender_enum, '1992-09-05', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(32, 'matthew.lewis@tms-edu.vn', '0912001013', 'Matthew Lewis',  'MALE'::gender_enum, '1989-06-27', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(33, 'ava.robinson@tms-edu.vn', '0912001014', 'Ava Robinson',  'FEMALE'::gender_enum, '1993-01-10', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(34, 'andrew.walker@tms-edu.vn', '0912001015', 'Andrew Walker',  'MALE'::gender_enum, '1986-08-18', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(35, 'isabella.young@tms-edu.vn', '0912001016', 'Isabella Young',  'FEMALE'::gender_enum, '1990-04-25', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07');
 
 -- Students (60 students total: 30 per branch for realistic testing)
 INSERT INTO user_account (id, email, phone, full_name, gender, dob, address, password_hash, status, created_at, updated_at) 
@@ -143,7 +143,7 @@ SELECT
     'student.' || LPAD(s.id::text, 4, '0') || '@gmail.com', 
     '0900' || LPAD(s.id::text, 6, '0'),
     'Student ' || LPAD(s.id::text, 4, '0'),
-    CASE WHEN s.id % 2 = 0 THEN 'FEMALE' ELSE 'MALE' END, 
+    CASE WHEN s.id % 2 = 0 THEN  'FEMALE'::gender_enum ELSE  'MALE'::gender_enum END, 
     make_date(2000 + (s.id % 6), (s.id % 12) + 1, (s.id % 28) + 1),
     CASE WHEN s.id <= 30 THEN 'Ha Noi' ELSE 'TP. HCM' END,
     '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.',
@@ -294,8 +294,8 @@ INSERT INTO level (id, subject_id, code, name, expected_duration_hours, sort_ord
 
 -- Replacement Skill Assessments for initial students
 -- Simulates placement test results before their first enrollment.
-INSERT INTO replacement_skill_assessment (student_id, skill, level_id, score, assessment_date, assessment_type, assessed_by, note)
-SELECT 
+INSERT INTO replacement_skill_assessment (student_id, skill, level_id, score, assessment_date, assessment_type, assessed_by, note, created_at, updated_at)
+SELECT
     s.id,
     'GENERAL'::skill_enum,
     1, -- Corresponds to 'IELTS Foundation (3.0-4.0)'
@@ -303,7 +303,9 @@ SELECT
     '2025-06-15',
     'placement_test',
     6, -- Assessed by 'staff.huong.hn@tms-edu.vn'
-    'Initial placement test score.'
+    'Initial placement test score.',
+    '2025-06-15 00:00:00+07',
+    '2025-06-15 00:00:00+07'
 FROM generate_series(1, 30) AS s(id);
 
 -- PLOs for IELTS Subject
@@ -326,31 +328,31 @@ INSERT INTO course_phase (id, course_id, phase_number, name, duration_weeks, cre
 -- Course Sessions for Foundation (24 sessions = 8 weeks × 3 sessions/week)
 INSERT INTO course_session (id, phase_id, sequence_no, topic, student_task, skill_set, created_at, updated_at) VALUES
 -- Phase 1: Foundation Basics (Sessions 1-12)
-(1, 1, 1, 'Introduction to IELTS & Basic Listening', 'Listen to simple dialogues', ARRAY['GENERAL','listening']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(2, 1, 2, 'Basic Speaking: Greetings and Introductions', 'Practice self-introduction', ARRAY['speaking']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(3, 1, 3, 'Basic Reading: Short Passages', 'Read and answer simple questions', ARRAY['reading']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(4, 1, 4, 'Basic Writing: Simple Sentences', 'Write about yourself', ARRAY['writing']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(5, 1, 5, 'Listening: Numbers and Dates', 'Complete listening exercises', ARRAY['listening']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(6, 1, 6, 'Speaking: Daily Activities', 'Describe your daily routine', ARRAY['speaking']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(7, 1, 7, 'Reading: Understanding Main Ideas', 'Identify main ideas', ARRAY['reading']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(8, 1, 8, 'Writing: Simple Paragraphs', 'Write a short paragraph', ARRAY['writing']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(9, 1, 9, 'Listening: Conversations', 'Listen to basic conversations', ARRAY['listening']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(10, 1, 10, 'Speaking: Expressing Likes and Dislikes', 'Talk about preferences', ARRAY['speaking']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(11, 1, 11, 'Reading: Details and Facts', 'Find specific information', ARRAY['reading']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(12, 1, 12, 'Writing: Connecting Ideas', 'Use simple connectors', ARRAY['writing']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(1, 1, 1, 'Introduction to IELTS & Basic Listening', 'Listen to simple dialogues', ARRAY['GENERAL','LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(2, 1, 2, 'Basic Speaking: Greetings and Introductions', 'Practice self-introduction', ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(3, 1, 3, 'Basic Reading: Short Passages', 'Read and answer simple questions', ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(4, 1, 4, 'Basic Writing: Simple Sentences', 'Write about yourself', ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(5, 1, 5, 'Listening: Numbers and Dates', 'Complete listening exercises', ARRAY['LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(6, 1, 6, 'Speaking: Daily Activities', 'Describe your daily routine', ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(7, 1, 7, 'Reading: Understanding Main Ideas', 'Identify main ideas', ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(8, 1, 8, 'Writing: Simple Paragraphs', 'Write a short paragraph', ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(9, 1, 9, 'Listening: Conversations', 'Listen to basic conversations', ARRAY['LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(10, 1, 10, 'Speaking: Expressing Likes and Dislikes', 'Talk about preferences', ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(11, 1, 11, 'Reading: Details and Facts', 'Find specific information', ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(12, 1, 12, 'Writing: Connecting Ideas', 'Use simple connectors', ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
 -- Phase 2: Foundation Practice (Sessions 13-24)
-(13, 2, 1, 'Listening: Following Instructions', 'Complete tasks from audio', ARRAY['listening']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(14, 2, 2, 'Speaking: Asking Questions', 'Practice question forms', ARRAY['speaking']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(15, 2, 3, 'Reading: Short Stories', 'Read and summarize', ARRAY['reading']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(16, 2, 4, 'Writing: Describing People and Places', 'Write descriptions', ARRAY['writing']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(17, 2, 5, 'Listening: News and Announcements', 'Understand main points', ARRAY['listening']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(18, 2, 6, 'Speaking: Giving Opinions', 'Express simple opinions', ARRAY['speaking']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(19, 2, 7, 'Reading: Understanding Context', 'Use context clues', ARRAY['reading']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(20, 2, 8, 'Writing: Personal Letters', 'Write informal letters', ARRAY['writing']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(21, 2, 9, 'Practice Test: Listening & Reading', 'Complete practice test', ARRAY['LISTENING','reading']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(22, 2, 10, 'Practice Test: Writing & Speaking', 'Complete practice test', ARRAY['WRITING','speaking']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(23, 2, 11, 'Review and Feedback', 'Review all skills', ARRAY['general']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(24, 2, 12, 'Final Assessment', 'Complete final test', ARRAY['GENERAL','READING','WRITING','SPEAKING','listening']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07');
+(13, 2, 1, 'Listening: Following Instructions', 'Complete tasks from audio', ARRAY['LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(14, 2, 2, 'Speaking: Asking Questions', 'Practice question forms', ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(15, 2, 3, 'Reading: Short Stories', 'Read and summarize', ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(16, 2, 4, 'Writing: Describing People and Places', 'Write descriptions', ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(17, 2, 5, 'Listening: News and Announcements', 'Understand main points', ARRAY['LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(18, 2, 6, 'Speaking: Giving Opinions', 'Express simple opinions', ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(19, 2, 7, 'Reading: Understanding Context', 'Use context clues', ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(20, 2, 8, 'Writing: Personal Letters', 'Write informal letters', ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(21, 2, 9, 'Practice Test: Listening & Reading', 'Complete practice test', ARRAY['LISTENING','READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(22, 2, 10, 'Practice Test: Writing & Speaking', 'Complete practice test', ARRAY['WRITING','SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(23, 2, 11, 'Review and Feedback', 'Review all skills', ARRAY['GENERAL']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(24, 2, 12, 'Final Assessment', 'Complete final test', ARRAY['GENERAL','READING','WRITING','SPEAKING','LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07');
 
 -- CLOs for Foundation Course
 INSERT INTO clo (id, course_id, code, description, created_at, updated_at) VALUES
@@ -361,57 +363,57 @@ INSERT INTO clo (id, course_id, code, description, created_at, updated_at) VALUE
 
 -- PLO-CLO Mappings
 INSERT INTO plo_clo_mapping (plo_id, clo_id, status) VALUES
-(1, 1, 'active'),
-(1, 2, 'active'),
-(2, 3, 'active'),
-(2, 4, 'active');
+(1, 1, 'ACTIVE'),
+(1, 2, 'ACTIVE'),
+(2, 3, 'ACTIVE'),
+(2, 4, 'ACTIVE');
 
 -- Course Session-CLO Mappings (Sample - map each CLO to relevant sessions)
 INSERT INTO course_session_clo_mapping (course_session_id, clo_id, status) VALUES
 -- CLO1 (Understand basic English) - Listening sessions
-(1, 1, 'active'), (5, 1, 'active'), (9, 1, 'active'), (13, 1, 'active'), (17, 1, 'active'),
+(1, 1, 'ACTIVE'), (5, 1, 'ACTIVE'), (9, 1, 'ACTIVE'), (13, 1, 'ACTIVE'), (17, 1, 'ACTIVE'),
 -- CLO2 (Communicate simple info) - Speaking sessions
-(2, 2, 'active'), (6, 2, 'active'), (10, 2, 'active'), (14, 2, 'active'), (18, 2, 'active'),
+(2, 2, 'ACTIVE'), (6, 2, 'ACTIVE'), (10, 2, 'ACTIVE'), (14, 2, 'ACTIVE'), (18, 2, 'ACTIVE'),
 -- CLO3 (Read simple texts) - Reading sessions
-(3, 3, 'active'), (7, 3, 'active'), (11, 3, 'active'), (15, 3, 'active'), (19, 3, 'active'),
+(3, 3, 'ACTIVE'), (7, 3, 'ACTIVE'), (11, 3, 'ACTIVE'), (15, 3, 'ACTIVE'), (19, 3, 'ACTIVE'),
 -- CLO4 (Write simple paragraphs) - Writing sessions
-(4, 4, 'active'), (8, 4, 'active'), (12, 4, 'active'), (16, 4, 'active'), (20, 4, 'active');
+(4, 4, 'ACTIVE'), (8, 4, 'ACTIVE'), (12, 4, 'ACTIVE'), (16, 4, 'ACTIVE'), (20, 4, 'ACTIVE');
 
 -- Course Materials for Foundation Course
 INSERT INTO course_material (course_id, phase_id, course_session_id, title, description, material_type, url, uploaded_by) VALUES
 -- Course-level materials
-(1, NULL, NULL, 'IELTS Foundation - Course Syllabus', 'The complete syllabus for the course.', 'pdf', '/materials/courses/1/syllabus.pdf', 5),
-(1, NULL, NULL, 'Introductory Video', 'A welcome video from the head teacher.', 'video', '/materials/courses/1/intro.mp4', 5),
+(1, NULL, NULL, 'IELTS Foundation - Course Syllabus', 'The complete syllabus for the course.', 'PDF', '/materials/courses/1/syllabus.pdf', 5),
+(1, NULL, NULL, 'Introductory Video', 'A welcome video from the head teacher.', 'VIDEO', '/materials/courses/1/intro.mp4', 5),
 -- Phase 1 materials
-(1, 1, NULL, 'Phase 1 Vocabulary List', 'Key vocabulary for the first 4 weeks.', 'document', '/materials/phases/1/vocab.docx', 5),
+(1, 1, NULL, 'Phase 1 Vocabulary List', 'Key vocabulary for the first 4 weeks.', 'DOCUMENT', '/materials/phases/1/vocab.docx', 5),
 -- Session-specific materials
-(1, 1, 1, 'Session 1 - Listening Slides', 'Presentation slides for the first session.', 'slide', '/materials/sessions/1/slides.pptx', 5),
-(1, 1, 2, 'Session 2 - Speaking Practice Audio', 'Audio files for speaking practice.', 'audio', '/materials/sessions/2/practice.mp3', 5),
-(1, 1, 3, 'Session 3 - Reading Passage PDF', 'Reading text for session 3.', 'pdf', '/materials/sessions/3/reading.pdf', 5),
-(1, 1, 4, 'Session 4 - Writing Task 1 Sample', 'A sample for the first writing task.', 'document', '/materials/sessions/4/sample.docx', 5),
+(1, 1, 1, 'Session 1 - Listening Slides', 'Presentation slides for the first session.', 'SLIDE', '/materials/sessions/1/slides.pptx', 5),
+(1, 1, 2, 'Session 2 - Speaking Practice Audio', 'Audio files for speaking practice.', 'AUDIO', '/materials/sessions/2/practice.mp3', 5),
+(1, 1, 3, 'Session 3 - Reading Passage PDF', 'Reading text for session 3.', 'PDF', '/materials/sessions/3/reading.pdf', 5),
+(1, 1, 4, 'Session 4 - Writing Task 1 Sample', 'A sample for the first writing task.', 'DOCUMENT', '/materials/sessions/4/sample.docx', 5),
 -- Phase 2 materials
-(1, 2, NULL, 'Phase 2 Grammar Guide', 'Advanced grammar rules for the last 4 weeks.', 'pdf', '/materials/phases/2/grammar.pdf', 5),
+(1, 2, NULL, 'Phase 2 Grammar Guide', 'Advanced grammar rules for the last 4 weeks.', 'PDF', '/materials/phases/2/grammar.pdf', 5),
 -- More session-specific materials
-(1, 2, 13, 'Session 13 - Listening Practice Test', 'A full practice test for listening.', 'audio', '/materials/sessions/13/practice-test.mp3', 5),
-(1, 2, 21, 'Session 21 - Full Practice Test', 'A complete mock test (all sections).', 'pdf', '/materials/sessions/21/mock-test.pdf', 5);
+(1, 2, 13, 'Session 13 - Listening Practice Test', 'A full practice test for listening.', 'AUDIO', '/materials/sessions/13/practice-test.mp3', 5),
+(1, 2, 21, 'Session 21 - Full Practice Test', 'A complete mock test (all sections).', 'PDF', '/materials/sessions/21/mock-test.pdf', 5);
 
 -- Course Assessments for Foundation
 INSERT INTO course_assessment (id, course_id, name, kind, duration_minutes, max_score, skills, created_at, updated_at) VALUES
-(1, 1, 'Listening Quiz 1', 'quiz', 30, 20, ARRAY['listening']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(2, 1, 'Speaking Quiz 1', 'quiz', 15, 20, ARRAY['speaking']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(3, 1, 'Reading Quiz 1', 'quiz', 30, 20, ARRAY['reading']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(4, 1, 'Writing Assignment 1', 'assignment', 60, 20, ARRAY['writing']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(5, 1, 'Midterm Exam', 'midterm', 90, 100, ARRAY['LISTENING','READING','WRITING','speaking']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(6, 1, 'Final Exam', 'final', 120, 100, ARRAY['LISTENING','READING','WRITING','speaking']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07');
+(1, 1, 'Listening Quiz 1', 'QUIZ', 30, 20, ARRAY['LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(2, 1, 'Speaking Quiz 1', 'QUIZ', 15, 20, ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(3, 1, 'Reading Quiz 1', 'QUIZ', 30, 20, ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(4, 1, 'Writing Assignment 1', 'ASSIGNMENT', 60, 20, ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(5, 1, 'Midterm Exam', 'MIDTERM', 90, 100, ARRAY['LISTENING','READING','WRITING','SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(6, 1, 'Final Exam', 'FINAL', 120, 100, ARRAY['LISTENING','READING','WRITING','SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07');
 
 -- Course Assessment-CLO Mappings
 INSERT INTO course_assessment_clo_mapping (course_assessment_id, clo_id, status) VALUES
-(1, 1, 'active'),
-(2, 2, 'active'),
-(3, 3, 'active'),
-(4, 4, 'active'),
-(5, 1, 'active'), (5, 2, 'active'), (5, 3, 'active'), (5, 4, 'active'),
-(6, 1, 'active'), (6, 2, 'active'), (6, 3, 'active'), (6, 4, 'active');
+(1, 1, 'ACTIVE'),
+(2, 2, 'ACTIVE'),
+(3, 3, 'ACTIVE'),
+(4, 4, 'ACTIVE'),
+(5, 1, 'ACTIVE'), (5, 2, 'ACTIVE'), (5, 3, 'ACTIVE'), (5, 4, 'ACTIVE'),
+(6, 1, 'ACTIVE'), (6, 2, 'ACTIVE'), (6, 3, 'ACTIVE'), (6, 4, 'ACTIVE');
 
 -- ========== TIER 4: CLASSES & SESSIONS ==========
 
@@ -454,7 +456,7 @@ BEGIN
             v_date := v_start_date + (v_week * 7) + CASE v_day_idx WHEN 1 THEN 0 WHEN 2 THEN 2 WHEN 3 THEN 4 END;
             
             INSERT INTO session (id, class_id, course_session_id, time_slot_template_id, date, type, status, teacher_note, created_at, updated_at)
-            VALUES (v_session_idx, v_class_id, v_course_session_id, 1, v_date, 'class', 'DONE', 'Session completed as planned.', '2025-07-01 10:00:00+07', v_date);
+            VALUES (v_session_idx, v_class_id, v_course_session_id, 1, v_date, 'CLASS', 'DONE', 'Session completed as planned.', '2025-07-01 10:00:00+07', v_date);
             
             v_session_idx := v_session_idx + 1;
         END LOOP;
@@ -467,7 +469,7 @@ SELECT id, 2 FROM session WHERE class_id = 1;
 
 -- Teaching Slots for Class 1 (assign Teacher 3)
 INSERT INTO teaching_slot (session_id, teacher_id, status)
-SELECT id, 3, 'scheduled' FROM session WHERE class_id = 1;
+SELECT id, 3, 'SCHEDULED' FROM session WHERE class_id = 1;
 
 
 -- Generate Sessions for Class 2 (HN-FOUND-O1) - Main testing class
@@ -497,11 +499,11 @@ BEGIN
             IF v_date < '2025-11-02' THEN
                 v_status := 'DONE';
             ELSE
-                v_status := 'planned';
+                v_status := 'PLANNED';
             END IF;
             
             INSERT INTO session (id, class_id, course_session_id, time_slot_template_id, date, type, status, created_at, updated_at)
-            VALUES (100 + v_session_idx, v_class_id, v_course_session_id, 1, v_date, 'class', v_status, '2025-09-30 10:00:00+07', CURRENT_TIMESTAMP);
+            VALUES (100 + v_session_idx, v_class_id, v_course_session_id, 1, v_date, 'CLASS', v_status, '2025-09-30 10:00:00+07', CURRENT_TIMESTAMP);
             
             v_session_idx := v_session_idx + 1;
         END LOOP;
@@ -532,11 +534,11 @@ BEGIN
             IF v_date < '2025-11-02' THEN
                 v_status := 'DONE';
             ELSE
-                v_status := 'planned';
+                v_status := 'PLANNED';
             END IF;
             
             INSERT INTO session (id, class_id, course_session_id, time_slot_template_id, date, type, status, created_at, updated_at)
-            VALUES (200 + v_session_idx, v_class_id, v_course_session_id, 4, v_date, 'class', v_status, '2025-10-01 10:00:00+07', CURRENT_TIMESTAMP);
+            VALUES (200 + v_session_idx, v_class_id, v_course_session_id, 4, v_date, 'CLASS', v_status, '2025-10-01 10:00:00+07', CURRENT_TIMESTAMP);
             
             v_session_idx := v_session_idx + 1;
         END LOOP;
@@ -553,11 +555,11 @@ SELECT id, 4 FROM session WHERE class_id = 3;
 
 -- Teaching Slots for Class 2 (assign Teacher 1)
 INSERT INTO teaching_slot (session_id, teacher_id, status)
-SELECT id, 1, 'scheduled' FROM session WHERE class_id = 2;
+SELECT id, 1, 'SCHEDULED' FROM session WHERE class_id = 2;
 
 -- Teaching Slots for Class 3 (assign Teacher 2)
 INSERT INTO teaching_slot (session_id, teacher_id, status)
-SELECT id, 2, 'scheduled' FROM session WHERE class_id = 3;
+SELECT id, 2, 'SCHEDULED' FROM session WHERE class_id = 3;
 
 -- Generate Sessions for Class 5 (HCM-FOUND-O1) - ONGOING
 -- Start: 2025-10-13 (Mon), Schedule: Mon/Wed/Fri
@@ -583,11 +585,11 @@ BEGIN
             IF v_date < '2025-11-02' THEN
                 v_status := 'DONE';
             ELSE
-                v_status := 'planned';
+                v_status := 'PLANNED';
             END IF;
             
             INSERT INTO session (id, class_id, course_session_id, time_slot_template_id, date, type, status, created_at, updated_at)
-            VALUES (300 + v_session_idx, v_class_id, v_course_session_id, 6, v_date, 'class', v_status, '2025-10-06 10:00:00+07', CURRENT_TIMESTAMP);
+            VALUES (300 + v_session_idx, v_class_id, v_course_session_id, 6, v_date, 'CLASS', v_status, '2025-10-06 10:00:00+07', CURRENT_TIMESTAMP);
             
             v_session_idx := v_session_idx + 1;
         END LOOP;
@@ -600,7 +602,7 @@ SELECT id, 5 FROM session WHERE class_id = 5;
 
 -- Teaching Slots for Class 5 (assign Teacher 9)
 INSERT INTO teaching_slot (session_id, teacher_id, status)
-SELECT id, 9, 'scheduled' FROM session WHERE class_id = 5;
+SELECT id, 9, 'SCHEDULED' FROM session WHERE class_id = 5;
 
 -- ========== TIER 5: ENROLLMENTS & ATTENDANCE ==========
 
@@ -622,20 +624,20 @@ SELECT
 FROM generate_series(1, 15) AS s(id);
 
 -- Student Sessions for Class 1 (COMPLETED)
-INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, homework_status, recorded_at, updated_at)
+INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, homework_status, recorded_at, created_at, updated_at)
 SELECT 
     e.student_id,
     s.id,
     false,
     CASE 
-        WHEN random() < 0.9 THEN 'present'::attendance_status_enum
-        ELSE 'absent'::attendance_status_enum
+        WHEN random() < 0.9 THEN 'PRESENT'::attendance_status_enum
+        ELSE 'ABSENT'::attendance_status_enum
     END,
     CASE 
         WHEN cs.student_task IS NOT NULL THEN
             CASE 
-                WHEN random() < 0.85 THEN 'completed'::homework_status_enum
-                ELSE 'incomplete'::homework_status_enum
+                WHEN random() < 0.85 THEN 'COMPLETED'::homework_status_enum
+                ELSE 'INCOMPLETE'::homework_status_enum
             END
         ELSE NULL
     END,
@@ -686,7 +688,7 @@ INSERT INTO enrollment (id, class_id, student_id, status, enrolled_at, enrolled_
 
 -- Student Sessions for Class 2 enrollments
 -- Generate for all students x all sessions (done + planned)
-INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, homework_status, recorded_at, updated_at)
+INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, homework_status, recorded_at, created_at, updated_at)
 SELECT 
     e.student_id,
     s.id,
@@ -695,21 +697,22 @@ SELECT
         WHEN s.status = 'DONE' THEN 
             CASE 
                 -- Most students present
-                WHEN random() < 0.85 THEN 'present'::attendance_status_enum
+                WHEN random() < 0.85 THEN 'PRESENT'::attendance_status_enum
                 -- Some absences for testing
-                ELSE 'absent'::attendance_status_enum
+                ELSE 'ABSENT'::attendance_status_enum
             END
-        ELSE 'planned'::attendance_status_enum
+        ELSE 'PLANNED'::attendance_status_enum
     END,
     CASE 
         WHEN s.status = 'DONE' AND cs.student_task IS NOT NULL THEN
             CASE 
-                WHEN random() < 0.8 THEN 'completed'::homework_status_enum
-                ELSE 'incomplete'::homework_status_enum
+                WHEN random() < 0.8 THEN 'COMPLETED'::homework_status_enum
+                ELSE 'INCOMPLETE'::homework_status_enum
             END
         ELSE NULL
     END,
     CASE WHEN s.status = 'DONE' THEN s.date ELSE NULL END,
+    CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
 FROM enrollment e
 CROSS JOIN session s
@@ -719,22 +722,23 @@ WHERE e.class_id = 2
   AND (e.join_session_id IS NULL OR s.id >= e.join_session_id);
 
 -- Student Sessions for Class 3
-INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, homework_status, recorded_at, updated_at)
+INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, homework_status, recorded_at, created_at, updated_at)
 SELECT 
     e.student_id,
     s.id,
     false,
     CASE 
         WHEN s.status = 'DONE' THEN 
-            CASE WHEN random() < 0.9 THEN 'present'::attendance_status_enum ELSE 'absent'::attendance_status_enum END
-        ELSE 'planned'::attendance_status_enum
+            CASE WHEN random() < 0.9 THEN 'PRESENT'::attendance_status_enum ELSE 'ABSENT'::attendance_status_enum END
+        ELSE 'PLANNED'::attendance_status_enum
     END,
     CASE 
         WHEN s.status = 'DONE' AND cs.student_task IS NOT NULL THEN
-            CASE WHEN random() < 0.85 THEN 'completed'::homework_status_enum ELSE 'incomplete'::homework_status_enum END
+            CASE WHEN random() < 0.85 THEN 'COMPLETED'::homework_status_enum ELSE 'INCOMPLETE'::homework_status_enum END
         ELSE NULL
     END,
     CASE WHEN s.status = 'DONE' THEN s.date ELSE NULL END,
+    CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
 FROM enrollment e
 CROSS JOIN session s
@@ -758,22 +762,23 @@ SELECT
 FROM generate_series(1, 15) AS s(id);
 
 -- Student Sessions for Class 5
-INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, homework_status, recorded_at, updated_at)
+INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, homework_status, recorded_at, created_at, updated_at)
 SELECT 
     e.student_id,
     s.id,
     false,
     CASE 
         WHEN s.status = 'DONE' THEN 
-            CASE WHEN random() < 0.9 THEN 'present'::attendance_status_enum ELSE 'absent'::attendance_status_enum END
-        ELSE 'planned'::attendance_status_enum
+            CASE WHEN random() < 0.9 THEN 'PRESENT'::attendance_status_enum ELSE 'ABSENT'::attendance_status_enum END
+        ELSE 'PLANNED'::attendance_status_enum
     END,
     CASE 
         WHEN s.status = 'DONE' AND cs.student_task IS NOT NULL THEN
-            CASE WHEN random() < 0.85 THEN 'completed'::homework_status_enum ELSE 'incomplete'::homework_status_enum END
+            CASE WHEN random() < 0.85 THEN 'COMPLETED'::homework_status_enum ELSE 'INCOMPLETE'::homework_status_enum END
         ELSE NULL
     END,
     CASE WHEN s.status = 'DONE' THEN s.date ELSE NULL END,
+    CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
 FROM enrollment e
 CROSS JOIN session s
@@ -789,7 +794,7 @@ INSERT INTO student_request (id, student_id, current_class_id, request_type, tar
 
 -- Update corresponding student_session for approved absence
 UPDATE student_session 
-SET attendance_status = 'absent', note = 'Approved absence: Family emergency'
+SET attendance_status = 'ABSENT', note = 'Approved absence: Family emergency'
 WHERE student_id = 1 AND session_id = 116;
 
 -- SCENARIO 2: Pending Absence Request (for testing approval flow)
@@ -805,8 +810,8 @@ INSERT INTO student_request (id, student_id, current_class_id, request_type, tar
 (4, 4, 2, 'MAKEUP', 107, 213, 'APPROVED', 'Missed session due to illness, want to makeup in online class', 104, '2025-10-22 10:00:00+07', 6, '2025-10-22 16:00:00+07');
 
 -- Create makeup student_session for approved makeup
-INSERT INTO student_session (student_id, session_id, is_makeup, makeup_session_id, original_session_id, attendance_status, note, updated_at)
-VALUES (4, 213, true, 213, 107, 'PLANNED', 'Makeup for missed session #107', '2025-10-22 16:00:00+07');
+INSERT INTO student_session (student_id, session_id, is_makeup, makeup_session_id, original_session_id, attendance_status, note, created_at, updated_at)
+VALUES (4, 213, true, 213, 107, 'PLANNED', 'Makeup for missed session #107', '2025-10-22 16:00:00+07', '2025-10-22 16:00:00+07');
 
 -- Update original session note
 UPDATE student_session 
@@ -823,7 +828,7 @@ INSERT INTO student_request (id, student_id, current_class_id, target_class_id, 
 
 -- Execute transfer: Update old enrollment
 UPDATE enrollment 
-SET status = 'transferred', left_at = '2025-11-04 00:00:00+07', left_session_id = 113
+SET status = 'TRANSFERRED', left_at = '2025-11-04 00:00:00+07', left_session_id = 113
 WHERE student_id = 18 AND class_id = 2;
 
 -- Execute transfer: Create new enrollment
@@ -832,33 +837,33 @@ VALUES (40, 3, 18, 'ENROLLED', '2025-11-04 00:00:00+07', 6, 214, '2025-11-04 00:
 
 -- Execute transfer: Mark future sessions in old class as absent
 UPDATE student_session 
-SET attendance_status = 'absent', note = 'Transferred to class #3'
+SET attendance_status = 'ABSENT', note = 'Transferred to class #3'
 WHERE student_id = 18 AND session_id IN (
     SELECT id FROM session WHERE class_id = 2 AND date >= '2025-11-04'
 );
 
 -- Execute transfer: Generate student_sessions in new class for future sessions
-INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, note, updated_at)
-SELECT 18, s.id, false, 'PLANNED', 'Transferred from class #2', CURRENT_TIMESTAMP
+INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, note, created_at, updated_at)
+SELECT 18, s.id, false, 'PLANNED', 'Transferred from class #2', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM session s
 WHERE s.class_id = 3 AND s.date >= '2025-11-04';
 
 -- SCENARIO 7: Teacher Swap Request - Approved
 INSERT INTO teacher_request (id, teacher_id, session_id, request_type, replacement_teacher_id, status, request_reason, submitted_by, submitted_at, decided_by, decided_at) VALUES
-(1, 1, 115, 'swap', 3, 'APPROVED', 'Family emergency - cannot attend session', 20, '2025-10-28 08:00:00+07', 6, '2025-10-28 10:00:00+07');
+(1, 1, 115, 'SWAP', 3, 'APPROVED', 'Family emergency - cannot attend session', 20, '2025-10-28 08:00:00+07', 6, '2025-10-28 10:00:00+07');
 
 -- Execute swap: Update teaching_slot
 UPDATE teaching_slot 
-SET teacher_id = 3, status = 'substituted'
+SET teacher_id = 3, status = 'SUBSTITUTED'
 WHERE session_id = 115 AND teacher_id = 1;
 
 -- SCENARIO 8: Teacher Reschedule Request - Pending
 INSERT INTO teacher_request (id, teacher_id, session_id, request_type, new_date, new_time_slot_id, new_resource_id, status, request_reason, submitted_by, submitted_at) VALUES
-(2, 2, 215, 'reschedule', '2025-11-05', 5, 4, 'PENDING', 'Conference attendance - propose rescheduling to evening slot', 21, '2025-11-01 09:00:00+07');
+(2, 2, 215, 'RESCHEDULE', '2025-11-05', 5, 4, 'PENDING', 'Conference attendance - propose rescheduling to evening slot', 21, '2025-11-01 09:00:00+07');
 
 -- SCENARIO 9: Teacher Modality Change Request - Approved
 INSERT INTO teacher_request (id, teacher_id, session_id, request_type, new_resource_id, status, request_reason, submitted_by, submitted_at, decided_by, decided_at) VALUES
-(3, 1, 117, 'modality_change', 4, 'APPROVED', 'Room air conditioning broken - need to switch to online', 20, '2025-11-01 07:00:00+07', 6, '2025-11-01 08:00:00+07');
+(3, 1, 117, 'MODALITY_CHANGE', 4, 'APPROVED', 'Room air conditioning broken - need to switch to online', 20, '2025-11-01 07:00:00+07', 6, '2025-11-01 08:00:00+07');
 
 -- Execute modality change: Update session_resource
 DELETE FROM session_resource WHERE session_id = 117;
@@ -866,46 +871,46 @@ INSERT INTO session_resource (session_id, resource_id) VALUES (117, 4);
 
 -- SCENARIO 10: Request created by Academic Affair on behalf (waiting confirmation)
 INSERT INTO student_request (id, student_id, current_class_id, request_type, target_session_id, status, request_reason, submitted_by, submitted_at, note) VALUES
-(7, 6, 2, 'ABSENCE', 119, 'waiting_confirm', 'Student called to report illness - created on behalf', 6, '2025-11-01 13:00:00+07', 'Created by Academic Affair via phone call');
+(7, 6, 2, 'ABSENCE', 119, 'WAITING_CONFIRM', 'Student called to report illness - created on behalf', 6, '2025-11-01 13:00:00+07', 'Created by Academic Affair via phone call');
 
 -- ========== TIER 7: ASSESSMENTS & SCORES ==========
 
 -- Assessments for Class 2 (scheduled and completed)
-INSERT INTO assessment (id, class_id, course_assessment_id, scheduled_date, actual_date) VALUES
-(1, 2, 1, '2025-10-18 08:00:00+07', '2025-10-18 08:00:00+07'), -- Listening Quiz 1 - completed
-(2, 2, 2, '2025-10-21 08:00:00+07', '2025-10-21 08:00:00+07'), -- Speaking Quiz 1 - completed
-(3, 2, 5, '2025-11-08 08:00:00+07', NULL), -- Midterm - scheduled
-(4, 2, 6, '2025-11-27 08:00:00+07', NULL); -- Final - scheduled
+INSERT INTO assessment (id, class_id, course_assessment_id, scheduled_date, actual_date, created_at, updated_at) VALUES
+(1, 2, 1, '2025-10-18 08:00:00+07', '2025-10-18 08:00:00+07', '2025-10-18 08:00:00+07', '2025-10-18 08:00:00+07'), -- Listening Quiz 1 - completed
+(2, 2, 2, '2025-10-21 08:00:00+07', '2025-10-21 08:00:00+07', '2025-10-21 08:00:00+07', '2025-10-21 08:00:00+07'), -- Speaking Quiz 1 - completed
+(3, 2, 5, '2025-11-08 08:00:00+07', NULL, '2025-10-15 08:00:00+07', '2025-10-15 08:00:00+07'), -- Midterm - scheduled
+(4, 2, 6, '2025-11-27 08:00:00+07', NULL, '2025-10-15 08:00:00+07', '2025-10-15 08:00:00+07'); -- Final - scheduled
 
 -- Scores for completed assessments (Listening Quiz 1)
-INSERT INTO score (id, assessment_id, student_id, score, feedback, graded_by, graded_at, updated_at) VALUES
-(1, 1, 1, 18.0, 'Good listening skills', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
-(2, 1, 2, 16.5, 'Need more practice on numbers', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
-(3, 1, 3, 19.0, 'Excellent performance', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
-(4, 1, 4, 15.0, 'Satisfactory', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
-(5, 1, 5, 17.5, 'Good work', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
-(6, 1, 6, 14.0, 'Need improvement', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
-(7, 1, 7, 18.5, 'Very good', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
-(8, 1, 8, 16.0, 'Good progress', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
-(9, 1, 9, 17.0, 'Well done', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
-(10, 1, 10, 15.5, 'Fair performance', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07');
+INSERT INTO score (id, assessment_id, student_id, score, feedback, graded_by, graded_at, created_at, updated_at) VALUES
+(1, 1, 1, 18.0, 'Good listening skills', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
+(2, 1, 2, 16.5, 'Need more practice on numbers', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
+(3, 1, 3, 19.0, 'Excellent performance', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
+(4, 1, 4, 15.0, 'Satisfactory', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
+(5, 1, 5, 17.5, 'Good work', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
+(6, 1, 6, 14.0, 'Need improvement', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
+(7, 1, 7, 18.5, 'Very good', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
+(8, 1, 8, 16.0, 'Good progress', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
+(9, 1, 9, 17.0, 'Well done', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07'),
+(10, 1, 10, 15.5, 'Fair performance', 1, '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07', '2025-10-19 10:00:00+07');
 
 -- Scores for Speaking Quiz 1
-INSERT INTO score (id, assessment_id, student_id, score, feedback, graded_by, graded_at, updated_at) VALUES
-(11, 2, 1, 17.0, 'Good fluency, work on pronunciation', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07'),
-(12, 2, 2, 18.0, 'Confident speaker', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07'),
-(13, 2, 3, 16.5, 'Good effort', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07'),
-(14, 2, 4, 15.0, 'Need more practice', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07'),
-(15, 2, 5, 19.0, 'Excellent speaking skills', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07');
+INSERT INTO score (id, assessment_id, student_id, score, feedback, graded_by, graded_at, created_at, updated_at) VALUES
+(11, 2, 1, 17.0, 'Good fluency, work on pronunciation', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07'),
+(12, 2, 2, 18.0, 'Confident speaker', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07'),
+(13, 2, 3, 16.5, 'Good effort', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07'),
+(14, 2, 4, 15.0, 'Need more practice', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07'),
+(15, 2, 5, 19.0, 'Excellent speaking skills', 1, '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07', '2025-10-22 10:00:00+07');
 
 -- Assessments for Class 1 (COMPLETED)
-INSERT INTO assessment (id, class_id, course_assessment_id, scheduled_date, actual_date) VALUES
-(10, 1, 1, '2025-07-21 08:00:00+07', '2025-07-21 08:00:00+07'), -- Listening Quiz 1
-(11, 1, 2, '2025-07-28 08:00:00+07', '2025-07-28 08:00:00+07'), -- Speaking Quiz 1
-(12, 1, 3, '2025-08-04 08:00:00+07', '2025-08-04 08:00:00+07'), -- Reading Quiz 1
-(13, 1, 4, '2025-08-11 08:00:00+07', '2025-08-11 08:00:00+07'), -- Writing Assignment 1
-(14, 1, 5, '2025-08-18 08:00:00+07', '2025-08-18 08:00:00+07'), -- Midterm Exam
-(15, 1, 6, '2025-09-01 08:00:00+07', '2025-09-01 08:00:00+07'); -- Final Exam
+INSERT INTO assessment (id, class_id, course_assessment_id, scheduled_date, actual_date, created_at, updated_at) VALUES
+(10, 1, 1, '2025-07-21 08:00:00+07', '2025-07-21 08:00:00+07', '2025-07-21 08:00:00+07', '2025-07-21 08:00:00+07'), -- Listening Quiz 1
+(11, 1, 2, '2025-07-28 08:00:00+07', '2025-07-28 08:00:00+07', '2025-07-28 08:00:00+07', '2025-07-28 08:00:00+07'), -- Speaking Quiz 1
+(12, 1, 3, '2025-08-04 08:00:00+07', '2025-08-04 08:00:00+07', '2025-08-04 08:00:00+07', '2025-08-04 08:00:00+07'), -- Reading Quiz 1
+(13, 1, 4, '2025-08-11 08:00:00+07', '2025-08-11 08:00:00+07', '2025-08-11 08:00:00+07', '2025-08-11 08:00:00+07'), -- Writing Assignment 1
+(14, 1, 5, '2025-08-18 08:00:00+07', '2025-08-18 08:00:00+07', '2025-08-18 08:00:00+07', '2025-08-18 08:00:00+07'), -- Midterm Exam
+(15, 1, 6, '2025-09-01 08:00:00+07', '2025-09-01 08:00:00+07', '2025-09-01 08:00:00+07', '2025-09-01 08:00:00+07'); -- Final Exam
 
 -- Scores for Class 1, Midterm Exam (assessment_id = 14)
 INSERT INTO score (assessment_id, student_id, score, feedback, graded_by, graded_at)
@@ -932,31 +937,31 @@ FROM generate_series(1, 15) AS s(id);
 -- ========== TIER 8: FEEDBACK & QA ==========
 
 -- Student Feedback for completed phase
-INSERT INTO student_feedback (id, student_id, class_id, phase_id, is_feedback, submitted_at) VALUES
-(1, 1, 2, 1, true, '2025-10-25 20:00:00+07'),
-(2, 2, 2, 1, true, '2025-10-25 21:00:00+07'),
-(3, 3, 2, 1, true, '2025-10-26 18:00:00+07');
+INSERT INTO student_feedback (id, student_id, class_id, phase_id, is_feedback, submitted_at, created_at, updated_at) VALUES
+(1, 1, 2, 1, true, '2025-10-25 20:00:00+07', '2025-10-25 20:00:00+07', '2025-10-25 20:00:00+07'),
+(2, 2, 2, 1, true, '2025-10-25 21:00:00+07', '2025-10-25 21:00:00+07', '2025-10-25 21:00:00+07'),
+(3, 3, 2, 1, true, '2025-10-26 18:00:00+07', '2025-10-26 18:00:00+07', '2025-10-26 18:00:00+07');
 
 -- Student Feedback Responses
-INSERT INTO student_feedback_response (id, feedback_id, question_id, rating) VALUES
+INSERT INTO student_feedback_response (id, feedback_id, question_id, rating, created_at, updated_at) VALUES
 -- Student 1 responses
-(1, 1, 1, 5), -- Teaching quality: 5/5
-(2, 1, 2, 4), -- Lesson organization: 4/5
-(3, 1, 3, 5), -- Materials: 5/5
-(4, 1, 4, 4), -- Class management: 4/5
-(5, 1, 5, 5), -- Recommendation: 5/5
+(1, 1, 1, 5, '2025-10-25 20:00:00+07', '2025-10-25 20:00:00+07'), -- Teaching quality: 5/5
+(2, 1, 2, 4, '2025-10-25 20:00:00+07', '2025-10-25 20:00:00+07'), -- Lesson organization: 4/5
+(3, 1, 3, 5, '2025-10-25 20:00:00+07', '2025-10-25 20:00:00+07'), -- Materials: 5/5
+(4, 1, 4, 4, '2025-10-25 20:00:00+07', '2025-10-25 20:00:00+07'), -- Class management: 4/5
+(5, 1, 5, 5, '2025-10-25 20:00:00+07', '2025-10-25 20:00:00+07'), -- Recommendation: 5/5
 -- Student 2 responses
-(6, 2, 1, 4),
-(7, 2, 2, 4),
-(8, 2, 3, 3),
-(9, 2, 4, 4),
-(10, 2, 5, 4),
+(6, 2, 1, 4, '2025-10-25 21:00:00+07', '2025-10-25 21:00:00+07'),
+(7, 2, 2, 4, '2025-10-25 21:00:00+07', '2025-10-25 21:00:00+07'),
+(8, 2, 3, 3, '2025-10-25 21:00:00+07', '2025-10-25 21:00:00+07'),
+(9, 2, 4, 4, '2025-10-25 21:00:00+07', '2025-10-25 21:00:00+07'),
+(10, 2, 5, 4, '2025-10-25 21:00:00+07', '2025-10-25 21:00:00+07'),
 -- Student 3 responses
-(11, 3, 1, 5),
-(12, 3, 2, 5),
-(13, 3, 3, 4),
-(14, 3, 4, 5),
-(15, 3, 5, 5);
+(11, 3, 1, 5, '2025-10-26 18:00:00+07', '2025-10-26 18:00:00+07'),
+(12, 3, 2, 5, '2025-10-26 18:00:00+07', '2025-10-26 18:00:00+07'),
+(13, 3, 3, 4, '2025-10-26 18:00:00+07', '2025-10-26 18:00:00+07'),
+(14, 3, 4, 5, '2025-10-26 18:00:00+07', '2025-10-26 18:00:00+07'),
+(15, 3, 5, 5, '2025-10-26 18:00:00+07', '2025-10-26 18:00:00+07');
 
 -- QA Reports
 INSERT INTO qa_report (id, class_id, session_id, reported_by, report_type, status, findings, action_items, created_at, updated_at) VALUES
@@ -970,7 +975,7 @@ INSERT INTO qa_report (id, class_id, session_id, reported_by, report_type, statu
 
 -- EDGE CASE 2: Student with high absence rate
 UPDATE student_session 
-SET attendance_status = 'absent', note = 'Frequent absence - needs monitoring'
+SET attendance_status = 'ABSENT', note = 'Frequent absence - needs monitoring'
 WHERE student_id = 13 AND session_id IN (101, 103, 105, 107, 109);
 
 -- EDGE CASE 3: Class at maximum capacity
@@ -986,10 +991,10 @@ UPDATE user_account SET dob = NULL, address = NULL WHERE id = 160;
 INSERT INTO enrollment (id, class_id, student_id, status, enrolled_at, enrolled_by, join_session_id, created_at, updated_at)
 VALUES (50, 2, 19, 'ENROLLED', '2025-10-06 00:00:00+07', 6, 101, '2025-10-06 00:00:00+07', '2025-10-06 00:00:00+07');
 
-INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, updated_at)
-SELECT 19, s.id, false, 
-    CASE WHEN s.status = 'DONE' THEN 'present'::attendance_status_enum ELSE 'planned'::attendance_status_enum END,
-    CURRENT_TIMESTAMP
+INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, created_at, updated_at)
+SELECT 19, s.id, false,
+    CASE WHEN s.status = 'DONE' THEN 'PRESENT'::attendance_status_enum ELSE 'PLANNED'::attendance_status_enum END,
+    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM session s
 WHERE s.class_id = 2;
 
@@ -1038,9 +1043,9 @@ SELECT setval('enrollment_id_seq', (SELECT MAX(id) FROM enrollment), true);
 -- UNION ALL SELECT 'Total Requests (Student)', COUNT(*) FROM student_request
 -- UNION ALL SELECT 'Total Requests (Teacher)', COUNT(*) FROM teacher_request
 -- UNION ALL SELECT 'Done Sessions', COUNT(*) FROM session WHERE status = 'DONE'
--- UNION ALL SELECT 'Planned Sessions', COUNT(*) FROM session WHERE status = 'planned'
--- UNION ALL SELECT 'Attendance Records (Present)', COUNT(*) FROM student_session WHERE attendance_status = 'present'
--- UNION ALL SELECT 'Attendance Records (Absent)', COUNT(*) FROM student_session WHERE attendance_status = 'absent';
+-- UNION ALL SELECT 'Planned Sessions', COUNT(*) FROM session WHERE status = 'PLANNED'
+-- UNION ALL SELECT 'Attendance Records (Present)', COUNT(*) FROM student_session WHERE attendance_status = 'PRESENT'
+-- UNION ALL SELECT 'Attendance Records (Absent)', COUNT(*) FROM student_session WHERE attendance_status = 'ABSENT';
 
 -- =========================================
 -- END OF SEED DATA
