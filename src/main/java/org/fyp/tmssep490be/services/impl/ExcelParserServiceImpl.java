@@ -22,7 +22,8 @@ import java.util.List;
 /**
  * Implementation của ExcelParserService
  * Parse Excel file với format:
- * student_code, full_name, email, phone, gender, dob, level
+ * student_code, full_name, email, phone, facebook_url, address, gender, dob, general, reading, writing, speaking, listening
+ * Skill format: "Level-Score" (e.g., "B1-75")
  */
 @Service
 @Slf4j
@@ -32,9 +33,15 @@ public class ExcelParserServiceImpl implements ExcelParserService {
     private static final int COLUMN_FULL_NAME = 1;
     private static final int COLUMN_EMAIL = 2;
     private static final int COLUMN_PHONE = 3;
-    private static final int COLUMN_GENDER = 4;
-    private static final int COLUMN_DOB = 5;
-    private static final int COLUMN_LEVEL = 6;
+    private static final int COLUMN_FACEBOOK_URL = 4;
+    private static final int COLUMN_ADDRESS = 5;
+    private static final int COLUMN_GENDER = 6;
+    private static final int COLUMN_DOB = 7;
+    private static final int COLUMN_GENERAL = 8;
+    private static final int COLUMN_READING = 9;
+    private static final int COLUMN_WRITING = 10;
+    private static final int COLUMN_SPEAKING = 11;
+    private static final int COLUMN_LISTENING = 12;
 
     private static final DateTimeFormatter[] DATE_FORMATTERS = {
             DateTimeFormatter.ofPattern("yyyy-MM-dd"),
@@ -91,9 +98,15 @@ public class ExcelParserServiceImpl implements ExcelParserService {
                 .fullName(getCellValueAsString(row.getCell(COLUMN_FULL_NAME)))
                 .email(getCellValueAsString(row.getCell(COLUMN_EMAIL)))
                 .phone(getCellValueAsString(row.getCell(COLUMN_PHONE)))
+                .facebookUrl(getCellValueAsString(row.getCell(COLUMN_FACEBOOK_URL)))
+                .address(getCellValueAsString(row.getCell(COLUMN_ADDRESS)))
                 .gender(parseGender(getCellValueAsString(row.getCell(COLUMN_GENDER))))
                 .dob(parseDob(getCellValueAsString(row.getCell(COLUMN_DOB))))
-                .level(getCellValueAsString(row.getCell(COLUMN_LEVEL)))
+                .general(getCellValueAsString(row.getCell(COLUMN_GENERAL)))
+                .reading(getCellValueAsString(row.getCell(COLUMN_READING)))
+                .writing(getCellValueAsString(row.getCell(COLUMN_WRITING)))
+                .speaking(getCellValueAsString(row.getCell(COLUMN_SPEAKING)))
+                .listening(getCellValueAsString(row.getCell(COLUMN_LISTENING)))
                 .build();
     }
 

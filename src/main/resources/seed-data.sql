@@ -226,13 +226,8 @@ INSERT INTO teacher (id, user_account_id, employee_code, hire_date, contract_typ
 SELECT (id - 19), id, 'TCH-' || LPAD((id-19)::text, 3, '0'), '2024-02-01', CASE WHEN id % 3 = 0 THEN 'part-time' ELSE 'full-time' END, '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'
 FROM user_account WHERE id BETWEEN 20 AND 35;
 
-INSERT INTO student (id, user_id, student_code, level, created_at, updated_at)
-SELECT (id - 100), id, 'STD-' || LPAD((id - 100)::text, 4, '0'), 
-CASE 
-    WHEN id BETWEEN 101 AND 120 THEN 'Beginner'
-    WHEN id BETWEEN 121 AND 140 THEN 'Intermediate'
-    ELSE 'Advanced'
-END,
+INSERT INTO student (id, user_id, student_code, created_at, updated_at)
+SELECT (id - 100), id, 'STD-' || LPAD((id - 100)::text, 4, '0'),
 '2024-03-01 00:00:00+07', '2024-03-01 00:00:00+07'
 FROM user_account WHERE id >= 101;
 

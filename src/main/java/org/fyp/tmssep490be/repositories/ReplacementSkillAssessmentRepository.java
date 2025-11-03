@@ -49,4 +49,37 @@ public interface ReplacementSkillAssessmentRepository extends JpaRepository<Repl
             @Param("studentIds") List<Long> studentIds,
             @Param("subjectId") Long subjectId
     );
+
+    /**
+     * Find latest skill assessment for a student with specific skill
+     * Used for getting general level or specific skill level
+     */
+    @Query("SELECT rsa FROM ReplacementSkillAssessment rsa " +
+           "INNER JOIN rsa.level l " +
+           "WHERE rsa.student.id = :studentId " +
+           "AND rsa.skill = :skill " +
+           "ORDER BY rsa.assessmentDate DESC, rsa.createdAt DESC " +
+           "LIMIT 1")
+    Optional<ReplacementSkillAssessment> findLatestAssessmentByStudentAndSkill(
+            @Param("studentId") Long studentId,
+            @Param("skill") org.fyp.tmssep490be.entities.enums.Skill skill
+    );
+
+    /**
+     * Find all assessments for a student, ordered by date (newest first)
+     */
+    List<ReplacementSkillAssessment> findByStudentIdOrderByAssessmentDateDesc(Long studentId);
+
+    /**
+     * Check if student has any assessment in a specific subject
+     */
+    @Query("SELECT CASE WHEN COUNT(rsa) > 0 THEN true ELSE false END " +
+           "FROM ReplacementSkillAssessment rsa " +
+           "INNER JOIN rsa.level l " +
+           "WHERE rsa.student.id = :studentId " +
+           "AND l.subject.id = :subjectId")
+    boolean existsByStudentIdAndLevelSubjectId(
+            @Param("studentId") Long studentId,
+            @Param("subjectId") Long subjectId
+    );
 }

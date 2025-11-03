@@ -6,4 +6,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface LevelRepository extends JpaRepository<Level, Long> {
+
+    /**
+     * Find level by code (case-insensitive)
+     */
+    java.util.Optional<Level> findByCodeIgnoreCase(String code);
 }

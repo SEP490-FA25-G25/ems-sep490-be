@@ -48,7 +48,7 @@ class ExcelParserServiceImplTest {
         assertThat(student1.getPhone()).isEqualTo("0901234567");
         assertThat(student1.getGender()).isEqualTo(Gender.MALE);
         assertThat(student1.getDob()).isEqualTo(LocalDate.of(1995, 1, 15));
-        assertThat(student1.getLevel()).isEqualTo("A1");
+        assertThat(student1.getInitialLevel()).isEqualTo("A1");
     }
 
     @Test

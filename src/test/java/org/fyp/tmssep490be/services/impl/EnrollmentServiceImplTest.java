@@ -428,7 +428,7 @@ class EnrollmentServiceImplTest {
                 .phone("090123456" + code.substring(code.length() - 1))
                 .gender(Gender.MALE)
                 .dob(LocalDate.of(1995, 1, 1))
-                .level("A1")
+                .initialLevel("A1")
                 .status(status)
                 .build();
     }

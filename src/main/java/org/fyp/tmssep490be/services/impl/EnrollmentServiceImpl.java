@@ -37,6 +37,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     private final UserBranchesRepository userBranchesRepository;
     private final ExcelParserService excelParserService;
     private final PasswordEncoder passwordEncoder;
+    private final ReplacementSkillAssessmentRepository replacementSkillAssessmentRepository;
+    private final LevelRepository levelRepository;
 
     @Override
     public ClassEnrollmentImportPreview previewClassEnrollmentImport(
@@ -164,7 +166,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
         for (StudentEnrollmentData data : studentsToEnroll) {
             if (data.getStatus() == StudentResolutionStatus.CREATE) {
-                Student newStudent = createStudentQuick(data, classEntity.getBranch().getId());
+                Student newStudent = createStudentQuick(data, classEntity.getBranch().getId(), enrolledBy);
                 allStudentIds.add(newStudent.getId());
                 studentsCreated++;
                 log.info("Created new student: {} ({})", newStudent.getId(), data.getEmail());
@@ -493,7 +495,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     /**
      * Create student nhanh từ Excel data
      */
-    private Student createStudentQuick(StudentEnrollmentData data, Long branchId) {
+    private Student createStudentQuick(StudentEnrollmentData data, Long branchId, Long enrolledBy) {
         log.info("Creating new student: {}", data.getEmail());
 
         // 1. Create user_account
@@ -501,6 +503,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         user.setEmail(data.getEmail());
         user.setFullName(data.getFullName());
         user.setPhone(data.getPhone());
+        user.setFacebookUrl(data.getFacebookUrl());
+        user.setAddress(data.getAddress());
         user.setGender(data.getGender());
         user.setDob(data.getDob());
         user.setStatus(UserStatus.ACTIVE);
@@ -512,8 +516,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         // 2. Create student
         Student student = new Student();
         student.setUserAccount(savedUser);
-        student.setStudentCode(generateStudentCode(branchId));
-        student.setLevel(data.getLevel());
+        student.setStudentCode(generateStudentCode(branchId, data.getFullName(), data.getEmail()));
         Student savedStudent = studentRepository.save(student);
 
         log.debug("Created student: ID {}, Code {}", savedStudent.getId(), savedStudent.getStudentCode());
@@ -551,6 +554,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         userBranchesRepository.save(userBranch);
 
         log.debug("Assigned user {} to branch {}", savedUser.getId(), branchId);
+
+        // 5. Create skill assessments from multi-skill data
+        createSkillAssessmentsFromExcelData(savedStudent, data, enrolledBy);
 
         return savedStudent;
     }
@@ -591,8 +597,218 @@ public class EnrollmentServiceImpl implements EnrollmentService {
      * Generate student code
      * Format: ST{branchId}{timestamp}
      */
-    private String generateStudentCode(Long branchId) {
-        String timestamp = String.valueOf(System.currentTimeMillis()).substring(8);
-        return String.format("ST%d%s", branchId, timestamp);
+    private String generateStudentCode(Long branchId, String fullName, String email) {
+        String baseName;
+
+        // Ưu tiên dùng fullName, nếu không có thì dùng email
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            // Loại bỏ ký tự đặc biệt, spaces và chuyển thành uppercase
+            baseName = fullName.replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
+            // Giới hạn độ dài tối đa 10 ký tự
+            if (baseName.length() > 10) {
+                baseName = baseName.substring(0, 10);
+            }
+        } else if (email != null && email.contains("@")) {
+            // Lấy phần trước @ của email
+            baseName = email.substring(0, email.indexOf("@")).replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
+            // Giới hạn độ dài tối đa 10 ký tự
+            if (baseName.length() > 10) {
+                baseName = baseName.substring(0, 10);
+            }
+        } else {
+            // Fallback: dùng timestamp
+            baseName = String.valueOf(System.currentTimeMillis()).substring(6);
+        }
+
+        // Thêm random number để đảm bảo uniqueness
+        int randomSuffix = (int) (Math.random() * 1000);
+
+        return String.format("ST%d%s%d", branchId, baseName, randomSuffix);
+    }
+
+    /**
+     * Create initial skill assessment for new student
+     * Only creates if level is provided and valid
+     */
+    private void createInitialSkillAssessment(Student student, String levelCode, Long assessedBy) {
+        if (levelCode == null || levelCode.trim().isEmpty()) {
+            log.debug("No level provided for student {}, skipping skill assessment creation", student.getId());
+            return;
+        }
+
+        try {
+            // Find level by code (assuming level code is unique across subjects for simplicity)
+            // In real implementation, you might need subject ID as well
+            Level level = levelRepository.findByCodeIgnoreCase(levelCode.trim())
+                    .orElse(null);
+
+            if (level == null) {
+                log.warn("Level with code '{}' not found, skipping skill assessment creation for student {}",
+                        levelCode, student.getId());
+                return;
+            }
+
+            // Create initial skill assessment with GENERAL skill
+            ReplacementSkillAssessment assessment = new ReplacementSkillAssessment();
+            assessment.setStudent(student);
+            assessment.setSkill(Skill.GENERAL);
+            assessment.setLevel(level);
+            assessment.setScore(0); // Default score, can be updated later
+            assessment.setAssessmentDate(LocalDate.now());
+            assessment.setAssessmentType("enrollment_initial");
+            assessment.setNote("Initial assessment created during student enrollment");
+
+            // Set assessed by user if provided, otherwise null
+            if (assessedBy != null) {
+                UserAccount assessedByUser = new UserAccount();
+                assessedByUser.setId(assessedBy);
+                assessment.setAssessedBy(assessedByUser);
+            }
+
+            replacementSkillAssessmentRepository.save(assessment);
+            log.debug("Created initial skill assessment for student {} at level {}", student.getId(), levelCode);
+
+        } catch (Exception e) {
+            // Don't fail student creation if skill assessment creation fails
+            log.error("Failed to create initial skill assessment for student {}: {}",
+                    student.getId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Create multiple skill assessments from Excel data
+     * Parses "Level-Score" format for each skill
+     */
+    private void createSkillAssessmentsFromExcelData(Student student, StudentEnrollmentData data, Long assessedBy) {
+        log.debug("Creating skill assessments from Excel data for student {}", student.getId());
+
+        int createdCount = 0;
+
+        // Create assessment for each skill if data is provided
+        if (data.getGeneral() != null && !data.getGeneral().trim().isEmpty()) {
+            SkillAssessmentData assessmentData = parseSkillAssessmentData(data.getGeneral());
+            if (assessmentData.isValid()) {
+                createSingleAssessment(student, Skill.GENERAL, assessmentData, assessedBy);
+                createdCount++;
+            }
+        }
+
+        if (data.getReading() != null && !data.getReading().trim().isEmpty()) {
+            SkillAssessmentData assessmentData = parseSkillAssessmentData(data.getReading());
+            if (assessmentData.isValid()) {
+                createSingleAssessment(student, Skill.READING, assessmentData, assessedBy);
+                createdCount++;
+            }
+        }
+
+        if (data.getWriting() != null && !data.getWriting().trim().isEmpty()) {
+            SkillAssessmentData assessmentData = parseSkillAssessmentData(data.getWriting());
+            if (assessmentData.isValid()) {
+                createSingleAssessment(student, Skill.WRITING, assessmentData, assessedBy);
+                createdCount++;
+            }
+        }
+
+        if (data.getSpeaking() != null && !data.getSpeaking().trim().isEmpty()) {
+            SkillAssessmentData assessmentData = parseSkillAssessmentData(data.getSpeaking());
+            if (assessmentData.isValid()) {
+                createSingleAssessment(student, Skill.SPEAKING, assessmentData, assessedBy);
+                createdCount++;
+            }
+        }
+
+        if (data.getListening() != null && !data.getListening().trim().isEmpty()) {
+            SkillAssessmentData assessmentData = parseSkillAssessmentData(data.getListening());
+            if (assessmentData.isValid()) {
+                createSingleAssessment(student, Skill.LISTENING, assessmentData, assessedBy);
+                createdCount++;
+            }
+        }
+
+        log.debug("Created {} skill assessments for student {}", createdCount, student.getId());
+    }
+
+    /**
+     * Parse "Level-Score" format into SkillAssessmentData
+     * Example: "B1-75" → levelCode="B1", score=75
+     */
+    private SkillAssessmentData parseSkillAssessmentData(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return SkillAssessmentData.empty(null);
+        }
+
+        try {
+            String[] parts = value.split("-");
+            if (parts.length != 2) {
+                log.warn("Invalid skill assessment format: '{}'. Expected format: 'Level-Score'", value);
+                return SkillAssessmentData.empty(null);
+            }
+
+            String levelCode = parts[0].trim();
+            String scoreStr = parts[1].trim();
+
+            if (levelCode.isEmpty() || scoreStr.isEmpty()) {
+                log.warn("Empty level or score in skill assessment: '{}'", value);
+                return SkillAssessmentData.empty(null);
+            }
+
+            int score = Integer.parseInt(scoreStr);
+            if (score < 0 || score > 100) {
+                log.warn("Invalid score range in skill assessment: '{}'. Score must be between 0-100", value);
+                return SkillAssessmentData.empty(null);
+            }
+
+            return SkillAssessmentData.valid(null, levelCode, score);
+
+        } catch (NumberFormatException e) {
+            log.warn("Invalid score format in skill assessment: '{}'. Score must be a number", value);
+            return SkillAssessmentData.empty(null);
+        } catch (Exception e) {
+            log.warn("Error parsing skill assessment '{}': {}", value, e.getMessage());
+            return SkillAssessmentData.empty(null);
+        }
+    }
+
+    /**
+     * Create a single skill assessment
+     */
+    private void createSingleAssessment(Student student, Skill skill, SkillAssessmentData assessmentData, Long assessedBy) {
+        try {
+            // Find level by code
+            Level level = levelRepository.findByCodeIgnoreCase(assessmentData.getLevelCode())
+                    .orElse(null);
+
+            if (level == null) {
+                log.warn("Level with code '{}' not found for skill {}, skipping assessment creation for student {}",
+                        assessmentData.getLevelCode(), skill, student.getId());
+                return;
+            }
+
+            // Create skill assessment
+            ReplacementSkillAssessment assessment = new ReplacementSkillAssessment();
+            assessment.setStudent(student);
+            assessment.setSkill(skill);
+            assessment.setLevel(level);
+            assessment.setScore(assessmentData.getScore());
+            assessment.setAssessmentDate(LocalDate.now());
+            assessment.setAssessmentType("excel_import");
+            assessment.setNote("Imported from Excel enrollment file");
+
+            // Set assessed by user if provided
+            if (assessedBy != null) {
+                UserAccount assessedByUser = new UserAccount();
+                assessedByUser.setId(assessedBy);
+                assessment.setAssessedBy(assessedByUser);
+            }
+
+            replacementSkillAssessmentRepository.save(assessment);
+            log.debug("Created {} assessment for student {} at level {} with score {}",
+                    skill, student.getId(), assessmentData.getLevelCode(), assessmentData.getScore());
+
+        } catch (Exception e) {
+            log.error("Failed to create {} assessment for student {}: {}",
+                    skill, student.getId(), e.getMessage(), e);
+            // Don't fail student creation if one assessment fails
+        }
     }
 }

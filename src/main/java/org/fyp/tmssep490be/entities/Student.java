@@ -27,9 +27,6 @@ public class Student extends BaseEntity {
     @Column(name = "student_code", unique = true, length = 50)
     private String studentCode;
 
-    @Column(length = 50)
-    private String level;
-
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<Enrollment> enrollments = new HashSet<>();

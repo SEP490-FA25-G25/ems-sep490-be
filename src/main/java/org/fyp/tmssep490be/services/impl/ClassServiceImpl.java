@@ -368,7 +368,6 @@ public class ClassServiceImpl implements ClassService {
                 .fullName(userAccount.getFullName())
                 .email(userAccount.getEmail())
                 .phone(userAccount.getPhone())
-                .level(student.getLevel())
                 .branchName(student.getUserAccount().getUserBranches().iterator().next().getBranch().getName())
                 .enrolledAt(enrollment.getEnrolledAt())
                 .enrolledBy(enrollment.getEnrolledByUser() != null ?
@@ -560,7 +559,6 @@ public class ClassServiceImpl implements ClassService {
                 .fullName(userAccount.getFullName())
                 .email(userAccount.getEmail())
                 .phone(userAccount.getPhone())
-                .level(student.getLevel())
                 .branchId(branchId)
                 .branchName(branchName)
                 .matchPriority(matchPriority)

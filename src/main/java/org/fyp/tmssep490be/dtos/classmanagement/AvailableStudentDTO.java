@@ -18,7 +18,6 @@ public class AvailableStudentDTO {
     private String fullName;
     private String email;
     private String phone;
-    private String level; // Current student level
 
     // Branch info
     private Long branchId;

@@ -14,7 +14,6 @@ public class StudentListItemDTO {
     private String fullName;
     private String email;
     private String phone;
-    private String level;
     private String branchName;
     private Long branchId;
     private Long activeEnrollments;

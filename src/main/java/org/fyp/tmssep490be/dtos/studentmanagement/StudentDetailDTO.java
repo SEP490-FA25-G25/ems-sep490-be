@@ -19,7 +19,6 @@ public class StudentDetailDTO {
     private String address;
     private String gender;
     private LocalDate dateOfBirth;
-    private String level;
     private String status;
     private OffsetDateTime lastLoginAt;
     private String branchName;
