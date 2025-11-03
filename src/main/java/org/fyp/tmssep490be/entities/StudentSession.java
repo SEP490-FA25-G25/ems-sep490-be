@@ -63,6 +63,21 @@ public class StudentSession implements Serializable {
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = OffsetDateTime.now();
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = OffsetDateTime.now();
+    }
+
     @Embeddable
     @Getter
     @Setter

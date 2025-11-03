@@ -454,14 +454,30 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
         // 4. Auto-generate student_session records
         List<StudentSession> studentSessions = new ArrayList<>();
+        
+        // Fetch all students to avoid lazy loading issues
+        List<Long> enrolledStudentIds = enrollments.stream()
+                .map(Enrollment::getStudentId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, Student> studentMap = studentRepository.findAllById(enrolledStudentIds).stream()
+                .collect(Collectors.toMap(Student::getId, s -> s));
+        
         for (Enrollment enrollment : enrollments) {
+            Student student = studentMap.get(enrollment.getStudentId());
+            if (student == null) {
+                log.error("Student not found: {}", enrollment.getStudentId());
+                continue;
+            }
+            
             for (Session session : futureSessions) {
-                StudentSession.StudentSessionId ssId = new StudentSession.StudentSessionId();
-                ssId.setStudentId(enrollment.getStudentId());
-                ssId.setSessionId(session.getId());
-
+                // IMPORTANT: When using @MapsId:
+                // 1. Create empty composite key object (JPA needs it to exist)
+                // 2. Set the relationships - @MapsId will auto-populate the key fields
                 StudentSession ss = new StudentSession();
-                ss.setId(ssId);
+                ss.setId(new StudentSession.StudentSessionId()); // Empty id - JPA will populate it
+                ss.setStudent(student);  // @MapsId("studentId") extracts from this
+                ss.setSession(session);  // @MapsId("sessionId") extracts from this
                 ss.setAttendanceStatus(AttendanceStatus.PLANNED);
                 ss.setIsMakeup(false);
                 studentSessions.add(ss);

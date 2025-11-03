@@ -604,6 +604,51 @@ SELECT id, 5 FROM session WHERE class_id = 5;
 INSERT INTO teaching_slot (session_id, teacher_id, status)
 SELECT id, 9, 'SCHEDULED' FROM session WHERE class_id = 5;
 
+-- Generate Sessions for Class 4 (HN-FOUND-S1) - SCHEDULED (Future class)
+-- Start: 2025-11-18 (Mon), Schedule: Mon/Wed/Fri, 24 sessions over 8 weeks
+-- All sessions are PLANNED (in the future)
+DO $$
+DECLARE
+    v_class_id BIGINT := 4;
+    v_start_date DATE := '2025-11-18'; -- 18/11/2025 (Monday)
+    v_session_count INT := 24;
+    v_course_session_id INT;
+    v_date DATE;
+    v_week INT;
+    v_day_idx INT;
+    v_session_idx INT := 1;
+    v_status VARCHAR(20);
+BEGIN
+    FOR v_week IN 0..7 LOOP -- 8 weeks
+        FOR v_day_idx IN 1..3 LOOP -- Mon/Wed/Fri
+            EXIT WHEN v_session_idx > v_session_count;
+            
+            v_course_session_id := v_session_idx; -- Map to course_session 1-24
+            -- Calculate date: Mon=0, Wed=2, Fri=4 days offset from Monday
+            v_date := v_start_date + (v_week * 7) + CASE v_day_idx WHEN 1 THEN 0 WHEN 2 THEN 2 WHEN 3 THEN 4 END;
+            
+            -- All sessions are PLANNED (future class)
+            v_status := 'PLANNED';
+            
+            -- Insert session with ID range 400-423 (to avoid conflict with other classes)
+            INSERT INTO session (id, class_id, course_session_id, time_slot_template_id, date, type, status, created_at, updated_at)
+            VALUES (400 + v_session_idx, v_class_id, v_course_session_id, 3, v_date, 'CLASS', v_status, '2025-11-10 10:00:00+07', CURRENT_TIMESTAMP);
+            
+            v_session_idx := v_session_idx + 1;
+        END LOOP;
+    END LOOP;
+END $$;
+
+-- Session Resources for Class 4 (Hybrid - assign Room 201)
+-- For hybrid classes, we assign a primary physical room
+INSERT INTO session_resource (session_id, resource_id)
+SELECT id, 3 FROM session WHERE class_id = 4;
+
+-- Teaching Slots for Class 4 (assign Teacher 3)
+-- Teacher 3 (David Lee) is available and has GENERAL + SPEAKING skills
+INSERT INTO teaching_slot (session_id, teacher_id, status)
+SELECT id, 3, 'SCHEDULED' FROM session WHERE class_id = 4;
+
 -- ========== TIER 5: ENROLLMENTS & ATTENDANCE ==========
 
 -- Enrollments for Class 1 (HN-FOUND-C1) - 15 students, all completed
