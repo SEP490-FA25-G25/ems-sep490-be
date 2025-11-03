@@ -93,18 +93,38 @@ docker exec -it tms-postgres psql -U postgres
 CREATE DATABASE tms;
 ```
 
+### Environment Setup on Windows
+```bash
+# Set JAVA_HOME (adjust path to your JDK installation)
+export JAVA_HOME="/c/Users/YourUsername/.jdks/openjdk-21.0.1"
+export PATH="$JAVA_HOME/bin:$PATH"
+
+# Alternative: Use Docker to avoid Java setup
+docker run --rm -v "$(pwd)":/workspace -w /workspace \
+  maven:3.9-openjdk-21 \
+  mvn clean compile
+
+# Verify setup
+java -version
+mvn -version
+```
+
 ## Architecture Overview
 
 ### Package Structure
 ```
 org.fyp.tmssep490be/
- config/           # Security, OpenAPI, JPA configurations
- controllers/      # REST API endpoints (/api/v1/*)
- services/         # Business logic layer
- repositories/     # Data access layer
- entities/         # JPA entities with PostgreSQL enums
- dtos/            # Data Transfer Objects
- security/        # JWT authentication components
+├── config/              # Security, OpenAPI, JPA configurations
+├── controllers/         # REST API endpoints (/api/v1/*)
+├── services/           # Business logic interfaces
+├── services/impl/      # Service implementations
+├── repositories/       # Data access layer
+├── entities/           # JPA entities
+├── entities/enums/     # Enum definitions using PostgreSQL enums
+├── dtos/common/        # Common DTOs (ResponseObject for standardized responses)
+├── security/           # JWT authentication components
+├── exceptions/         # Global exception handling
+└── utils/              # Test utilities and builders
 ```
 
 ### Layered Architecture Pattern
@@ -115,6 +135,7 @@ org.fyp.tmssep490be/
 
 ### Key Configuration Classes
 - `SecurityConfiguration`: JWT authentication and role-based authorization
+- `SecurityBeanConfiguration`: JWT bean configuration and utilities
 - `OpenAPIConfiguration`: Swagger UI at `/swagger-ui.html`
 - `JpaAuditingConfiguration`: Automatic timestamps (`created_at`, `updated_at`)
 
@@ -134,14 +155,17 @@ org.fyp.tmssep490be/
 ### Security Configuration
 - Public endpoints: `/api/v1/auth/login`, `/api/v1/auth/refresh`
 - All other endpoints require JWT authentication
-- CORS configured for React/Vue.js development servers
+- CORS configured for frontend integration
+- Role-based access control with method-level security (`@PreAuthorize`)
+- JWT tokens with configurable secret via `JWT_SECRET` environment variable
 
 ## Database & Persistence
 
 ### PostgreSQL Configuration
 - Development mode: `ddl-auto: create-drop` (schema recreated each run)
+- PostgreSQL enum types with CHECK constraints for data validation
 - Enum types initialized via `enum-init.sql`
-- Seed data loaded via `seed-data.sql`
+- Comprehensive seed data loaded via `seed-data.sql` covering all business scenarios
 - Automatic auditing with `@CreatedDate` and `@LastModifiedDate`
 
 ### Entity Base Class
@@ -152,16 +176,20 @@ All entities extend `BaseEntity` which provides:
 
 ### Test Database
 Integration tests use Testcontainers with PostgreSQL for realistic testing.
+- `PostgreSQLTestContainer` singleton pattern for better test performance
+- Base test classes for consistent test setup
 
 ## API Design Standards
 
 ### REST API Conventions
 - Base path: `/api/v1/`
-- Standardized response format using `ResponseObject<T>`
+- Standardized response format using `ResponseObject<T>` from `dtos/common` package
 - Pagination support with Spring Data `Pageable`
 - Validation using `@Valid` annotations
+- Global exception handling via `exceptions` package
 
 ### Response Format
+All API responses use `ResponseObject<T>` for consistency:
 ```json
 {
   "success": true,
@@ -180,6 +208,7 @@ Integration tests use Testcontainers with PostgreSQL for realistic testing.
 ### Base Test Classes
 - `AbstractRepositoryTest`: For `@DataJpaTest` with Testcontainers
 - `AbstractIntegrationTest`: For `@SpringBootTest` with full context
+- REST Assured framework for API testing
 
 ### Test Data Builders
 Use `TestDataBuilder` utility for creating test entities:
@@ -224,14 +253,26 @@ Center center = TestDataBuilder.buildCenter()
 
 ### Testing New Features
 ```bash
+# Ensure JAVA_HOME is set first
+export JAVA_HOME="/c/Users/YourUsername/.jdks/openjdk-21.0.1"
+
 # Run specific test during development
-mvn test -Dtest=NewFeatureServiceTest
+mvn test -Dtest=CenterServiceImplTest
+
+# Run REST API tests with REST Assured
+mvn test -Dtest=RestAssuredIT
 
 # Run tests with coverage
 mvn clean verify jacoco:report
 
+# Run tests with parallel execution
+mvn -T 1C clean verify
+
 # Debug failing tests
 mvn test -X
+
+# Use Maven wrapper if JAVA_HOME setup is problematic
+./mvnw test -Dtest=CenterServiceImplTest
 ```
 
 ### API Documentation
@@ -246,8 +287,16 @@ mvn test -X
 - Database settings in `application.yml` (hardcoded for development)
 
 ### Production Considerations
-- Change JWT secret via environment variable
+- Change JWT secret via `JWT_SECRET` environment variable
 - Update database credentials for production
-- Change `ddl-auto` to `validate` or `none`
+- Change `ddl-auto` to `validate` or `none` for production
 - Configure proper logging levels
 - Set up proper CORS origins
+
+## Data Import Capabilities
+
+### Excel/CSV Import
+- Apache POI for Excel file parsing (.xlsx format)
+- Support for bulk data operations
+- Import endpoints for courses, students, and enrollments
+- CSV file processing capabilities
