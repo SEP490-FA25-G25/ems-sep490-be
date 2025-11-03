@@ -34,7 +34,7 @@ public class Enrollment {
     private Student student;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "enrollment_status_enum")
+    @Column(nullable = false)
     @Builder.Default
     private EnrollmentStatus status = EnrollmentStatus.ENROLLED;
 

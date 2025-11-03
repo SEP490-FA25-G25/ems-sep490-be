@@ -1,52 +1,22 @@
 -- =========================================
--- PostgreSQL Enum Types for TMS
--- This script creates enum types before Hibernate creates tables
---
--- QUAN TRỌNG:
--- - File này CHỈ định nghĩa ENUM TYPES, KHÔNG tạo tables
--- - Hibernate sẽ TỰ ĐỘNG tạo/update tables dựa trên entities
--- - Khi thêm enum mới: Chỉ cần thêm dòng CREATE TYPE ở đây
+-- EMS-SEP490-BE: Database Initialization Script
+-- =========================================
+-- REFACTORED: No longer using PostgreSQL enum types
+-- 
+-- Best Practice: Using VARCHAR with @Enumerated(EnumType.STRING)
+-- - Better Hibernate compatibility
+-- - Easier enum value management (no ALTER TYPE needed)
+-- - Database independence
+-- - Human-readable in SQL queries
+-- 
+-- Database validation is handled by:
+-- 1. CHECK constraints in schema.sql (database level)
+-- 2. @Enumerated(EnumType.STRING) in entities (application level)
 -- =========================================
 
--- Drop existing enums to avoid conflicts (create-drop mode)
-DROP TYPE IF EXISTS session_status_enum CASCADE;
-DROP TYPE IF EXISTS session_type_enum CASCADE;
-DROP TYPE IF EXISTS attendance_status_enum CASCADE;
-DROP TYPE IF EXISTS enrollment_status_enum CASCADE;
-DROP TYPE IF EXISTS request_status_enum CASCADE;
-DROP TYPE IF EXISTS teacher_request_type_enum CASCADE;
-DROP TYPE IF EXISTS student_request_type_enum CASCADE;
-DROP TYPE IF EXISTS resource_type_enum CASCADE;
-DROP TYPE IF EXISTS modality_enum CASCADE;
-DROP TYPE IF EXISTS skill_enum CASCADE;
-DROP TYPE IF EXISTS teaching_role_enum CASCADE;
-DROP TYPE IF EXISTS branch_status_enum CASCADE;
-DROP TYPE IF EXISTS class_status_enum CASCADE;
-DROP TYPE IF EXISTS subject_status_enum CASCADE;
-DROP TYPE IF EXISTS assessment_kind_enum CASCADE;
-DROP TYPE IF EXISTS teaching_slot_status_enum CASCADE;
-DROP TYPE IF EXISTS homework_status_enum CASCADE;
-DROP TYPE IF EXISTS course_status_enum CASCADE;
-DROP TYPE IF EXISTS approval_status_enum CASCADE;
-DROP TYPE IF EXISTS material_type_enum CASCADE;
-DROP TYPE IF EXISTS mapping_status_enum CASCADE;
-DROP TYPE IF EXISTS gender_enum CASCADE;
-DROP TYPE IF EXISTS user_status_enum CASCADE;
-
--- Enum for Session Status
-CREATE TYPE session_status_enum AS ENUM ('PLANNED', 'CANCELLED', 'DONE');
-
--- Enum for Session Type
-CREATE TYPE session_type_enum AS ENUM ('CLASS', 'TEACHER_RESCHEDULE');
-
--- Enum for Attendance Status
-CREATE TYPE attendance_status_enum AS ENUM ('PLANNED', 'PRESENT', 'ABSENT');
-
--- Enum for Enrollment Status
-CREATE TYPE enrollment_status_enum AS ENUM ('ENROLLED', 'TRANSFERRED', 'DROPPED', 'COMPLETED');
-
--- Enum for Request Status
-CREATE TYPE request_status_enum AS ENUM ('PENDING', 'WAITING_CONFIRM', 'APPROVED', 'REJECTED');
+-- This file is now intentionally minimal.
+-- All enum validation is done via VARCHAR columns with CHECK constraints.
+-- See schema.sql for table definitions.
 
 -- Enum for Teacher Request Type
 CREATE TYPE teacher_request_type_enum AS ENUM ('SWAP', 'RESCHEDULE', 'MODALITY_CHANGE');

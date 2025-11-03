@@ -106,35 +106,35 @@ INSERT INTO role (id, code, name) VALUES
 -- Hash: $2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.
 INSERT INTO user_account (id, email, phone, full_name, gender, dob, address, password_hash, status, created_at, updated_at) VALUES
 -- Staff & Management (11 users)
-(1, 'admin@tms-edu.vn', '0912000001', 'Nguyen Van Admin',  'MALE'::gender_enum, '1980-01-15', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(2, 'manager.global@tms-edu.vn', '0912000002', 'Le Van Manager',  'MALE'::gender_enum, '1982-07-10', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(3, 'head.hn01@tms-edu.vn', '0912000003', 'Tran Thi Lan',  'FEMALE'::gender_enum, '1975-03-20', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(4, 'head.hcm01@tms-edu.vn', '0912000004', 'Nguyen Thi Mai',  'FEMALE'::gender_enum, '1978-05-22', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(5, 'leader.ielts@tms-edu.vn', '0912000005', 'Bui Van Nam',  'MALE'::gender_enum, '1985-12-30', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(6, 'staff.huong.hn@tms-edu.vn', '0912000006', 'Pham Thi Huong',  'FEMALE'::gender_enum, '1990-11-05', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(7, 'staff.duc.hn@tms-edu.vn', '0912000007', 'Hoang Van Duc',  'MALE'::gender_enum, '1992-05-18', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(8, 'staff.anh.hcm@tms-edu.vn', '0912000008', 'Le Thi Anh',  'FEMALE'::gender_enum, '1991-02-15', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(9, 'staff.tuan.hcm@tms-edu.vn', '0912000009', 'Tran Minh Tuan',  'MALE'::gender_enum, '1993-08-20', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(10, 'qa.linh@tms-edu.vn', '0912000010', 'Vu Thi Linh',  'FEMALE'::gender_enum, '1988-09-25', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
-(11, 'qa.thanh@tms-edu.vn', '0912000011', 'Dang Ngoc Thanh',  'MALE'::gender_enum, '1989-04-10', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(1, 'admin@tms-edu.vn', '0912000001', 'Nguyen Van Admin',  'MALE', '1980-01-15', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(2, 'manager.global@tms-edu.vn', '0912000002', 'Le Van Manager',  'MALE', '1982-07-10', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(3, 'head.hn01@tms-edu.vn', '0912000003', 'Tran Thi Lan',  'FEMALE', '1975-03-20', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(4, 'head.hcm01@tms-edu.vn', '0912000004', 'Nguyen Thi Mai',  'FEMALE', '1978-05-22', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(5, 'leader.ielts@tms-edu.vn', '0912000005', 'Bui Van Nam',  'MALE', '1985-12-30', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(6, 'staff.huong.hn@tms-edu.vn', '0912000006', 'Pham Thi Huong',  'FEMALE', '1990-11-05', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(7, 'staff.duc.hn@tms-edu.vn', '0912000007', 'Hoang Van Duc',  'MALE', '1992-05-18', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(8, 'staff.anh.hcm@tms-edu.vn', '0912000008', 'Le Thi Anh',  'FEMALE', '1991-02-15', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(9, 'staff.tuan.hcm@tms-edu.vn', '0912000009', 'Tran Minh Tuan',  'MALE', '1993-08-20', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(10, 'qa.linh@tms-edu.vn', '0912000010', 'Vu Thi Linh',  'FEMALE', '1988-09-25', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
+(11, 'qa.thanh@tms-edu.vn', '0912000011', 'Dang Ngoc Thanh',  'MALE', '1989-04-10', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-01-01 00:00:00+07', '2024-01-01 00:00:00+07'),
 
 -- Teachers (16 teachers: 8 per branch)
-(20, 'john.smith@tms-edu.vn', '0912001001', 'John Smith',  'MALE'::gender_enum, '1985-04-12', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(21, 'emma.wilson@tms-edu.vn', '0912001002', 'Emma Wilson',  'FEMALE'::gender_enum, '1987-08-22', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(22, 'david.lee@tms-edu.vn', '0912001003', 'David Lee',  'MALE'::gender_enum, '1983-12-05', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(23, 'sarah.johnson@tms-edu.vn', '0912001004', 'Sarah Johnson',  'FEMALE'::gender_enum, '1990-06-14', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(24, 'michael.brown@tms-edu.vn', '0912001005', 'Michael Brown',  'MALE'::gender_enum, '1986-02-28', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(25, 'lisa.chen@tms-edu.vn', '0912001006', 'Lisa Chen',  'FEMALE'::gender_enum, '1988-10-17', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(26, 'james.taylor@tms-edu.vn', '0912001007', 'James Taylor',  'MALE'::gender_enum, '1984-03-09', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(27, 'anna.martinez@tms-edu.vn', '0912001008', 'Anna Martinez',  'FEMALE'::gender_enum, '1989-07-21', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(28, 'chris.evans@tms-edu.vn', '0912001009', 'Chris Evans',  'MALE'::gender_enum, '1988-01-20', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(29, 'olivia.white@tms-edu.vn', '0912001010', 'Olivia White',  'FEMALE'::gender_enum, '1991-03-15', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(30, 'daniel.harris@tms-edu.vn', '0912001011', 'Daniel Harris',  'MALE'::gender_enum, '1987-11-30', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(31, 'sophia.clark@tms-edu.vn', '0912001012', 'Sophia Clark',  'FEMALE'::gender_enum, '1992-09-05', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(32, 'matthew.lewis@tms-edu.vn', '0912001013', 'Matthew Lewis',  'MALE'::gender_enum, '1989-06-27', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(33, 'ava.robinson@tms-edu.vn', '0912001014', 'Ava Robinson',  'FEMALE'::gender_enum, '1993-01-10', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(34, 'andrew.walker@tms-edu.vn', '0912001015', 'Andrew Walker',  'MALE'::gender_enum, '1986-08-18', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
-(35, 'isabella.young@tms-edu.vn', '0912001016', 'Isabella Young',  'FEMALE'::gender_enum, '1990-04-25', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07');
+(20, 'john.smith@tms-edu.vn', '0912001001', 'John Smith',  'MALE', '1985-04-12', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(21, 'emma.wilson@tms-edu.vn', '0912001002', 'Emma Wilson',  'FEMALE', '1987-08-22', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(22, 'david.lee@tms-edu.vn', '0912001003', 'David Lee',  'MALE', '1983-12-05', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(23, 'sarah.johnson@tms-edu.vn', '0912001004', 'Sarah Johnson',  'FEMALE', '1990-06-14', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(24, 'michael.brown@tms-edu.vn', '0912001005', 'Michael Brown',  'MALE', '1986-02-28', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(25, 'lisa.chen@tms-edu.vn', '0912001006', 'Lisa Chen',  'FEMALE', '1988-10-17', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(26, 'james.taylor@tms-edu.vn', '0912001007', 'James Taylor',  'MALE', '1984-03-09', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(27, 'anna.martinez@tms-edu.vn', '0912001008', 'Anna Martinez',  'FEMALE', '1989-07-21', 'Ha Noi', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(28, 'chris.evans@tms-edu.vn', '0912001009', 'Chris Evans',  'MALE', '1988-01-20', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(29, 'olivia.white@tms-edu.vn', '0912001010', 'Olivia White',  'FEMALE', '1991-03-15', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(30, 'daniel.harris@tms-edu.vn', '0912001011', 'Daniel Harris',  'MALE', '1987-11-30', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(31, 'sophia.clark@tms-edu.vn', '0912001012', 'Sophia Clark',  'FEMALE', '1992-09-05', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(32, 'matthew.lewis@tms-edu.vn', '0912001013', 'Matthew Lewis',  'MALE', '1989-06-27', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(33, 'ava.robinson@tms-edu.vn', '0912001014', 'Ava Robinson',  'FEMALE', '1993-01-10', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(34, 'andrew.walker@tms-edu.vn', '0912001015', 'Andrew Walker',  'MALE', '1986-08-18', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07'),
+(35, 'isabella.young@tms-edu.vn', '0912001016', 'Isabella Young',  'FEMALE', '1990-04-25', 'TP. HCM', '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.', 'ACTIVE', '2024-02-01 00:00:00+07', '2024-02-01 00:00:00+07');
 
 -- Students (60 students total: 30 per branch for realistic testing)
 INSERT INTO user_account (id, email, phone, full_name, gender, dob, address, password_hash, status, created_at, updated_at) 
@@ -143,7 +143,7 @@ SELECT
     'student.' || LPAD(s.id::text, 4, '0') || '@gmail.com', 
     '0900' || LPAD(s.id::text, 6, '0'),
     'Student ' || LPAD(s.id::text, 4, '0'),
-    CASE WHEN s.id % 2 = 0 THEN  'FEMALE'::gender_enum ELSE  'MALE'::gender_enum END, 
+    CASE WHEN s.id % 2 = 0 THEN  'FEMALE' ELSE  'MALE' END, 
     make_date(2000 + (s.id % 6), (s.id % 12) + 1, (s.id % 28) + 1),
     CASE WHEN s.id <= 30 THEN 'Ha Noi' ELSE 'TP. HCM' END,
     '$2a$12$YNA7sOfjJNXLzHPzolLvkuhVj8EkY85r9OgPUBtb1wpk2gT5g1IV.',
@@ -297,7 +297,7 @@ INSERT INTO level (id, subject_id, code, name, expected_duration_hours, sort_ord
 INSERT INTO replacement_skill_assessment (student_id, skill, level_id, score, assessment_date, assessment_type, assessed_by, note, created_at, updated_at)
 SELECT
     s.id,
-    'GENERAL'::skill_enum,
+    'GENERAL',
     1, -- Corresponds to 'IELTS Foundation (3.0-4.0)'
     30 + floor(random() * 16)::int, -- Generates a score between 30 and 45 (equivalent to 3.0-4.5 band)
     '2025-06-15',
@@ -328,31 +328,31 @@ INSERT INTO course_phase (id, course_id, phase_number, name, duration_weeks, cre
 -- Course Sessions for Foundation (24 sessions = 8 weeks × 3 sessions/week)
 INSERT INTO course_session (id, phase_id, sequence_no, topic, student_task, skill_set, created_at, updated_at) VALUES
 -- Phase 1: Foundation Basics (Sessions 1-12)
-(1, 1, 1, 'Introduction to IELTS & Basic Listening', 'Listen to simple dialogues', ARRAY['GENERAL','LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(2, 1, 2, 'Basic Speaking: Greetings and Introductions', 'Practice self-introduction', ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(3, 1, 3, 'Basic Reading: Short Passages', 'Read and answer simple questions', ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(4, 1, 4, 'Basic Writing: Simple Sentences', 'Write about yourself', ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(5, 1, 5, 'Listening: Numbers and Dates', 'Complete listening exercises', ARRAY['LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(6, 1, 6, 'Speaking: Daily Activities', 'Describe your daily routine', ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(7, 1, 7, 'Reading: Understanding Main Ideas', 'Identify main ideas', ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(8, 1, 8, 'Writing: Simple Paragraphs', 'Write a short paragraph', ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(9, 1, 9, 'Listening: Conversations', 'Listen to basic conversations', ARRAY['LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(10, 1, 10, 'Speaking: Expressing Likes and Dislikes', 'Talk about preferences', ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(11, 1, 11, 'Reading: Details and Facts', 'Find specific information', ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(12, 1, 12, 'Writing: Connecting Ideas', 'Use simple connectors', ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(1, 1, 1, 'Introduction to IELTS & Basic Listening', 'Listen to simple dialogues', ARRAY['GENERAL','LISTENING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(2, 1, 2, 'Basic Speaking: Greetings and Introductions', 'Practice self-introduction', ARRAY['SPEAKING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(3, 1, 3, 'Basic Reading: Short Passages', 'Read and answer simple questions', ARRAY['READING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(4, 1, 4, 'Basic Writing: Simple Sentences', 'Write about yourself', ARRAY['WRITING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(5, 1, 5, 'Listening: Numbers and Dates', 'Complete listening exercises', ARRAY['LISTENING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(6, 1, 6, 'Speaking: Daily Activities', 'Describe your daily routine', ARRAY['SPEAKING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(7, 1, 7, 'Reading: Understanding Main Ideas', 'Identify main ideas', ARRAY['READING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(8, 1, 8, 'Writing: Simple Paragraphs', 'Write a short paragraph', ARRAY['WRITING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(9, 1, 9, 'Listening: Conversations', 'Listen to basic conversations', ARRAY['LISTENING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(10, 1, 10, 'Speaking: Expressing Likes and Dislikes', 'Talk about preferences', ARRAY['SPEAKING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(11, 1, 11, 'Reading: Details and Facts', 'Find specific information', ARRAY['READING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(12, 1, 12, 'Writing: Connecting Ideas', 'Use simple connectors', ARRAY['WRITING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
 -- Phase 2: Foundation Practice (Sessions 13-24)
-(13, 2, 1, 'Listening: Following Instructions', 'Complete tasks from audio', ARRAY['LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(14, 2, 2, 'Speaking: Asking Questions', 'Practice question forms', ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(15, 2, 3, 'Reading: Short Stories', 'Read and summarize', ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(16, 2, 4, 'Writing: Describing People and Places', 'Write descriptions', ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(17, 2, 5, 'Listening: News and Announcements', 'Understand main points', ARRAY['LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(18, 2, 6, 'Speaking: Giving Opinions', 'Express simple opinions', ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(19, 2, 7, 'Reading: Understanding Context', 'Use context clues', ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(20, 2, 8, 'Writing: Personal Letters', 'Write informal letters', ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(21, 2, 9, 'Practice Test: Listening & Reading', 'Complete practice test', ARRAY['LISTENING','READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(22, 2, 10, 'Practice Test: Writing & Speaking', 'Complete practice test', ARRAY['WRITING','SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(23, 2, 11, 'Review and Feedback', 'Review all skills', ARRAY['GENERAL']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(24, 2, 12, 'Final Assessment', 'Complete final test', ARRAY['GENERAL','READING','WRITING','SPEAKING','LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07');
+(13, 2, 1, 'Listening: Following Instructions', 'Complete tasks from audio', ARRAY['LISTENING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(14, 2, 2, 'Speaking: Asking Questions', 'Practice question forms', ARRAY['SPEAKING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(15, 2, 3, 'Reading: Short Stories', 'Read and summarize', ARRAY['READING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(16, 2, 4, 'Writing: Describing People and Places', 'Write descriptions', ARRAY['WRITING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(17, 2, 5, 'Listening: News and Announcements', 'Understand main points', ARRAY['LISTENING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(18, 2, 6, 'Speaking: Giving Opinions', 'Express simple opinions', ARRAY['SPEAKING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(19, 2, 7, 'Reading: Understanding Context', 'Use context clues', ARRAY['READING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(20, 2, 8, 'Writing: Personal Letters', 'Write informal letters', ARRAY['WRITING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(21, 2, 9, 'Practice Test: Listening & Reading', 'Complete practice test', ARRAY['LISTENING','READING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(22, 2, 10, 'Practice Test: Writing & Speaking', 'Complete practice test', ARRAY['WRITING','SPEAKING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(23, 2, 11, 'Review and Feedback', 'Review all skills', ARRAY['GENERAL'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(24, 2, 12, 'Final Assessment', 'Complete final test', ARRAY['GENERAL','READING','WRITING','SPEAKING','LISTENING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07');
 
 -- CLOs for Foundation Course
 INSERT INTO clo (id, course_id, code, description, created_at, updated_at) VALUES
@@ -399,12 +399,12 @@ INSERT INTO course_material (course_id, phase_id, course_session_id, title, desc
 
 -- Course Assessments for Foundation
 INSERT INTO course_assessment (id, course_id, name, kind, duration_minutes, max_score, skills, created_at, updated_at) VALUES
-(1, 1, 'Listening Quiz 1', 'QUIZ', 30, 20, ARRAY['LISTENING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(2, 1, 'Speaking Quiz 1', 'QUIZ', 15, 20, ARRAY['SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(3, 1, 'Reading Quiz 1', 'QUIZ', 30, 20, ARRAY['READING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(4, 1, 'Writing Assignment 1', 'ASSIGNMENT', 60, 20, ARRAY['WRITING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(5, 1, 'Midterm Exam', 'MIDTERM', 90, 100, ARRAY['LISTENING','READING','WRITING','SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
-(6, 1, 'Final Exam', 'FINAL', 120, 100, ARRAY['LISTENING','READING','WRITING','SPEAKING']::skill_enum[], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07');
+(1, 1, 'Listening Quiz 1', 'QUIZ', 30, 20, ARRAY['LISTENING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(2, 1, 'Speaking Quiz 1', 'QUIZ', 15, 20, ARRAY['SPEAKING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(3, 1, 'Reading Quiz 1', 'QUIZ', 30, 20, ARRAY['READING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(4, 1, 'Writing Assignment 1', 'ASSIGNMENT', 60, 20, ARRAY['WRITING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(5, 1, 'Midterm Exam', 'MIDTERM', 90, 100, ARRAY['LISTENING','READING','WRITING','SPEAKING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07'),
+(6, 1, 'Final Exam', 'FINAL', 120, 100, ARRAY['LISTENING','READING','WRITING','SPEAKING'], '2024-08-15 00:00:00+07', '2024-08-15 00:00:00+07');
 
 -- Course Assessment-CLO Mappings
 INSERT INTO course_assessment_clo_mapping (course_assessment_id, clo_id, status) VALUES
@@ -486,7 +486,7 @@ DECLARE
     v_week INT;
     v_day_idx INT;
     v_session_idx INT := 1;
-    v_status session_status_enum;
+    v_status VARCHAR(20);
 BEGIN
     FOR v_week IN 0..7 LOOP -- 8 weeks
         FOR v_day_idx IN 1..3 LOOP -- 3 days per week
@@ -522,7 +522,7 @@ DECLARE
     v_week INT;
     v_day_idx INT;
     v_session_idx INT := 1;
-    v_status session_status_enum;
+    v_status VARCHAR(20);
 BEGIN
     FOR v_week IN 0..7 LOOP
         FOR v_day_idx IN 1..3 LOOP
@@ -573,7 +573,7 @@ DECLARE
     v_week INT;
     v_day_idx INT;
     v_session_idx INT := 1;
-    v_status session_status_enum;
+    v_status VARCHAR(20);
 BEGIN
     FOR v_week IN 0..7 LOOP
         FOR v_day_idx IN 1..3 LOOP
@@ -630,14 +630,14 @@ SELECT
     s.id,
     false,
     CASE 
-        WHEN random() < 0.9 THEN 'PRESENT'::attendance_status_enum
-        ELSE 'ABSENT'::attendance_status_enum
+        WHEN random() < 0.9 THEN 'PRESENT'
+        ELSE 'ABSENT'
     END,
     CASE 
         WHEN cs.student_task IS NOT NULL THEN
             CASE 
-                WHEN random() < 0.85 THEN 'COMPLETED'::homework_status_enum
-                ELSE 'INCOMPLETE'::homework_status_enum
+                WHEN random() < 0.85 THEN 'COMPLETED'
+                ELSE 'INCOMPLETE'
             END
         ELSE NULL
     END,
@@ -697,17 +697,17 @@ SELECT
         WHEN s.status = 'DONE' THEN 
             CASE 
                 -- Most students present
-                WHEN random() < 0.85 THEN 'PRESENT'::attendance_status_enum
+                WHEN random() < 0.85 THEN 'PRESENT'
                 -- Some absences for testing
-                ELSE 'ABSENT'::attendance_status_enum
+                ELSE 'ABSENT'
             END
-        ELSE 'PLANNED'::attendance_status_enum
+        ELSE 'PLANNED'
     END,
     CASE 
         WHEN s.status = 'DONE' AND cs.student_task IS NOT NULL THEN
             CASE 
-                WHEN random() < 0.8 THEN 'COMPLETED'::homework_status_enum
-                ELSE 'INCOMPLETE'::homework_status_enum
+                WHEN random() < 0.8 THEN 'COMPLETED'
+                ELSE 'INCOMPLETE'
             END
         ELSE NULL
     END,
@@ -729,12 +729,12 @@ SELECT
     false,
     CASE 
         WHEN s.status = 'DONE' THEN 
-            CASE WHEN random() < 0.9 THEN 'PRESENT'::attendance_status_enum ELSE 'ABSENT'::attendance_status_enum END
-        ELSE 'PLANNED'::attendance_status_enum
+            CASE WHEN random() < 0.9 THEN 'PRESENT' ELSE 'ABSENT' END
+        ELSE 'PLANNED'
     END,
     CASE 
         WHEN s.status = 'DONE' AND cs.student_task IS NOT NULL THEN
-            CASE WHEN random() < 0.85 THEN 'COMPLETED'::homework_status_enum ELSE 'INCOMPLETE'::homework_status_enum END
+            CASE WHEN random() < 0.85 THEN 'COMPLETED' ELSE 'INCOMPLETE' END
         ELSE NULL
     END,
     CASE WHEN s.status = 'DONE' THEN s.date ELSE NULL END,
@@ -769,12 +769,12 @@ SELECT
     false,
     CASE 
         WHEN s.status = 'DONE' THEN 
-            CASE WHEN random() < 0.9 THEN 'PRESENT'::attendance_status_enum ELSE 'ABSENT'::attendance_status_enum END
-        ELSE 'PLANNED'::attendance_status_enum
+            CASE WHEN random() < 0.9 THEN 'PRESENT' ELSE 'ABSENT' END
+        ELSE 'PLANNED'
     END,
     CASE 
         WHEN s.status = 'DONE' AND cs.student_task IS NOT NULL THEN
-            CASE WHEN random() < 0.85 THEN 'COMPLETED'::homework_status_enum ELSE 'INCOMPLETE'::homework_status_enum END
+            CASE WHEN random() < 0.85 THEN 'COMPLETED' ELSE 'INCOMPLETE' END
         ELSE NULL
     END,
     CASE WHEN s.status = 'DONE' THEN s.date ELSE NULL END,
@@ -993,7 +993,7 @@ VALUES (50, 2, 19, 'ENROLLED', '2025-10-06 00:00:00+07', 6, 101, '2025-10-06 00:
 
 INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, created_at, updated_at)
 SELECT 19, s.id, false,
-    CASE WHEN s.status = 'DONE' THEN 'PRESENT'::attendance_status_enum ELSE 'PLANNED'::attendance_status_enum END,
+    CASE WHEN s.status = 'DONE' THEN 'PRESENT' ELSE 'PLANNED' END,
     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM session s
 WHERE s.class_id = 2;

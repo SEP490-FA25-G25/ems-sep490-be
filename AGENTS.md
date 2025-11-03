@@ -1,0 +1,253 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+This is a **Java Spring Boot 3.5.7** application using **Java 21** for a Tuition Management System (TMS). The application follows a clean layered architecture with JWT-based authentication and PostgreSQL database.
+
+**Key Technologies:**
+- Spring Boot 3.5.7 with Java 21
+- PostgreSQL with Hibernate JPA
+- JWT authentication with role-based authorization
+- SpringDoc OpenAPI for API documentation
+- Testcontainers for integration testing
+- Maven for build management
+
+
+## Implementation Plan: Core Principles
+
+**1. Code Quality & Structure:**
+
+- **Clean Implementation:** The implementation must be clean, avoiding unnecessary code, complexity, and "code smells." Adhere strictly to established coding standards and best practices (e.g., SOLID, DRY).
+- **No Redundancy (DRY - Don't Repeat Yourself):** Actively prevent code duplication. Abstract and reuse components, functions, and logic wherever possible.
+- **Logical Soundness & Correct Algorithms:** Ensure all logic is correct and the algorithms used are efficient and appropriate for the given problem.
+
+**2. System Integrity & Performance:**
+
+- **Prevent Race Conditions:** Proactively identify and prevent potential race conditions to ensure data integrity and system stability, especially in concurrent operations.
+- **Avoid Over-engineering:** The solution must not be over-engineered. Implement what is necessary to meet the current requirements without adding speculative features or unnecessary complexity.
+
+**3. Development Approach:**
+
+- **Adhere to Best Practices:** Always follow the best and most current industry-standard approaches for the technologies and patterns being used.
+- **Maintain a Holistic View:** Always consider the overall architecture and the impact of your changes on the entire system. Ensure new implementations integrate seamlessly.
+- **Focus on the Story & Scope:** Concentrate on delivering the user story at hand. Ensure the implementation directly serves the story's requirements and stays within the defined scope for the MVP (Minimum Viable Product). The primary goal is a functional, demonstrable feature that meets the story's acceptance criteria.
+
+**4. Final Deliverable:**
+
+- **Solid & Maintainable Code:** The final code must be robust, reliable, well-documented, and easy for other developers to understand, modify, and maintain in the future.
+
+## Development Commands
+
+### Build and Run
+```bash
+# Build the project
+mvn clean compile
+
+# Run the application
+mvn spring-boot:run
+
+# Build JAR file
+mvn clean package
+
+# Run JAR file
+java -jar target/tms-sep490-be-0.0.1-SNAPSHOT.jar
+
+# Skip tests during build
+mvn clean package -DskipTests
+```
+
+### Testing Commands
+```bash
+# Run all tests (unit + integration + coverage)
+mvn clean verify
+
+# Run only unit tests
+mvn test
+
+# Run specific test class
+mvn test -Dtest=CenterServiceImplTest
+
+# Run specific test method
+mvn test -Dtest=CenterServiceImplTest#shouldFindCenterById
+
+# Run tests with coverage report
+mvn clean verify jacoco:report
+# View coverage report: target/site/jacoco/index.html
+
+# Run tests in parallel (faster)
+mvn -T 1C clean verify
+
+# Run integration tests only
+mvn verify -DskipUnitTests
+```
+
+### Database Setup
+```bash
+# Start PostgreSQL with Docker (for local development)
+docker run --name tms-postgres -e POSTGRES_PASSWORD=979712 -p 5432:5432 -d postgres
+
+# Connect to database
+docker exec -it tms-postgres psql -U postgres
+CREATE DATABASE tms;
+```
+
+## Architecture Overview
+
+### Package Structure
+```
+org.fyp.tmssep490be/
+ config/           # Security, OpenAPI, JPA configurations
+ controllers/      # REST API endpoints (/api/v1/*)
+ services/         # Business logic layer
+ repositories/     # Data access layer
+ entities/         # JPA entities with PostgreSQL enums
+ dtos/            # Data Transfer Objects
+ security/        # JWT authentication components
+```
+
+### Layered Architecture Pattern
+- **Controllers**: Handle HTTP requests, validation, responses
+- **Services**: Business logic, transaction management
+- **Repositories**: Data access, database operations
+- **Entities**: JPA domain models with auditing
+
+### Key Configuration Classes
+- `SecurityConfiguration`: JWT authentication and role-based authorization
+- `OpenAPIConfiguration`: Swagger UI at `/swagger-ui.html`
+- `JpaAuditingConfiguration`: Automatic timestamps (`created_at`, `updated_at`)
+
+## Security & Authentication
+
+### JWT Implementation
+- **Access tokens**: 15 minutes expiration
+- **Refresh tokens**: 7 days expiration
+- **Stateless sessions**: No server-side session storage
+- **Role-based authorization**: ADMIN, MANAGER, CENTER_HEAD, etc.
+
+### Authentication Flow
+1. POST `/api/v1/auth/login` � JWT tokens
+2. Include `Authorization: Bearer <access_token>` in API calls
+3. Use refresh token to get new access token
+
+### Security Configuration
+- Public endpoints: `/api/v1/auth/login`, `/api/v1/auth/refresh`
+- All other endpoints require JWT authentication
+- CORS configured for React/Vue.js development servers
+
+## Database & Persistence
+
+### PostgreSQL Configuration
+- Development mode: `ddl-auto: create-drop` (schema recreated each run)
+- Enum types initialized via `enum-init.sql`
+- Seed data loaded via `seed-data.sql`
+- Automatic auditing with `@CreatedDate` and `@LastModifiedDate`
+
+### Entity Base Class
+All entities extend `BaseEntity` which provides:
+- `createdAt`: Auto-populated timestamp
+- `updatedAt`: Auto-updated timestamp
+- Standard ID generation
+
+### Test Database
+Integration tests use Testcontainers with PostgreSQL for realistic testing.
+
+## API Design Standards
+
+### REST API Conventions
+- Base path: `/api/v1/`
+- Standardized response format using `ResponseObject<T>`
+- Pagination support with Spring Data `Pageable`
+- Validation using `@Valid` annotations
+
+### Response Format
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully",
+  "data": { ... }
+}
+```
+
+## Testing Strategy
+
+### Three-Tier Testing Approach
+1. **Unit Tests**: Service layer with mocked dependencies (`*Test.java`)
+2. **Integration Tests**: Repository layer with Testcontainers (`*RepositoryTest.java`)
+3. **Full Integration Tests**: End-to-end workflows (`*IT.java`, `*IntegrationTest.java`)
+
+### Base Test Classes
+- `AbstractRepositoryTest`: For `@DataJpaTest` with Testcontainers
+- `AbstractIntegrationTest`: For `@SpringBootTest` with full context
+
+### Test Data Builders
+Use `TestDataBuilder` utility for creating test entities:
+```java
+Center center = TestDataBuilder.buildCenter()
+    .name("Test Center")
+    .build();
+```
+
+### Coverage Goals
+- Overall: 80%+
+- Service Layer: 90%+ (critical business logic)
+- Repository Layer: 70%+
+- Entity Layer: 60%+
+
+## Development Workflow
+
+### Feature Development
+1. Create/update entities in `entities/` package
+2. Add/update repositories in `repositories/` package
+3. Implement business logic in `services/` package
+4. Create/update DTOs in `dtos/` package
+5. Add/update controllers in `controllers/` package
+6. Write comprehensive tests for all layers
+
+### Code Quality Standards
+- Use Lombok annotations to reduce boilerplate
+- Follow Spring Boot best practices
+- Maintain 80%+ test coverage
+- Use AssertJ for fluent assertions in tests
+- Apply AAA pattern (Arrange-Act-Assert) in tests
+
+## Common Development Tasks
+
+### Adding New Entity
+1. Create entity class extending `BaseEntity`
+2. Add repository interface extending `JpaRepository`
+3. Create service interface and implementation
+4. Add DTOs for request/response
+5. Create controller with REST endpoints
+6. Write comprehensive tests
+
+### Testing New Features
+```bash
+# Run specific test during development
+mvn test -Dtest=NewFeatureServiceTest
+
+# Run tests with coverage
+mvn clean verify jacoco:report
+
+# Debug failing tests
+mvn test -X
+```
+
+### API Documentation
+- Swagger UI available at: `http://localhost:8080/swagger-ui.html`
+- OpenAPI spec at: `http://localhost:8080/v3/api-docs`
+- Custom styling configured in `OpenAPIConfiguration`
+
+## Environment Variables
+
+### Configuration
+- `JWT_SECRET`: Override default JWT secret key (IMPORTANT for production)
+- Database settings in `application.yml` (hardcoded for development)
+
+### Production Considerations
+- Change JWT secret via environment variable
+- Update database credentials for production
+- Change `ddl-auto` to `validate` or `none`
+- Configure proper logging levels
+- Set up proper CORS origins

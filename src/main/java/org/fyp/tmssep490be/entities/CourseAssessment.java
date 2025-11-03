@@ -40,7 +40,7 @@ public class CourseAssessment {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false, columnDefinition = "skill_enum[]")
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private Skill[] skills;
 

@@ -73,29 +73,16 @@ DROP TYPE IF EXISTS mapping_status_enum CASCADE;
 DROP TYPE IF EXISTS gender_enum CASCADE;
 DROP TYPE IF EXISTS user_status_enum CASCADE;
 
--- ========== SECTION 2: ENUM TYPES ==========
-DO $$ BEGIN CREATE TYPE session_status_enum AS ENUM ('PLANNED','CANCELLED','DONE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE session_type_enum   AS ENUM ('CLASS','TEACHER_RESCHEDULE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE attendance_status_enum AS ENUM ('PLANNED','PRESENT','ABSENT'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE enrollment_status_enum AS ENUM ('ENROLLED','TRANSFERRED','DROPPED','COMPLETED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE request_status_enum AS ENUM ('PENDING','WAITING_CONFIRM','APPROVED','REJECTED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE teacher_request_type_enum AS ENUM ('SWAP','RESCHEDULE','MODALITY_CHANGE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE student_request_type_enum AS ENUM ('ABSENCE','MAKEUP','TRANSFER'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE resource_type_enum AS ENUM ('ROOM','VIRTUAL'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE modality_enum AS ENUM ('OFFLINE','ONLINE','HYBRID'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE skill_enum AS ENUM ('GENERAL','READING','WRITING','SPEAKING','LISTENING'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE branch_status_enum AS ENUM ('ACTIVE','INACTIVE','CLOSED','PLANNED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE class_status_enum AS ENUM ('DRAFT','SCHEDULED','ONGOING','COMPLETED','CANCELLED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE subject_status_enum AS ENUM ('DRAFT','ACTIVE','INACTIVE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE assessment_kind_enum AS ENUM ('QUIZ','MIDTERM','FINAL','ASSIGNMENT','PROJECT','ORAL','PRACTICE','OTHER'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE teaching_slot_status_enum AS ENUM ('SCHEDULED','ON_LEAVE','SUBSTITUTED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE homework_status_enum AS ENUM ('COMPLETED','INCOMPLETE','NO_HOMEWORK'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE course_status_enum AS ENUM ('DRAFT','ACTIVE','INACTIVE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE approval_status_enum AS ENUM ('PENDING','APPROVED','REJECTED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE material_type_enum AS ENUM ('VIDEO','PDF','SLIDE','AUDIO','DOCUMENT','OTHER'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE mapping_status_enum AS ENUM ('ACTIVE','INACTIVE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE gender_enum AS ENUM ('MALE','FEMALE','OTHER'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE user_status_enum AS ENUM ('ACTIVE','INACTIVE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- ========== SECTION 2: REFACTORED - NO ENUM TYPES ==========
+-- BEST PRACTICE: Using VARCHAR with @Enumerated(EnumType.STRING)
+-- - Better Hibernate compatibility
+-- - Easier enum value management (no ALTER TYPE needed)
+-- - Database independence
+-- - Human-readable in SQL queries
+-- 
+-- All enum validation is handled by:
+-- 1. CHECK constraints on columns (database level)
+-- 2. @Enumerated(EnumType.STRING) in entities (application level)
 -- ========== SECTION 3: TABLES (ĐÚNG THỨ TỰ) ==========
 
 -- TIER 1: Independent
@@ -123,14 +110,16 @@ CREATE TABLE user_account (
   phone VARCHAR(50),
   facebook_url VARCHAR(500),
   full_name VARCHAR(255) NOT NULL,
-  gender gender_enum NOT NULL DEFAULT 'MALE',
+  gender VARCHAR(20) NOT NULL DEFAULT 'MALE',
   dob DATE,
   address TEXT,
   password_hash VARCHAR(255) NOT NULL,
-  status user_status_enum NOT NULL DEFAULT 'ACTIVE',
+  status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
   last_login_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT chk_user_gender CHECK (gender IN ('MALE', 'FEMALE', 'OTHER')),
+  CONSTRAINT chk_user_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
 );
 
 -- TIER 2
@@ -144,12 +133,13 @@ CREATE TABLE branch (
   email VARCHAR(255),
   district VARCHAR(255),
   city VARCHAR(255),
-  status branch_status_enum NOT NULL DEFAULT 'ACTIVE',
+  status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
   opening_date DATE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_branch_center FOREIGN KEY(center_id) REFERENCES center(id) ON DELETE CASCADE,
-  CONSTRAINT uq_branch_center_code UNIQUE(center_id,code)
+  CONSTRAINT uq_branch_center_code UNIQUE(center_id,code),
+  CONSTRAINT chk_branch_status CHECK (status IN ('ACTIVE', 'INACTIVE', 'CLOSED', 'PLANNED'))
 );
 
 CREATE TABLE subject (
@@ -157,13 +147,14 @@ CREATE TABLE subject (
   code VARCHAR(50) NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
   description TEXT,
-  status subject_status_enum NOT NULL DEFAULT 'DRAFT', 
+  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT', 
   -- draft -> tạo course với subject đang draft -> submit -> manager duyệt -> active
   -- inactive khi không còn một class đang học với subject đó
   created_by BIGINT,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_subject_created_by FOREIGN KEY(created_by) REFERENCES user_account(id) ON DELETE SET NULL
+  CONSTRAINT fk_subject_created_by FOREIGN KEY(created_by) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT chk_subject_status CHECK (status IN ('DRAFT', 'ACTIVE', 'INACTIVE'))
 );
 
 CREATE TABLE time_slot_template ( -- center head điều chỉnh thời gian học của branch
@@ -180,7 +171,7 @@ CREATE TABLE time_slot_template ( -- center head điều chỉnh thời gian h�
 CREATE TABLE resource ( -- center head điều chỉnh tài sản của branch
   id BIGSERIAL PRIMARY KEY,
   branch_id BIGINT NOT NULL,
-  resource_type resource_type_enum NOT NULL,
+  resource_type VARCHAR(20) NOT NULL,
   code VARCHAR(50) NOT NULL UNIQUE, -- theo quy chuẩn code chi nhánh-loại resource-số phòng
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -199,7 +190,8 @@ CREATE TABLE resource ( -- center head điều chỉnh tài sản của branch
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_resource_branch FOREIGN KEY(branch_id) REFERENCES branch(id) ON DELETE CASCADE,
-  CONSTRAINT fk_resource_created_by FOREIGN KEY(created_by) REFERENCES user_account(id) ON DELETE SET NULL
+  CONSTRAINT fk_resource_created_by FOREIGN KEY(created_by) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT chk_resource_type CHECK (resource_type IN ('ROOM', 'VIRTUAL'))
 );
 
 CREATE TABLE user_role (
@@ -260,7 +252,7 @@ CREATE TABLE level (
 CREATE TABLE replacement_skill_assessment (
   id BIGSERIAL PRIMARY KEY,
   student_id BIGINT NOT NULL,
-  skill skill_enum NOT NULL,  -- Sử dụng lại enum: general, reading, writing, speaking, listening
+  skill VARCHAR(20) NOT NULL,  -- Sử dụng lại enum: general, reading, writing, speaking, listening
   level_id BIGINT,  -- Link đến bảng level (ví dụ: A1, A2, B1, B2...)
   score INTEGER,  -- Điểm số cụ thể (ví dụ: IELTS band score * 10 = 65 cho 6.5)
   assessment_date DATE NOT NULL,  -- Ngày đánh giá
@@ -272,7 +264,8 @@ CREATE TABLE replacement_skill_assessment (
   CONSTRAINT fk_student_skill_student FOREIGN KEY(student_id) REFERENCES student(id) ON DELETE CASCADE,
   CONSTRAINT fk_student_skill_level FOREIGN KEY(level_id) REFERENCES level(id) ON DELETE SET NULL,
   CONSTRAINT fk_student_skill_assessed_by FOREIGN KEY(assessed_by) REFERENCES user_account(id) ON DELETE SET NULL,
-  CONSTRAINT uq_student_skill_assessment UNIQUE(student_id, skill, assessment_date)  -- Một student có thể test lại nhiều lần
+  CONSTRAINT uq_student_skill_assessment UNIQUE(student_id, skill, assessment_date),  -- Một student có thể test lại nhiều lần
+  CONSTRAINT chk_replacement_skill CHECK (skill IN ('GENERAL', 'READING', 'WRITING', 'SPEAKING', 'LISTENING'))
 );
 
 CREATE TABLE course (
@@ -293,11 +286,11 @@ CREATE TABLE course (
   target_audience TEXT,-- ví dụ: learners targeting HSK3 certification
   teaching_methods TEXT, -- ví dụ: task-based learning, drills, mock tests, feedback
   effective_date DATE, -- ngày hiệu lực của course (ví dụ: ngày bắt đầu mở course) -> cronjob vào ngày cập nhật status là active
-  status course_status_enum NOT NULL DEFAULT 'DRAFT', 
+  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT', 
   -- draft -> tạo course với subject đang draft -> submit -> manager duyệt -> approved -> không cập nhật status
-  approval_status approval_status_enum NOT NULL DEFAULT 'PENDING',
-  -- pending -> subject leader submit -> manager duyệt -> approved -> course_status_enum vẫn là draft
-  -- rejected -> subject leader submit -> manager duyệt -> rejected -> course_status_enum vẫn là draft
+  approval_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  -- pending -> subject leader submit -> manager duyệt -> approved -> status vẫn là draft
+  -- rejected -> subject leader submit -> manager duyệt -> rejected -> status vẫn là draft
   decided_by_manager BIGINT,
   decided_at TIMESTAMPTZ,
   rejection_reason TEXT,
@@ -308,7 +301,9 @@ CREATE TABLE course (
   CONSTRAINT fk_course_subject FOREIGN KEY(subject_id) REFERENCES subject(id) ON DELETE CASCADE,
   CONSTRAINT fk_course_level FOREIGN KEY(level_id) REFERENCES level(id) ON DELETE SET NULL,
   CONSTRAINT fk_course_decided_by_manager FOREIGN KEY(decided_by_manager) REFERENCES user_account(id) ON DELETE SET NULL,
-  CONSTRAINT fk_course_created_by FOREIGN KEY(created_by) REFERENCES user_account(id) ON DELETE SET NULL
+  CONSTRAINT fk_course_created_by FOREIGN KEY(created_by) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT chk_course_status CHECK (status IN ('DRAFT', 'ACTIVE', 'INACTIVE')),
+  CONSTRAINT chk_course_approval_status CHECK (approval_status IN ('PENDING', 'APPROVED', 'REJECTED'))
 );
 
 CREATE TABLE course_phase (
@@ -330,7 +325,7 @@ CREATE TABLE course_session (
   sequence_no INTEGER NOT NULL, -- ví dụ: Session 1, Session 2, Session 3, ...
   topic VARCHAR(500),
   student_task TEXT,
-  skill_set skill_enum[],
+  skill_set VARCHAR(20)[],
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT fk_course_session_phase FOREIGN KEY(phase_id) REFERENCES course_phase(id) ON DELETE CASCADE,
@@ -344,7 +339,7 @@ CREATE TABLE course_material (
   course_session_id BIGINT, -- liên kết đến session để biết tài liệu này thuộc session nào (nếu có)
   title VARCHAR(500) NOT NULL, -- tiêu đề tài liệu
   description TEXT,
-  material_type material_type_enum NOT NULL, -- loại tài liệu: video, pdf, slide, audio, document, other
+  material_type VARCHAR(20) NOT NULL, -- loại tài liệu: video, pdf, slide, audio, document, other
   url VARCHAR(1000) NOT NULL, -- link đến tài liệu (có thể là link nội bộ hoặc link bên ngoài)
   uploaded_by BIGINT, -- người upload tài liệu
   uploaded_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -353,7 +348,8 @@ CREATE TABLE course_material (
   CONSTRAINT fk_course_material_course FOREIGN KEY(course_id) REFERENCES course(id) ON DELETE CASCADE,
   CONSTRAINT fk_course_material_phase FOREIGN KEY(phase_id) REFERENCES course_phase(id) ON DELETE CASCADE,
   CONSTRAINT fk_course_material_session FOREIGN KEY(course_session_id) REFERENCES course_session(id) ON DELETE CASCADE,
-  CONSTRAINT fk_course_material_uploaded_by FOREIGN KEY(uploaded_by) REFERENCES user_account(id) ON DELETE SET NULL
+  CONSTRAINT fk_course_material_uploaded_by FOREIGN KEY(uploaded_by) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT chk_material_type CHECK (material_type IN ('VIDEO', 'PDF', 'SLIDE', 'AUDIO', 'DOCUMENT', 'OTHER'))
 );
 
 CREATE TABLE plo (
@@ -381,43 +377,47 @@ CREATE TABLE clo (
 CREATE TABLE plo_clo_mapping (
   plo_id BIGINT NOT NULL,
   clo_id BIGINT NOT NULL,
-  status mapping_status_enum NOT NULL,
+  status VARCHAR(20) NOT NULL,
   PRIMARY KEY (plo_id,clo_id),
   CONSTRAINT fk_plo_clo_plo FOREIGN KEY(plo_id) REFERENCES plo(id) ON DELETE CASCADE,
-  CONSTRAINT fk_plo_clo_clo FOREIGN KEY(clo_id) REFERENCES clo(id) ON DELETE CASCADE
+  CONSTRAINT fk_plo_clo_clo FOREIGN KEY(clo_id) REFERENCES clo(id) ON DELETE CASCADE,
+  CONSTRAINT chk_plo_clo_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
 );
 
 CREATE TABLE course_session_clo_mapping (
   course_session_id BIGINT NOT NULL,
   clo_id BIGINT NOT NULL,
-  status mapping_status_enum NOT NULL,
+  status VARCHAR(20) NOT NULL,
   PRIMARY KEY (course_session_id,clo_id),
   CONSTRAINT fk_course_session_clo_session FOREIGN KEY(course_session_id) REFERENCES course_session(id) ON DELETE CASCADE,
-  CONSTRAINT fk_course_session_clo_clo FOREIGN KEY(clo_id) REFERENCES clo(id) ON DELETE CASCADE
+  CONSTRAINT fk_course_session_clo_clo FOREIGN KEY(clo_id) REFERENCES clo(id) ON DELETE CASCADE,
+  CONSTRAINT chk_session_clo_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
 );
 
 CREATE TABLE course_assessment (
   id BIGSERIAL PRIMARY KEY,
   course_id BIGINT NOT NULL,
   name VARCHAR(255) NOT NULL, -- ví dụ: Quiz 1, Midterm Exam, Final Project, etc.
-  kind assessment_kind_enum NOT NULL, -- ví dụ: quiz, midterm, final, assignment, project, oral, practice, other
+  kind VARCHAR(20) NOT NULL, -- ví dụ: quiz, midterm, final, assignment, project, oral, practice, other
   duration_minutes INTEGER, -- thời lượng làm bài (nếu có)
   description TEXT,
-  skills skill_enum[] NOT NULL,
+  skills VARCHAR(20)[] NOT NULL,
   max_score DECIMAL(5,2) NOT NULL,
   note TEXT,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-  CONSTRAINT fk_course_assessment_course FOREIGN KEY(course_id) REFERENCES course(id) ON DELETE CASCADE
+  CONSTRAINT fk_course_assessment_course FOREIGN KEY(course_id) REFERENCES course(id) ON DELETE CASCADE,
+  CONSTRAINT chk_assessment_kind CHECK (kind IN ('QUIZ', 'MIDTERM', 'FINAL', 'ASSIGNMENT', 'PROJECT', 'ORAL', 'PRACTICE', 'OTHER'))
 );
 
 CREATE TABLE course_assessment_clo_mapping (
   course_assessment_id BIGINT NOT NULL,
   clo_id BIGINT NOT NULL,
-  status mapping_status_enum NOT NULL,
+  status VARCHAR(20) NOT NULL,
   PRIMARY KEY(course_assessment_id,clo_id),
   CONSTRAINT fk_course_assessment_clo_assessment FOREIGN KEY(course_assessment_id) REFERENCES course_assessment(id) ON DELETE CASCADE,
-  CONSTRAINT fk_course_assessment_clo_clo FOREIGN KEY(clo_id) REFERENCES clo(id) ON DELETE CASCADE
+  CONSTRAINT fk_course_assessment_clo_clo FOREIGN KEY(clo_id) REFERENCES clo(id) ON DELETE CASCADE,
+  CONSTRAINT chk_assessment_clo_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
 );
 
 -- TIER 4: Operations
@@ -427,14 +427,14 @@ CREATE TABLE "class" (
   course_id BIGINT NOT NULL,
   code VARCHAR(50) NOT NULL,
   name VARCHAR(255),
-  modality modality_enum NOT NULL, -- offline/online/hybrid
+  modality VARCHAR(20) NOT NULL, -- offline/online/hybrid
   start_date DATE NOT NULL, -- ngày bắt đầu lớp
   planned_end_date DATE, -- ngày kết thúc dự kiến
   actual_end_date DATE, -- ngày kết thúc thực tế
   schedule_days SMALLINT[], -- mảng các ngày trong tuần (1-7) lớp học (ví dụ: [2,4,6] cho thứ 3,5,7)
   max_capacity integer, -- policy về sức chứa tối đa của lớp
-  status class_status_enum NOT NULL DEFAULT 'DRAFT', -- draft -> scheduled -> ongoing -> completed
-  approval_status approval_status_enum NOT NULL DEFAULT 'PENDING', -- pending -> academic affair submit -> centerhead duyệt -> approved/rejected
+  status VARCHAR(20) NOT NULL DEFAULT 'DRAFT', -- draft -> scheduled -> ongoing -> completed
+  approval_status VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- pending -> academic affair submit -> centerhead duyệt -> approved/rejected
   created_by BIGINT, -- tạo bởi giáo vụ nào
   submitted_at TIMESTAMPTZ, -- thời gian giáo vụ submit để duyệt
   decided_by BIGINT, -- duyệt bởi centerhead nào
@@ -446,7 +446,10 @@ CREATE TABLE "class" (
   CONSTRAINT fk_class_course FOREIGN KEY(course_id) REFERENCES course(id) ON DELETE CASCADE,
   CONSTRAINT fk_class_created_by FOREIGN KEY(created_by) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT fk_class_decided_by FOREIGN KEY(decided_by) REFERENCES user_account(id) ON DELETE SET NULL,
-  CONSTRAINT uq_class_branch_code UNIQUE(branch_id,code)
+  CONSTRAINT uq_class_branch_code UNIQUE(branch_id,code),
+  CONSTRAINT chk_class_modality CHECK (modality IN ('OFFLINE', 'ONLINE', 'HYBRID')),
+  CONSTRAINT chk_class_status CHECK (status IN ('DRAFT', 'SCHEDULED', 'ONGOING', 'COMPLETED', 'CANCELLED')),
+  CONSTRAINT chk_class_approval_status CHECK (approval_status IN ('PENDING', 'APPROVED', 'REJECTED'))
 );
 
 CREATE TABLE session (
@@ -455,24 +458,27 @@ CREATE TABLE session (
   course_session_id BIGINT,
   time_slot_template_id BIGINT,
   date DATE NOT NULL,
-  type session_type_enum NOT NULL DEFAULT 'CLASS', -- class là theo lịch bình thường, other là buổi học đặc biệt khác, teacher_reschedule là lịch dạy của giáo viên (không liên quan đến lớp học)
-  status session_status_enum NOT NULL DEFAULT 'PLANNED',
+  type VARCHAR(20) NOT NULL DEFAULT 'CLASS', -- class là theo lịch bình thường, other là buổi học đặc biệt khác, teacher_reschedule là lịch dạy của giáo viên (không liên quan đến lớp học)
+  status VARCHAR(20) NOT NULL DEFAULT 'PLANNED',
   teacher_note TEXT, -- teacher báo cáo sau buổi học
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   CONSTRAINT fk_session_class FOREIGN KEY(class_id) REFERENCES "class"(id) ON DELETE CASCADE,
   CONSTRAINT fk_session_course_session FOREIGN KEY(course_session_id) REFERENCES course_session(id) ON DELETE SET NULL,
-  CONSTRAINT fk_session_time_slot_template FOREIGN KEY(time_slot_template_id) REFERENCES time_slot_template(id) ON DELETE SET NULL
+  CONSTRAINT fk_session_time_slot_template FOREIGN KEY(time_slot_template_id) REFERENCES time_slot_template(id) ON DELETE SET NULL,
+  CONSTRAINT chk_session_type CHECK (type IN ('CLASS', 'TEACHER_RESCHEDULE')),
+  CONSTRAINT chk_session_status CHECK (status IN ('PLANNED', 'CANCELLED', 'DONE'))
 );
 
 CREATE TABLE teacher_skill (
   teacher_id BIGINT NOT NULL,
-  skill skill_enum NOT NULL,
+  skill VARCHAR(20) NOT NULL,
   specialization VARCHAR(255), -- ví dụ: TOEFL, IELTS,...
   language VARCHAR(255), -- ví dụ: English, Vietnamese, etc.
   level SMALLINT,
   PRIMARY KEY(teacher_id, skill, specialization),
-  CONSTRAINT fk_teacher_skill_teacher FOREIGN KEY(teacher_id) REFERENCES teacher(id) ON DELETE CASCADE
+  CONSTRAINT fk_teacher_skill_teacher FOREIGN KEY(teacher_id) REFERENCES teacher(id) ON DELETE CASCADE,
+  CONSTRAINT chk_teacher_skill CHECK (skill IN ('GENERAL', 'READING', 'WRITING', 'SPEAKING', 'LISTENING'))
 );
 
 CREATE TABLE teacher_availability (
@@ -499,17 +505,18 @@ CREATE TABLE session_resource (
 CREATE TABLE teaching_slot (
   session_id BIGINT NOT NULL,
   teacher_id BIGINT NOT NULL,
-  status teaching_slot_status_enum NOT NULL DEFAULT 'SCHEDULED', -- on_leave - session đó giáo viên nghỉ/substituted - session đó giáo viên khác dạy thay/scheduled - session giáo viên dạy đúng lịch
+  status VARCHAR(20) NOT NULL DEFAULT 'SCHEDULED', -- on_leave - session đó giáo viên nghỉ/substituted - session đó giáo viên khác dạy thay/scheduled - session giáo viên dạy đúng lịch
   PRIMARY KEY(session_id,teacher_id),
   CONSTRAINT fk_teaching_slot_session FOREIGN KEY(session_id) REFERENCES session(id) ON DELETE CASCADE,
-  CONSTRAINT fk_teaching_slot_teacher FOREIGN KEY(teacher_id) REFERENCES teacher(id) ON DELETE CASCADE
+  CONSTRAINT fk_teaching_slot_teacher FOREIGN KEY(teacher_id) REFERENCES teacher(id) ON DELETE CASCADE,
+  CONSTRAINT chk_teaching_slot_status CHECK (status IN ('SCHEDULED', 'ON_LEAVE', 'SUBSTITUTED'))
 );
 
 CREATE TABLE enrollment (
   id BIGSERIAL PRIMARY KEY,
   class_id BIGINT NOT NULL,
   student_id BIGINT NOT NULL,
-  status enrollment_status_enum NOT NULL DEFAULT 'ENROLLED',
+  status VARCHAR(20) NOT NULL DEFAULT 'ENROLLED',
   enrolled_at TIMESTAMPTZ,
   left_at TIMESTAMPTZ,
   join_session_id BIGINT, -- session_id mà student bắt đầu tham gia lớp
@@ -523,7 +530,8 @@ CREATE TABLE enrollment (
   CONSTRAINT fk_enrollment_enrolled_by FOREIGN KEY(enrolled_by) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT fk_enrollment_student FOREIGN KEY(student_id) REFERENCES student(id) ON DELETE CASCADE,
   CONSTRAINT fk_enrollment_join_session FOREIGN KEY(join_session_id) REFERENCES session(id) ON DELETE SET NULL,
-  CONSTRAINT fk_enrollment_left_session FOREIGN KEY(left_session_id) REFERENCES session(id) ON DELETE SET NULL
+  CONSTRAINT fk_enrollment_left_session FOREIGN KEY(left_session_id) REFERENCES session(id) ON DELETE SET NULL,
+  CONSTRAINT chk_enrollment_status CHECK (status IN ('ENROLLED', 'TRANSFERRED', 'DROPPED', 'COMPLETED'))
 );
 
 CREATE TABLE student_session (
@@ -532,8 +540,8 @@ CREATE TABLE student_session (
   is_makeup BOOLEAN DEFAULT false,
   makeup_session_id BIGINT, -- nếu là buổi học bù thì lưu session bù
   original_session_id BIGINT, -- nếu là buổi học bù thì lưu session gốc
-  attendance_status attendance_status_enum NOT NULL DEFAULT 'PLANNED',
-  homework_status homework_status_enum,
+  attendance_status VARCHAR(20) NOT NULL DEFAULT 'PLANNED',
+  homework_status VARCHAR(20),
   note TEXT,
   recorded_at TIMESTAMPTZ, -- thời gian ghi nhận trạng thái điểm danh/homework
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -542,7 +550,9 @@ CREATE TABLE student_session (
   CONSTRAINT fk_student_session_makeup FOREIGN KEY(makeup_session_id) REFERENCES session(id) ON DELETE SET NULL,
   CONSTRAINT fk_student_session_original FOREIGN KEY(original_session_id) REFERENCES session(id) ON DELETE SET NULL,
   CONSTRAINT fk_student_session_student FOREIGN KEY(student_id) REFERENCES student(id) ON DELETE CASCADE,
-  CONSTRAINT fk_student_session_session FOREIGN KEY(session_id) REFERENCES session(id) ON DELETE CASCADE
+  CONSTRAINT fk_student_session_session FOREIGN KEY(session_id) REFERENCES session(id) ON DELETE CASCADE,
+  CONSTRAINT chk_attendance_status CHECK (attendance_status IN ('PLANNED', 'PRESENT', 'ABSENT')),
+  CONSTRAINT chk_homework_status CHECK (homework_status IN ('COMPLETED', 'INCOMPLETE', 'NO_HOMEWORK'))
 );
 
 -- TIER 5: Assessment & Feedback
@@ -633,13 +643,13 @@ CREATE TABLE student_request (
   id BIGSERIAL PRIMARY KEY,
   student_id BIGINT NOT NULL,
   current_class_id BIGINT, -- lớp hiện tại của student
-  request_type student_request_type_enum NOT NULL,
+  request_type VARCHAR(20) NOT NULL,
   target_class_id BIGINT, -- lớp muốn chuyển đến (dành cho transfer request)
   target_session_id BIGINT, -- dành buổi gốc mình chọn để học bù hoặc nghỉ
   makeup_session_id BIGINT, -- dành buổi học bù mình muốn học bù
   effective_date DATE, -- ngày có hiệu lực của request (dành cho transfer request)
   effective_session_id BIGINT, -- buổi học có hiệu lực (dành cho transfer request)
-  status request_status_enum NOT NULL DEFAULT 'PENDING',
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
   submitted_at TIMESTAMPTZ,
   submitted_by BIGINT,
   decided_by BIGINT,
@@ -653,7 +663,9 @@ CREATE TABLE student_request (
   CONSTRAINT fk_student_request_makeup_session FOREIGN KEY(makeup_session_id) REFERENCES session(id) ON DELETE SET NULL,
   CONSTRAINT fk_student_request_effective_session FOREIGN KEY(effective_session_id) REFERENCES session(id) ON DELETE SET NULL,
   CONSTRAINT fk_student_request_submitted_by FOREIGN KEY(submitted_by) REFERENCES user_account(id) ON DELETE SET NULL,
-  CONSTRAINT fk_student_request_decided_by FOREIGN KEY(decided_by) REFERENCES user_account(id) ON DELETE SET NULL
+  CONSTRAINT fk_student_request_decided_by FOREIGN KEY(decided_by) REFERENCES user_account(id) ON DELETE SET NULL,
+  CONSTRAINT chk_student_request_type CHECK (request_type IN ('ABSENCE', 'MAKEUP', 'TRANSFER')),
+  CONSTRAINT chk_student_request_status CHECK (status IN ('PENDING', 'WAITING_CONFIRM', 'APPROVED', 'REJECTED'))
 );
 
 CREATE TABLE teacher_request (
@@ -663,10 +675,10 @@ CREATE TABLE teacher_request (
   new_date DATE, -- teacher muốn đổi sang ngày này
   new_time_slot_id BIGINT, -- teacher muốn đổi sang khung giờ này
   new_resource_id BIGINT, -- teacher muốn đổi sang phòng này
-  request_type teacher_request_type_enum NOT NULL,
+  request_type VARCHAR(20) NOT NULL,
   replacement_teacher_id BIGINT, -- giáo viên thay thế (nếu có)
   new_session_id BIGINT, -- teacher đổi buổi sang buổi này
-  status request_status_enum NOT NULL DEFAULT 'PENDING',
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
   submitted_at TIMESTAMPTZ,
   submitted_by BIGINT,
   decided_by BIGINT,
@@ -680,7 +692,9 @@ CREATE TABLE teacher_request (
   CONSTRAINT fk_teacher_request_decided_by FOREIGN KEY(decided_by) REFERENCES user_account(id) ON DELETE SET NULL,
   CONSTRAINT fk_teacher_request_new_time_slot FOREIGN KEY(new_time_slot_id) REFERENCES time_slot_template(id) ON DELETE SET NULL,
   CONSTRAINT fk_teacher_request_new_resource FOREIGN KEY(new_resource_id) REFERENCES resource(id) ON DELETE SET NULL,
-  CONSTRAINT fk_teacher_request_new_session FOREIGN KEY(new_session_id) REFERENCES session(id) ON DELETE SET NULL
+  CONSTRAINT fk_teacher_request_new_session FOREIGN KEY(new_session_id) REFERENCES session(id) ON DELETE SET NULL,
+  CONSTRAINT chk_teacher_request_type CHECK (request_type IN ('SWAP', 'RESCHEDULE', 'MODALITY_CHANGE')),
+  CONSTRAINT chk_teacher_request_status CHECK (status IN ('PENDING', 'WAITING_CONFIRM', 'APPROVED', 'REJECTED'))
 );
 
 -- ========== SECTION 4: INDEXES ==========

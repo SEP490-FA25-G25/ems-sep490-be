@@ -36,7 +36,7 @@ public class CourseSession {
     @Column(name = "student_task", columnDefinition = "TEXT")
     private String studentTask;
 
-    @Column(name = "skill_set", columnDefinition = "skill_enum[]")
+    @Column(name = "skill_set")
     @Enumerated(EnumType.STRING)
     private Skill[] skillSet;
 
