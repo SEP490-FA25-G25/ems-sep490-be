@@ -1,23 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)",
-      "Bash(mvn clean compile:*)",
-      "Bash(cat:*)",
-      "Bash(mvn test:*)",
-      "Bash(docker exec:*)",
-      "Bash(dir:*)",
-      "Bash(./mvnw test:*)",
-      "Bash(gemini --all-files -p \"Analyze this Spring Boot codebase and provide a comprehensive analysis of the current enrollment flow implementation. Focus on:\n\n1. What enrollment-related endpoints, services, and entities currently exist\n2. The academic affairs (giáo vụ) user workflow for student enrollment into classes\n3. What screens/steps are involved in the enrollment process from the academic affairs perspective\n4. Current implementation status vs what''s documented in the PRD\n5. Database schema and entities related to enrollment\n6. What queries and functionality are available for the enrollment flow\n7. Gaps between current implementation and the documented requirements\n8. Next steps needed to complete the enrollment flow\n\nPlease provide specific code examples, file paths, and current status of implementation.\")",
-      "Bash(gemini --yolo -p \"Analyze this Spring Boot codebase and provide a comprehensive analysis of the current enrollment flow implementation. Focus on:\n\n1. What enrollment-related endpoints, services, and entities currently exist\n2. The academic affairs (giáo vụ) user workflow for student enrollment into classes\n3. What screens/steps are involved in the enrollment process from the academic affairs perspective\n4. Current implementation status vs what''s documented in the PRD\n5. Database schema and entities related to enrollment\n6. What queries and functionality are available for the enrollment flow\n7. Gaps between current implementation and the documented requirements\n8. Next steps needed to complete the enrollment flow\n\nPlease provide specific code examples, file paths, and current status of implementation.\")",
-      "Bash(find:*)",
-      "Bash(gemini --all-files -p \"Analyze this Spring Boot codebase to understand the Academic Affairs (giáo vụ) workflow for managing classes and students. Focus on:\n\n1. Class List Workflow:\n   - How academic affairs views class lists\n   - Available filters (branch, course, status)\n   - Information displayed for each class\n\n2. Class Detail & Student List Workflow:\n   - Navigation from class list to specific class\n   - Detailed class information display\n   - Current enrolled students list\n   - Available actions\n\n3. Branch Student Management Workflow:\n   - How academic affairs views branch students\n   - Search/filter capabilities\n   - Student information display\n   - Connection to enrollment workflow\n\nFor each workflow, identify:\n- Existing controllers and endpoints\n- Relevant entities and services\n- Current queries and functionality\n- Missing components that need implementation\n\nFocus specifically on the academic affairs user role and their daily workflow. Include code examples of existing implementations and identify gaps that need to be filled.\")",
-      "Bash(gemini -p \"Analyze this Spring Boot codebase to understand the Academic Affairs (giáo vụ) workflow for managing classes and students. Focus on:\n\n1. Class List Workflow:\n   - How academic affairs views class lists\n   - Available filters (branch, course, status)\n   - Information displayed for each class\n\n2. Class Detail & Student List Workflow:\n   - Navigation from class list to specific class\n   - Detailed class information display\n   - Current enrolled students list\n   - Available actions\n\n3. Branch Student Management Workflow:\n   - How academic affairs views branch students\n   - Search/filter capabilities\n   - Student information display\n   - Connection to enrollment workflow\n\nFor each workflow, identify:\n- Existing controllers and endpoints\n- Relevant entities and services\n- Current queries and functionality\n- Missing components that need implementation\n\nFocus specifically on the academic affairs user role and their daily workflow. Include code examples of existing implementations and identify gaps that need to be filled.\")",
-      "Bash(docker cp:*)",
-      "Bash(curl:*)",
-      "Bash(echo:*)",
-      "Bash(java:*)",
-      "Bash(sed:*)"
+      "Bash(docker:*)"
     ],
     "deny": [],
     "ask": []

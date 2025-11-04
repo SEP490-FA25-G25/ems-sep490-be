@@ -2,17 +2,13 @@ spring:
   application:
     name: tms-sep490-be
 
-  datasource:
-    # Connect to local PostgreSQL database for integration tests
-    url: jdbc:postgresql://localhost:5432/tms
-    username: postgres
-    password: 979712
-    driver-class-name: org.postgresql.Driver
+  # Testcontainers will provide database configuration via @DynamicPropertySource
+  # No hardcoded database configuration - conflicts with Testcontainers
 
   jpa:
     hibernate:
       ddl-auto: create-drop  # Recreate schema for each test run
-    show-sql: true
+    show-sql: false  # Reduce test log noise, enable for debugging
     properties:
       hibernate:
         format_sql: true
@@ -32,14 +28,17 @@ spring:
       access-token-expiration: 900000      # 15 minutes
       refresh-token-expiration: 604800000  # 7 days
 
-# Logging
+# Logging optimized for test performance
 logging:
   level:
-    org.fyp.tmssep490be: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.fyp.tmssep490be: INFO  # Reduced from DEBUG for performance
+    org.hibernate.SQL: WARN    # Reduced from DEBUG for performance
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
     org.testcontainers: INFO
     com.github.dockerjava: WARN
+    org.springframework.web: WARN
+    org.springframework.security: WARN
 
-# Disable security for easier testing (override in specific tests if needed)
-spring.security.enabled: false
+# Security configuration for tests
+# Security is ENABLED by default - use @WithMockUser for specific tests
+# spring.security.enabled property has been removed as it's deprecated

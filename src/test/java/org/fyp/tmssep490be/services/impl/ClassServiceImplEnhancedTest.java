@@ -2,6 +2,8 @@ package org.fyp.tmssep490be.services.impl;
 
 import org.fyp.tmssep490be.dtos.classmanagement.AvailableStudentDTO;
 import org.fyp.tmssep490be.entities.*;
+import org.fyp.tmssep490be.entities.enums.ApprovalStatus;
+import org.fyp.tmssep490be.entities.enums.ClassStatus;
 import org.fyp.tmssep490be.entities.enums.EnrollmentStatus;
 import org.fyp.tmssep490be.entities.enums.Skill;
 import org.fyp.tmssep490be.repositories.*;
@@ -94,6 +96,8 @@ class ClassServiceImplEnhancedTest {
                 .course(course)
                 .branch(branch)
                 .maxCapacity(20)
+                .status(ClassStatus.SCHEDULED)
+                .approvalStatus(ApprovalStatus.APPROVED)
                 .build();
 
         // Setup test student
@@ -104,7 +108,8 @@ class ClassServiceImplEnhancedTest {
                 .phone("+1234567890")
                 .build();
 
-        UserBranch userBranch = UserBranch.builder()
+        UserBranches userBranch = UserBranches.builder()
+                .userAccount(userAccount)
                 .branch(branch)
                 .build();
         userAccount.getUserBranches().add(userBranch);
@@ -121,6 +126,7 @@ class ClassServiceImplEnhancedTest {
                 .code("B1")
                 .name("Intermediate")
                 .subject(subject)
+                .expectedDurationHours(60)
                 .build();
 
         UserAccount assessor = UserAccount.builder()
@@ -163,7 +169,7 @@ class ClassServiceImplEnhancedTest {
 
         when(classRepository.findById(classId)).thenReturn(Optional.of(testClass));
         when(userBranchesRepository.findBranchIdsByUserId(userId)).thenReturn(List.of(1L));
-        when(studentRepository.findAvailableStudentsForClass(eq(classId), eq(1L), anyString(), any(Pageable.class)))
+        when(studentRepository.findAvailableStudentsForClass(eq(classId), eq(1L), isNull(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(testStudent)));
         when(skillAssessmentRepository.findByStudentIdIn(List.of(2000L))).thenReturn(testAssessments);
         when(enrollmentRepository.countByStudentIdAndStatus(2000L, EnrollmentStatus.ENROLLED)).thenReturn(1);
@@ -222,7 +228,7 @@ class ClassServiceImplEnhancedTest {
 
         when(classRepository.findById(classId)).thenReturn(Optional.of(testClass));
         when(userBranchesRepository.findBranchIdsByUserId(userId)).thenReturn(List.of(1L));
-        when(studentRepository.findAvailableStudentsForClass(eq(classId), eq(1L), anyString(), any(Pageable.class)))
+        when(studentRepository.findAvailableStudentsForClass(eq(classId), eq(1L), isNull(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(testStudent)));
         when(skillAssessmentRepository.findByStudentIdIn(List.of(2000L))).thenReturn(List.of());
         when(enrollmentRepository.countByStudentIdAndStatus(2000L, EnrollmentStatus.ENROLLED)).thenReturn(0);

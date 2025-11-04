@@ -6,15 +6,17 @@ import org.fyp.tmssep490be.entities.*;
 import org.fyp.tmssep490be.entities.enums.*;
 import org.fyp.tmssep490be.exceptions.CustomException;
 import org.fyp.tmssep490be.repositories.*;
+import org.fyp.tmssep490be.services.EnrollmentService;
 import org.fyp.tmssep490be.services.ExcelParserService;
+import org.fyp.tmssep490be.utils.TestDataBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
@@ -24,35 +26,41 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
+/**
+ * Service layer tests for EnrollmentService.
+ * Uses modern Spring Boot 3.5.7 @SpringBootTest with @MockitoBean pattern.
+ * Tests enrollment business logic in Spring context.
+ */
+@SpringBootTest
+@ActiveProfiles("test")
 @DisplayName("EnrollmentService Unit Tests")
 class EnrollmentServiceImplTest {
 
-    @Mock
+    @MockitoBean
     private EnrollmentRepository enrollmentRepository;
-    @Mock
+    @MockitoBean
     private ClassRepository classRepository;
-    @Mock
+    @MockitoBean
     private StudentRepository studentRepository;
-    @Mock
+    @MockitoBean
     private UserAccountRepository userAccountRepository;
-    @Mock
+    @MockitoBean
     private SessionRepository sessionRepository;
-    @Mock
+    @MockitoBean
     private StudentSessionRepository studentSessionRepository;
-    @Mock
+    @MockitoBean
     private RoleRepository roleRepository;
-    @Mock
+    @MockitoBean
     private UserRoleRepository userRoleRepository;
-    @Mock
+    @MockitoBean
     private UserBranchesRepository userBranchesRepository;
-    @Mock
+    @MockitoBean
     private ExcelParserService excelParserService;
-    @Mock
+    @MockitoBean
     private PasswordEncoder passwordEncoder;
 
-    @InjectMocks
-    private EnrollmentServiceImpl enrollmentService;
+    @Autowired
+    private EnrollmentService enrollmentService;
 
     private ClassEntity testClass;
     private MultipartFile mockFile;
@@ -205,14 +213,26 @@ class EnrollmentServiceImplTest {
         )).thenReturn(futureSessions);
         when(enrollmentRepository.existsByClassIdAndStudentIdAndStatus(anyLong(), anyLong(), any()))
                 .thenReturn(false);
-        when(enrollmentRepository.saveAll(anyList())).thenReturn(Collections.emptyList());
-        when(studentSessionRepository.saveAll(anyList())).thenReturn(Collections.emptyList());
+        when(enrollmentRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(studentSessionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Mock student resolution
+        long studentIdCounter = 1000L;
         for (StudentEnrollmentData data : request.getStudents()) {
             data.setStatus(StudentResolutionStatus.FOUND);
-            data.setResolvedStudentId((long) data.hashCode());
+            data.setResolvedStudentId(studentIdCounter++);
         }
+
+        // Mock studentRepository.findAllById to return students for session creation
+        List<Student> mockStudents = new ArrayList<>();
+        for (long i = 1000L; i < 1005L; i++) {
+            Student student = TestDataBuilder.buildStudent()
+                    .studentCode("ST" + i)
+                    .build();
+            student.setId(i);
+            mockStudents.add(student);
+        }
+        when(studentRepository.findAllById(anyList())).thenReturn(mockStudents);
 
         // Act
         EnrollmentResult result = enrollmentService.executeClassEnrollmentImport(request, 100L);
@@ -238,9 +258,10 @@ class EnrollmentServiceImplTest {
         when(enrollmentRepository.countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED)).thenReturn(15);
 
         // Mock all students as FOUND
+        long studentIdCounter = 1000L;
         for (StudentEnrollmentData data : request.getStudents()) {
             data.setStatus(StudentResolutionStatus.FOUND);
-            data.setResolvedStudentId((long) data.hashCode());
+            data.setResolvedStudentId(studentIdCounter++);
         }
 
         // Act & Assert
@@ -266,13 +287,14 @@ class EnrollmentServiceImplTest {
         )).thenReturn(futureSessions);
         when(enrollmentRepository.existsByClassIdAndStudentIdAndStatus(anyLong(), anyLong(), any()))
                 .thenReturn(false);
-        when(enrollmentRepository.saveAll(anyList())).thenReturn(Collections.emptyList());
-        when(studentSessionRepository.saveAll(anyList())).thenReturn(Collections.emptyList());
+        when(enrollmentRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(studentSessionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Mock all students as FOUND
+        long studentIdCounter = 1000L;
         for (StudentEnrollmentData data : request.getStudents()) {
             data.setStatus(StudentResolutionStatus.FOUND);
-            data.setResolvedStudentId((long) data.hashCode());
+            data.setResolvedStudentId(studentIdCounter++);
         }
 
         // Act
@@ -297,9 +319,10 @@ class EnrollmentServiceImplTest {
         when(enrollmentRepository.countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED)).thenReturn(15);
 
         // Mock all students as FOUND
+        long studentIdCounter = 1000L;
         for (StudentEnrollmentData data : request.getStudents()) {
             data.setStatus(StudentResolutionStatus.FOUND);
-            data.setResolvedStudentId((long) data.hashCode());
+            data.setResolvedStudentId(studentIdCounter++);
         }
 
         // Act & Assert
@@ -528,7 +551,7 @@ class EnrollmentServiceImplTest {
         assertThat(result.getTotalStudentSessionsCreated()).isEqualTo(15); // 3 students × 5 sessions
 
         verify(classRepository, atLeastOnce()).findById(1L); // Called in validateClassForEnrollment and enrollStudents
-        verify(studentRepository).findAllById(studentIds);
+        verify(studentRepository, atLeastOnce()).findAllById(studentIds);
         verify(enrollmentRepository).countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED);
         verify(enrollmentRepository).saveAll(anyList());
         verify(studentSessionRepository).saveAll(anyList());
@@ -561,7 +584,7 @@ class EnrollmentServiceImplTest {
                 .hasFieldOrPropertyWithValue("errorCode", org.fyp.tmssep490be.exceptions.ErrorCode.CLASS_CAPACITY_EXCEEDED);
 
         verify(classRepository).findById(1L);
-        verify(studentRepository).findAllById(studentIds);
+        verify(studentRepository, atLeastOnce()).findAllById(studentIds);
         verify(enrollmentRepository).countByClassIdAndStatus(1L, EnrollmentStatus.ENROLLED);
         verify(enrollmentRepository, never()).saveAll(anyList());
     }
@@ -702,7 +725,7 @@ class EnrollmentServiceImplTest {
 
         // Assert
         assertThat(result.getEnrolledCount()).isEqualTo(3); // Only 3 unique students
-        verify(studentRepository).findAllById(argThat(ids -> ((java.util.Collection<?>) ids).size() == 3)); // Should query only 3
+        verify(studentRepository, atLeastOnce()).findAllById(argThat(ids -> ((java.util.Collection<?>) ids).size() == 3)); // Should query only 3
     }
 
     @Test

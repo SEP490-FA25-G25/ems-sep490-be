@@ -4,19 +4,20 @@ import org.fyp.tmssep490be.dtos.center.CenterRequest;
 import org.fyp.tmssep490be.dtos.center.CenterResponse;
 import org.fyp.tmssep490be.entities.Center;
 import org.fyp.tmssep490be.repositories.CenterRepository;
+import org.fyp.tmssep490be.services.CenterService;
+import org.fyp.tmssep490be.utils.TestDataBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.context.ActiveProfiles;
 
-import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -25,22 +26,29 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
+/**
+ * Service layer tests for CenterService.
+ * Uses modern Spring Boot 3.5.7 @SpringBootTest with @MockitoBean pattern.
+ * Tests business logic in Spring context with proper dependency injection.
+ */
+@SpringBootTest
+@ActiveProfiles("test")
 @DisplayName("CenterService Unit Tests")
 class CenterServiceImplTest {
 
-    @Mock
-    private CenterRepository centerRepository;
+    @Autowired
+    private CenterService centerService;
 
-    @InjectMocks
-    private CenterServiceImpl centerService;
+    @MockitoBean
+    private CenterRepository centerRepository;
 
     private Center testCenter;
     private CenterRequest testRequest;
 
     @BeforeEach
     void setUp() {
-        testCenter = Center.builder()
+        // Use TestDataBuilder for consistent test data creation
+        testCenter = TestDataBuilder.buildCenter()
                 .id(1L)
                 .code("TC001")
                 .name("Test Center")

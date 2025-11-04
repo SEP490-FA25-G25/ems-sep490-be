@@ -99,11 +99,6 @@ CREATE DATABASE tms;
 export JAVA_HOME="/c/Users/YourUsername/.jdks/openjdk-21.0.1"
 export PATH="$JAVA_HOME/bin:$PATH"
 
-# Alternative: Use Docker to avoid Java setup
-docker run --rm -v "$(pwd)":/workspace -w /workspace \
-  maven:3.9-openjdk-21 \
-  mvn clean compile
-
 # Verify setup
 java -version
 mvn -version
@@ -198,31 +193,39 @@ All API responses use `ResponseObject<T>` for consistency:
 }
 ```
 
-## Testing Strategy
+## Testing Strategy (Spring Boot 3.5.7 + Java 21)
 
-### Three-Tier Testing Approach
-1. **Unit Tests**: Service layer with mocked dependencies (`*Test.java`)
-2. **Integration Tests**: Repository layer with Testcontainers (`*RepositoryTest.java`)
-3. **Full Integration Tests**: End-to-end workflows (`*IT.java`, `*IntegrationTest.java`)
+### ⚠️ CRITICAL: Modern Testing Standards (2025)
 
-### Base Test Classes
-- `AbstractRepositoryTest`: For `@DataJpaTest` with Testcontainers
-- `AbstractIntegrationTest`: For `@SpringBootTest` with full context
-- REST Assured framework for API testing
+**MUST READ:** See detailed testing guidelines in [src/test/README.md](src/test/README.md)
 
-### Test Data Builders
-Use `TestDataBuilder` utility for creating test entities:
+**Key Rules:**
+1. ✅ **USE**: `@SpringBootTest` + `@MockitoBean` (Spring Boot 3.4+)
+2. ❌ **NEVER USE**: `@ExtendWith(MockitoExtension.class)` + `@Mock` + `@InjectMocks`
+3. ✅ Import: `org.springframework.test.context.bean.override.mockito.MockitoBean`
+4. ❌ NOT: `org.springframework.boot.test.mock.mockito.MockBean` (deprecated)
+
+**Quick Reference:**
 ```java
-Center center = TestDataBuilder.buildCenter()
-    .name("Test Center")
-    .build();
+// ✅ CORRECT
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+@SpringBootTest
+@ActiveProfiles("test")
+class ServiceTest {
+    @Autowired private YourService service;
+    @MockitoBean private YourRepository repository;
+}
+
+// ❌ WRONG - DO NOT USE
+@ExtendWith(MockitoExtension.class)  // ❌ DEPRECATED
+class ServiceTest {
+    @Mock private YourRepository repository;  // ❌ No Spring context
+    @InjectMocks private YourService service;  // ❌ Bypasses Spring DI
+}
 ```
 
-### Coverage Goals
-- Overall: 80%+
-- Service Layer: 90%+ (critical business logic)
-- Repository Layer: 70%+
-- Entity Layer: 60%+
+**Test Templates & Best Practices:** See [src/test/README.md](src/test/README.md)
 
 ## Development Workflow
 

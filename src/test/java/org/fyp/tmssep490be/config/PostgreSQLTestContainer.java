@@ -5,6 +5,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 /**
  * Singleton PostgreSQL container for integration tests.
  * Reuses the same container across all tests for better performance.
+ * Uses modern Spring Boot 3.5.7 @DynamicPropertySource pattern.
  */
 public class PostgreSQLTestContainer extends PostgreSQLContainer<PostgreSQLTestContainer> {
 
@@ -21,22 +22,51 @@ public class PostgreSQLTestContainer extends PostgreSQLContainer<PostgreSQLTestC
                     .withDatabaseName("tms_test")
                     .withUsername("test")
                     .withPassword("test")
-                    .withReuse(true);
+                    .withReuse(true)
+                    .withLabel("reuse", "true");  // Testcontainers reuse optimization
         }
         return container;
+    }
+
+    /**
+     * Get container without System.setProperty (deprecated approach)
+     * Use @DynamicPropertySource in test classes instead
+     */
+    public static PostgreSQLTestContainer getContainer() {
+        return getInstance();
     }
 
     @Override
     public void start() {
         super.start();
-        System.setProperty("spring.datasource.url", container.getJdbcUrl());
-        System.setProperty("spring.datasource.username", container.getUsername());
-        System.setProperty("spring.datasource.password", container.getPassword());
+        // Note: System.setProperty approach is deprecated
+        // Use @DynamicPropertySource in test classes for proper Spring Boot integration
     }
 
     @Override
     public void stop() {
         // Do nothing, JVM handles shut down
         // This allows container reuse across test classes
+    }
+
+    /**
+     * Get database URL for @DynamicPropertySource
+     */
+    public String getDatabaseUrl() {
+        return super.getJdbcUrl();
+    }
+
+    /**
+     * Get database username for @DynamicPropertySource
+     */
+    public String getDatabaseUsername() {
+        return super.getUsername();
+    }
+
+    /**
+     * Get database password for @DynamicPropertySource
+     */
+    public String getDatabasePassword() {
+        return super.getPassword();
     }
 }

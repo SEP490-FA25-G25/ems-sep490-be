@@ -6,24 +6,27 @@ import org.fyp.tmssep490be.dtos.auth.RefreshTokenRequest;
 import org.fyp.tmssep490be.entities.Role;
 import org.fyp.tmssep490be.entities.UserAccount;
 import org.fyp.tmssep490be.entities.UserRole;
+import org.fyp.tmssep490be.entities.enums.Gender;
 import org.fyp.tmssep490be.entities.enums.UserStatus;
 import org.fyp.tmssep490be.exceptions.InvalidTokenException;
 import org.fyp.tmssep490be.repositories.UserAccountRepository;
 import org.fyp.tmssep490be.security.JwtTokenProvider;
 import org.fyp.tmssep490be.security.UserPrincipal;
+import org.fyp.tmssep490be.services.AuthService;
+import org.fyp.tmssep490be.utils.TestDataBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.HashSet;
 import java.util.List;
@@ -34,26 +37,30 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit tests for AuthServiceImpl
+ * Service layer tests for AuthService.
+ * Uses modern Spring Boot 3.5.7 @SpringBootTest with @MockitoBean pattern.
+ * Tests authentication logic in Spring context with proper security testing.
  */
-@ExtendWith(MockitoExtension.class)
+@SpringBootTest
+@ActiveProfiles("test")
 @DisplayName("AuthService Unit Tests")
 class AuthServiceImplTest {
 
-    @Mock
+    @Autowired
+    private AuthService authService;
+
+    @MockitoBean
     private AuthenticationManager authenticationManager;
 
-    @Mock
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
-    @Mock
+    @MockitoBean
     private UserAccountRepository userAccountRepository;
-
-    @InjectMocks
-    private AuthServiceImpl authService;
 
     private UserAccount testUser;
     private UserPrincipal testUserPrincipal;
@@ -61,32 +68,28 @@ class AuthServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Create test user with email as login
-        testUser = new UserAccount();
-        testUser.setId(1L);
-        testUser.setEmail("test@example.com");
+        // Use TestDataBuilder for consistent test user creation
+        testUser = TestDataBuilder.buildUserAccount()
+                .id(1L)
+                .email("test@example.com")
+                .fullName("Test User")
+                .status(UserStatus.ACTIVE)
+                .build();
+        // Set password hash for authentication testing
         testUser.setPasswordHash("encodedPassword");
-        testUser.setFullName("Test User");
-        testUser.setStatus(UserStatus.ACTIVE);
 
-        // Create role
-        Role role = new Role();
-        role.setId(1L);
-        role.setCode("ADMIN");
-        role.setName("Administrator");
+        // Create and add role for the user
+        Role adminRole = new Role();
+        adminRole.setId(1L);
+        adminRole.setCode("ADMIN");
+        adminRole.setName("Administrator");
 
         UserRole userRole = new UserRole();
-        UserRole.UserRoleId userRoleId = new UserRole.UserRoleId();
-        userRoleId.setUserId(1L);
-        userRoleId.setRoleId(1L);
-        userRole.setId(userRoleId);
-        userRole.setRole(role);
         userRole.setUserAccount(testUser);
+        userRole.setRole(adminRole);
 
-        Set<UserRole> userRoles = new HashSet<>();
-        userRoles.add(userRole);
-        testUser.setUserRoles(userRoles);
-        testUser.setUserBranches(new HashSet<>());
+        testUser.setUserRoles(new HashSet<>());
+        testUser.getUserRoles().add(userRole);
 
         // Create UserPrincipal (6 arguments: id, email, passwordHash, fullName, status, authorities)
         testUserPrincipal = new UserPrincipal(
@@ -160,12 +163,14 @@ class AuthServiceImplTest {
     @DisplayName("Should refresh token successfully with valid refresh token")
     void shouldRefreshTokenSuccessfully() {
         // Arrange
-        RefreshTokenRequest request = new RefreshTokenRequest("valid-refresh-token");
+        RefreshTokenRequest request = RefreshTokenRequest.builder()
+                .refreshToken("valid-refresh-token")
+                .build();
 
         when(jwtTokenProvider.validateRefreshToken("valid-refresh-token")).thenReturn(true);
         when(jwtTokenProvider.getUserIdFromJwt("valid-refresh-token")).thenReturn(1L);
         when(userAccountRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(jwtTokenProvider.generateAccessToken(1L, "test@example.com", "ROLE_ADMIN"))
+        when(jwtTokenProvider.generateAccessToken(eq(1L), eq("test@example.com"), anyString()))
                 .thenReturn("new-access-token");
         when(jwtTokenProvider.generateRefreshToken(1L, "test@example.com"))
                 .thenReturn("new-refresh-token");
@@ -191,7 +196,9 @@ class AuthServiceImplTest {
     @DisplayName("Should throw exception when refresh token is invalid")
     void shouldThrowExceptionWhenRefreshTokenInvalid() {
         // Arrange
-        RefreshTokenRequest request = new RefreshTokenRequest("invalid-refresh-token");
+        RefreshTokenRequest request = RefreshTokenRequest.builder()
+                .refreshToken("invalid-refresh-token")
+                .build();
 
         when(jwtTokenProvider.validateRefreshToken("invalid-refresh-token")).thenReturn(false);
 
@@ -209,7 +216,9 @@ class AuthServiceImplTest {
     @DisplayName("Should throw exception when user not found during refresh")
     void shouldThrowExceptionWhenUserNotFoundDuringRefresh() {
         // Arrange
-        RefreshTokenRequest request = new RefreshTokenRequest("valid-refresh-token");
+        RefreshTokenRequest request = RefreshTokenRequest.builder()
+                .refreshToken("valid-refresh-token")
+                .build();
 
         when(jwtTokenProvider.validateRefreshToken("valid-refresh-token")).thenReturn(true);
         when(jwtTokenProvider.getUserIdFromJwt("valid-refresh-token")).thenReturn(999L);

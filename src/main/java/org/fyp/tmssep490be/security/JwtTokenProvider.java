@@ -202,4 +202,11 @@ public class JwtTokenProvider {
             return false;
         }
     }
+
+    /**
+     * Get access token expiration in seconds
+     */
+    public long getAccessTokenExpirationInSeconds() {
+        return accessTokenValidityInMs / 1000;
+    }
 }

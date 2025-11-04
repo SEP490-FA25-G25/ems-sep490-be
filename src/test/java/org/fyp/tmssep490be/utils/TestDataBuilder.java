@@ -5,7 +5,7 @@ import org.fyp.tmssep490be.entities.enums.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.OffsetDateTime;
 
 /**
  * Test data builder utility for creating test entities.
@@ -45,6 +45,16 @@ public class TestDataBuilder {
 
         public CenterBuilder name(String name) {
             center.setName(name);
+            return this;
+        }
+
+        public CenterBuilder id(Long id) {
+            center.setId(id);
+            return this;
+        }
+
+        public CenterBuilder description(String description) {
+            center.setDescription(description);
             return this;
         }
 
@@ -99,6 +109,11 @@ public class TestDataBuilder {
 
         public BranchBuilder name(String name) {
             branch.setName(name);
+            return this;
+        }
+
+        public BranchBuilder address(String address) {
+            branch.setAddress(address);
             return this;
         }
 
@@ -247,6 +262,286 @@ public class TestDataBuilder {
         }
     }
 
-    // Additional builders can be added as needed...
-    // ClassEntity, Session, Enrollment, etc.
+    // UserAccount Builder
+    public static UserAccountBuilder buildUserAccount() {
+        return new UserAccountBuilder();
+    }
+
+    public static class UserAccountBuilder {
+        private final UserAccount userAccount = new UserAccount();
+
+        public UserAccountBuilder() {
+            // Set defaults
+            userAccount.setEmail("test@example.com");
+            userAccount.setFullName("Test User");
+            userAccount.setGender(Gender.MALE);
+            userAccount.setStatus(UserStatus.ACTIVE);
+            userAccount.setPasswordHash("encodedPasswordHash");
+        }
+
+        public UserAccountBuilder id(Long id) {
+            userAccount.setId(id);
+            return this;
+        }
+
+        public UserAccountBuilder email(String email) {
+            userAccount.setEmail(email);
+            return this;
+        }
+
+        public UserAccountBuilder fullName(String fullName) {
+            userAccount.setFullName(fullName);
+            return this;
+        }
+
+        public UserAccountBuilder gender(Gender gender) {
+            userAccount.setGender(gender);
+            return this;
+        }
+
+        public UserAccountBuilder status(UserStatus status) {
+            userAccount.setStatus(status);
+            return this;
+        }
+
+        public UserAccountBuilder passwordHash(String passwordHash) {
+            userAccount.setPasswordHash(passwordHash);
+            return this;
+        }
+
+        public UserAccount build() {
+            return userAccount;
+        }
+    }
+
+    // Student Builder
+    public static StudentBuilder buildStudent() {
+        return new StudentBuilder();
+    }
+
+    public static class StudentBuilder {
+        private final Student student = new Student();
+
+        public StudentBuilder() {
+            // Set defaults
+            student.setStudentCode("ST001");
+        }
+
+        public StudentBuilder userAccount(UserAccount userAccount) {
+            student.setUserAccount(userAccount);
+            return this;
+        }
+
+        public StudentBuilder studentCode(String studentCode) {
+            student.setStudentCode(studentCode);
+            return this;
+        }
+
+        public Student build() {
+            return student;
+        }
+    }
+
+    // ClassEntity Builder
+    public static ClassEntityBuilder buildClassEntity() {
+        return new ClassEntityBuilder();
+    }
+
+    public static class ClassEntityBuilder {
+        private final ClassEntity classEntity = new ClassEntity();
+
+        public ClassEntityBuilder() {
+            // Set defaults
+            classEntity.setCode("CLASS001");
+            classEntity.setName("Test Class");
+            classEntity.setModality(Modality.ONLINE);
+            classEntity.setStartDate(LocalDate.now().plusDays(7));
+            classEntity.setPlannedEndDate(LocalDate.now().plusWeeks(12));
+            classEntity.setMaxCapacity(20);
+        }
+
+        public ClassEntityBuilder branch(Branch branch) {
+            classEntity.setBranch(branch);
+            return this;
+        }
+
+        public ClassEntityBuilder course(Course course) {
+            classEntity.setCourse(course);
+            return this;
+        }
+
+        public ClassEntityBuilder code(String code) {
+            classEntity.setCode(code);
+            return this;
+        }
+
+        public ClassEntityBuilder name(String name) {
+            classEntity.setName(name);
+            return this;
+        }
+
+        public ClassEntityBuilder modality(Modality modality) {
+            classEntity.setModality(modality);
+            return this;
+        }
+
+        public ClassEntityBuilder startDate(LocalDate startDate) {
+            classEntity.setStartDate(startDate);
+            return this;
+        }
+
+        public ClassEntityBuilder plannedEndDate(LocalDate plannedEndDate) {
+            classEntity.setPlannedEndDate(plannedEndDate);
+            return this;
+        }
+
+        public ClassEntityBuilder maxCapacity(Integer maxCapacity) {
+            classEntity.setMaxCapacity(maxCapacity);
+            return this;
+        }
+
+        public ClassEntity build() {
+            return classEntity;
+        }
+    }
+
+    // Enrollment Builder
+    public static EnrollmentBuilder buildEnrollment() {
+        return new EnrollmentBuilder();
+    }
+
+    public static class EnrollmentBuilder {
+        private final Enrollment enrollment = new Enrollment();
+
+        public EnrollmentBuilder() {
+            // Set defaults
+            enrollment.setStatus(EnrollmentStatus.ENROLLED);
+            enrollment.setEnrolledAt(OffsetDateTime.now());
+            enrollment.setEnrolledBy(1L);
+            enrollment.setCapacityOverride(false);
+        }
+
+        public EnrollmentBuilder classId(Long classId) {
+            enrollment.setClassId(classId);
+            return this;
+        }
+
+        public EnrollmentBuilder studentId(Long studentId) {
+            enrollment.setStudentId(studentId);
+            return this;
+        }
+
+        public EnrollmentBuilder status(EnrollmentStatus status) {
+            enrollment.setStatus(status);
+            return this;
+        }
+
+        public EnrollmentBuilder enrolledAt(OffsetDateTime enrolledAt) {
+            enrollment.setEnrolledAt(enrolledAt);
+            return this;
+        }
+
+        public EnrollmentBuilder enrolledBy(Long enrolledBy) {
+            enrollment.setEnrolledBy(enrolledBy);
+            return this;
+        }
+
+        public EnrollmentBuilder capacityOverride(Boolean capacityOverride) {
+            enrollment.setCapacityOverride(capacityOverride);
+            return this;
+        }
+
+        public EnrollmentBuilder overrideReason(String overrideReason) {
+            enrollment.setOverrideReason(overrideReason);
+            return this;
+        }
+
+        public Enrollment build() {
+            return enrollment;
+        }
+    }
+
+    // Session Builder
+    public static SessionBuilder buildSession() {
+        return new SessionBuilder();
+    }
+
+    public static class SessionBuilder {
+        private final Session session = new Session();
+
+        public SessionBuilder() {
+            // Set defaults
+            session.setDate(LocalDate.now());
+            session.setStatus(SessionStatus.PLANNED);
+        }
+
+        public SessionBuilder classEntity(ClassEntity classEntity) {
+            session.setClassEntity(classEntity);
+            return this;
+        }
+
+        public SessionBuilder date(LocalDate date) {
+            session.setDate(date);
+            return this;
+        }
+
+        public SessionBuilder status(SessionStatus status) {
+            session.setStatus(status);
+            return this;
+        }
+
+        public SessionBuilder teacherNote(String teacherNote) {
+            session.setTeacherNote(teacherNote);
+            return this;
+        }
+
+        public Session build() {
+            return session;
+        }
+    }
+
+    // ReplacementSkillAssessment Builder
+    public static ReplacementSkillAssessmentBuilder buildReplacementSkillAssessment() {
+        return new ReplacementSkillAssessmentBuilder();
+    }
+
+    public static class ReplacementSkillAssessmentBuilder {
+        private final ReplacementSkillAssessment assessment = new ReplacementSkillAssessment();
+
+        public ReplacementSkillAssessmentBuilder() {
+            // Set defaults
+            assessment.setSkill(Skill.READING);
+            assessment.setAssessmentDate(LocalDate.now());
+            assessment.setScore(75);
+        }
+
+        public ReplacementSkillAssessmentBuilder student(Student student) {
+            assessment.setStudent(student);
+            return this;
+        }
+
+        public ReplacementSkillAssessmentBuilder skill(Skill skill) {
+            assessment.setSkill(skill);
+            return this;
+        }
+
+        public ReplacementSkillAssessmentBuilder level(Level level) {
+            assessment.setLevel(level);
+            return this;
+        }
+
+        public ReplacementSkillAssessmentBuilder assessmentDate(LocalDate assessmentDate) {
+            assessment.setAssessmentDate(assessmentDate);
+            return this;
+        }
+
+        public ReplacementSkillAssessmentBuilder score(Integer score) {
+            assessment.setScore(score);
+            return this;
+        }
+
+        public ReplacementSkillAssessment build() {
+            return assessment;
+        }
+    }
 }

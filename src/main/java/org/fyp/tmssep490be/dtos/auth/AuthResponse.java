@@ -19,6 +19,7 @@ public class AuthResponse {
     private String accessToken;
     private String refreshToken;
     private String tokenType = "Bearer";
+    private Long expiresIn; // Token expiration in seconds
     private Long userId;
     private String email;
     private String fullName;
