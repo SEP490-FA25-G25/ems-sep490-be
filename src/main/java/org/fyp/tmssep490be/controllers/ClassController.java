@@ -203,18 +203,23 @@ public class ClassController {
     }
 
     /**
-     * Get available students for enrollment in a class
-     * Returns students from the same branch who are not yet enrolled
+     * Get available students for enrollment in a class with complete assessment data
+     * Returns students from the same branch who are not yet enrolled with full replacement skill assessment history
      * Smart sorting based on skill assessment matching
      */
     @GetMapping("/{classId}/available-students")
     @Operation(
             summary = "Get available students for enrollment",
-            description = "Retrieve students who are available to enroll in the class, " +
+            description = "Retrieve students who are available to enroll in the class with complete replacement skill assessment history, " +
                     "sorted by skill assessment match priority. Priority levels:\n" +
                     "1. Perfect match - Assessment matches both Subject AND Level\n" +
                     "2. Partial match - Assessment matches Subject only\n" +
-                    "3. No match - No assessment or different Subject"
+                    "3. No match - No assessment or different Subject\n\n" +
+                    "Response includes complete student assessment data:\n" +
+                    "- All replacement skill assessments (READING, WRITING, SPEAKING, LISTENING, GENERAL)\n" +
+                    "- Assessment details: scores, dates, types, notes, and assessors\n" +
+                    "- Level information with subject context and duration expectations\n" +
+                    "- Class match analysis with detailed reasoning for recommendations"
     )
     @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
     public ResponseEntity<ResponseObject<Page<AvailableStudentDTO>>> getAvailableStudentsForClass(

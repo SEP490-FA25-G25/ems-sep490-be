@@ -236,31 +236,32 @@ public class ClassServiceImpl implements ClassService {
         Long classSubjectId = classEntity.getCourse().getLevel().getSubject().getId();
         Long classLevelId = classEntity.getCourse().getLevel().getId();
 
-        // Batch fetch skill assessments for all students
+        // Batch fetch ALL skill assessments for all students (not just matching subject)
         List<Long> studentIds = availableStudents.getContent().stream()
                 .map(Student::getId)
                 .collect(Collectors.toList());
 
-        List<ReplacementSkillAssessment> assessments = studentIds.isEmpty() ?
+        List<ReplacementSkillAssessment> allAssessments = studentIds.isEmpty() ?
                 List.of() :
-                skillAssessmentRepository.findLatestAssessmentsByStudentsAndSubject(studentIds, classSubjectId);
+                skillAssessmentRepository.findByStudentIdIn(studentIds);
 
-        // Create a map for quick lookup: studentId -> assessment
-        var assessmentMap = assessments.stream()
-                .collect(Collectors.toMap(
-                        a -> a.getStudent().getId(),
-                        a -> a,
-                        (a1, a2) -> a1.getAssessmentDate().isAfter(a2.getAssessmentDate()) ? a1 : a2
-                ));
+        // Group assessments by student ID
+        Map<Long, List<ReplacementSkillAssessment>> assessmentsByStudent = allAssessments.stream()
+                .collect(Collectors.groupingBy(assessment -> assessment.getStudent().getId()));
 
-        // Convert to DTOs with priority calculation and sort by matchPriority
+        // Convert to DTOs with complete assessment data and sort by matchPriority
         List<AvailableStudentDTO> dtos = availableStudents.getContent().stream()
-                .map(student -> convertToAvailableStudentDTO(student, assessmentMap.get(student.getId()),
-                        classSubjectId, classLevelId))
+                .map(student -> convertToAvailableStudentDTO(
+                        student,
+                        assessmentsByStudent.get(student.getId()),
+                        classSubjectId,
+                        classLevelId
+                ))
                 .sorted((dto1, dto2) -> {
                     // Sort by matchPriority (ascending: 1, 2, 3)
                     // Then by student name if same priority
-                    int priorityCompare = dto1.getMatchPriority().compareTo(dto2.getMatchPriority());
+                    int priorityCompare = dto1.getClassMatchInfo().getMatchPriority()
+                            .compareTo(dto2.getClassMatchInfo().getMatchPriority());
                     if (priorityCompare != 0) {
                         return priorityCompare;
                     }
@@ -514,7 +515,7 @@ public class ClassServiceImpl implements ClassService {
 
     private AvailableStudentDTO convertToAvailableStudentDTO(
             Student student,
-            ReplacementSkillAssessment assessment,
+            List<ReplacementSkillAssessment> assessments,
             Long classSubjectId,
             Long classLevelId
     ) {
@@ -528,29 +529,19 @@ public class ClassServiceImpl implements ClassService {
             branchName = userAccount.getUserBranches().iterator().next().getBranch().getName();
         }
 
+        // Convert all assessments to DTOs
+        List<AvailableStudentDTO.SkillAssessmentDTO> assessmentDTOs = assessments != null ?
+                assessments.stream()
+                        .map(this::convertToSkillAssessmentDTO)
+                        .sorted((a1, a2) -> a2.getAssessmentDate().compareTo(a1.getAssessmentDate())) // Most recent first
+                        .collect(Collectors.toList()) :
+                List.of();
+
+        // Find matching assessment for priority calculation
+        ReplacementSkillAssessment matchingAssessment = findMatchingAssessment(assessments, classSubjectId, classLevelId);
+
         // Calculate match priority and context
-        Integer matchPriority = 3; // Default: No match
-        String matchingSkillLevel = null;
-        String notes = "No skill assessment found for this course's subject";
-
-        if (assessment != null && assessment.getLevel() != null) {
-            Long assessmentSubjectId = assessment.getLevel().getSubject().getId();
-            Long assessmentLevelId = assessment.getLevel().getId();
-
-            if (assessmentSubjectId.equals(classSubjectId)) {
-                if (assessmentLevelId.equals(classLevelId)) {
-                    // Perfect match: Same subject AND same level
-                    matchPriority = 1;
-                    matchingSkillLevel = assessment.getLevel().getCode();
-                    notes = "Perfect match - Assessment level matches class level";
-                } else {
-                    // Partial match: Same subject, different level
-                    matchPriority = 2;
-                    matchingSkillLevel = assessment.getLevel().getCode();
-                    notes = "Subject match - Different level (assessed at " + matchingSkillLevel + ")";
-                }
-            }
-        }
+        AvailableStudentDTO.ClassMatchInfoDTO classMatchInfo = calculateClassMatchInfo(matchingAssessment, classSubjectId, classLevelId);
 
         // Get active enrollments count
         int activeEnrollments = enrollmentRepository.countByStudentIdAndStatus(
@@ -566,13 +557,129 @@ public class ClassServiceImpl implements ClassService {
                 .phone(userAccount.getPhone())
                 .branchId(branchId)
                 .branchName(branchName)
-                .matchPriority(matchPriority)
-                .matchingSkillLevel(matchingSkillLevel)
-                .lastAssessmentDate(assessment != null ? assessment.getAssessmentDate() : null)
-                .lastAssessmentScore(assessment != null ? assessment.getScore() : null)
+                .replacementSkillAssessments(assessmentDTOs)
+                .classMatchInfo(classMatchInfo)
                 .activeEnrollments(activeEnrollments)
                 .canEnroll(canEnroll)
-                .notes(notes)
+                .build();
+    }
+
+    private ReplacementSkillAssessment findMatchingAssessment(
+            List<ReplacementSkillAssessment> assessments,
+            Long classSubjectId,
+            Long classLevelId
+    ) {
+        if (assessments == null || assessments.isEmpty()) {
+            return null;
+        }
+
+        // Find assessments matching the class subject
+        List<ReplacementSkillAssessment> subjectMatches = assessments.stream()
+                .filter(a -> a.getLevel() != null &&
+                            a.getLevel().getSubject() != null &&
+                            a.getLevel().getSubject().getId().equals(classSubjectId))
+                .collect(Collectors.toList());
+
+        if (subjectMatches.isEmpty()) {
+            return null;
+        }
+
+        // Find perfect match (subject + level)
+        for (ReplacementSkillAssessment assessment : subjectMatches) {
+            if (assessment.getLevel().getId().equals(classLevelId)) {
+                return assessment;
+            }
+        }
+
+        // Return first subject match as partial match
+        return subjectMatches.get(0);
+    }
+
+    private AvailableStudentDTO.ClassMatchInfoDTO calculateClassMatchInfo(
+            ReplacementSkillAssessment matchingAssessment,
+            Long classSubjectId,
+            Long classLevelId
+    ) {
+        Integer matchPriority = 3; // Default: No match
+        String matchingSkill = null;
+        AvailableStudentDTO.LevelInfoDTO matchingLevel = null;
+        String matchReason = "No skill assessment found for this course's subject";
+
+        if (matchingAssessment != null && matchingAssessment.getLevel() != null) {
+            Long assessmentSubjectId = matchingAssessment.getLevel().getSubject().getId();
+            Long assessmentLevelId = matchingAssessment.getLevel().getId();
+
+            if (assessmentSubjectId.equals(classSubjectId)) {
+                matchingSkill = matchingAssessment.getSkill().name();
+                matchingLevel = convertToLevelInfoDTO(matchingAssessment.getLevel());
+
+                if (assessmentLevelId.equals(classLevelId)) {
+                    // Perfect match: Same subject AND same level
+                    matchPriority = 1;
+                    matchReason = "Perfect match - Assessment matches both Subject AND Level";
+                } else {
+                    // Partial match: Same subject, different level
+                    matchPriority = 2;
+                    matchReason = "Partial match - Assessment matches Subject only";
+                }
+            }
+        }
+
+        return AvailableStudentDTO.ClassMatchInfoDTO.builder()
+                .matchPriority(matchPriority)
+                .matchingSkill(matchingSkill)
+                .matchingLevel(matchingLevel)
+                .matchReason(matchReason)
+                .build();
+    }
+
+    private AvailableStudentDTO.SkillAssessmentDTO convertToSkillAssessmentDTO(ReplacementSkillAssessment assessment) {
+        return AvailableStudentDTO.SkillAssessmentDTO.builder()
+                .id(assessment.getId())
+                .skill(assessment.getSkill().name())
+                .level(convertToLevelInfoDTO(assessment.getLevel()))
+                .score(assessment.getScore())
+                .assessmentDate(assessment.getAssessmentDate())
+                .assessmentType(assessment.getAssessmentType())
+                .note(assessment.getNote())
+                .assessedBy(convertToAssessorDTO(assessment.getAssessedBy()))
+                .build();
+    }
+
+    private AvailableStudentDTO.LevelInfoDTO convertToLevelInfoDTO(Level level) {
+        if (level == null) {
+            return null;
+        }
+
+        return AvailableStudentDTO.LevelInfoDTO.builder()
+                .id(level.getId())
+                .code(level.getCode())
+                .name(level.getName())
+                .subject(convertToSubjectInfoDTO(level.getSubject()))
+                .expectedDurationHours(level.getExpectedDurationHours())
+                .description(level.getDescription())
+                .build();
+    }
+
+    private AvailableStudentDTO.SubjectInfoDTO convertToSubjectInfoDTO(Subject subject) {
+        if (subject == null) {
+            return null;
+        }
+
+        return AvailableStudentDTO.SubjectInfoDTO.builder()
+                .id(subject.getId())
+                .name(subject.getName())
+                .build();
+    }
+
+    private AvailableStudentDTO.AssessorDTO convertToAssessorDTO(UserAccount assessor) {
+        if (assessor == null) {
+            return null;
+        }
+
+        return AvailableStudentDTO.AssessorDTO.builder()
+                .id(assessor.getId())
+                .fullName(assessor.getFullName())
                 .build();
     }
 }

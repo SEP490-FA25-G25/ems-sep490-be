@@ -71,6 +71,12 @@ public interface ReplacementSkillAssessmentRepository extends JpaRepository<Repl
     List<ReplacementSkillAssessment> findByStudentIdOrderByAssessmentDateDesc(Long studentId);
 
     /**
+     * Find all assessments for multiple students
+     * Used for getting complete assessment history
+     */
+    List<ReplacementSkillAssessment> findByStudentIdIn(List<Long> studentIds);
+
+    /**
      * Check if student has any assessment in a specific subject
      */
     @Query("SELECT CASE WHEN COUNT(rsa) > 0 THEN true ELSE false END " +
