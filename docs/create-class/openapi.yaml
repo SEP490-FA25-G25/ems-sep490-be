@@ -1,0 +1,1751 @@
+openapi: 3.0.3
+info:
+  title: TMS - Class Creation Workflow API
+  description: |
+    # Class Creation Workflow API Documentation
+
+    This API specification covers the complete **7-step workflow** for creating and managing classes
+    in the Tuition Management System (TMS).
+
+    ## Workflow Steps
+
+    1. **Create Class** - Academic Staff creates a new class with basic information
+    2. **Generate Sessions** - System automatically generates sessions based on course template
+    3. **Assign Time Slots** - Academic Staff assigns time slots for each schedule day
+    4. **Assign Resources** - Academic Staff assigns rooms/resources with auto-propagation
+    5. **Assign Teachers** - Academic Staff assigns teachers with PRE-CHECK availability
+    6. **Validate** - System validates completeness before submission
+    7. **Submit for Approval** - Academic Staff submits, Center Head approves/rejects
+
+    ## Key Features
+
+    - **PRE-CHECK Approach** (v1.1): Teachers queried WITH availability status upfront
+    - **Smart Matching**: Students matched by skill assessment
+    - **HYBRID Auto-propagation**: SQL bulk operations + detailed conflict analysis
+    - **'general' Skill**: Universal skill that can teach any session
+
+    ## Authentication
+
+    All endpoints require JWT Bearer authentication with role-based authorization:
+    - `ACADEMIC_STAFF`: Steps 1-7 (create, assign, submit)
+    - `CENTER_HEAD`: Approval/rejection
+
+  version: 1.1.0
+  contact:
+    name: TMS Development Team
+    email: support@tms.edu.vn
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+  - url: https://api.tms.edu.vn/api/v1
+    description: Production server
+
+tags:
+  - name: Step 1 - Create Class
+    description: Create a new class with basic information
+  - name: Step 2 - Generate Sessions
+    description: System auto-generates sessions from course template
+  - name: Step 3 - Assign Time Slots
+    description: Assign time slots for each schedule day
+  - name: Step 4 - Assign Resources
+    description: Assign rooms/resources with conflict checking
+  - name: Step 5 - Assign Teachers
+    description: Assign teachers with PRE-CHECK availability (v1.1)
+  - name: Step 6 - Validate
+    description: Validate class completeness before submission
+  - name: Step 7 - Submit & Approve
+    description: Submit for approval and Center Head decision
+  - name: Utilities
+    description: Helper endpoints for lookups and queries
+
+paths:
+  # ========== STEP 1: CREATE CLASS ==========
+  /classes:
+    post:
+      tags:
+        - Step 1 - Create Class
+      summary: Create a new class
+      description: |
+        **STEP 1** of the workflow: Academic Staff creates a new class.
+
+        **Validations:**
+        - `start_date` must be in `schedule_days`
+        - Course must be approved and active
+        - `(branch_id, code)` must be unique
+
+        **After creation**, the system automatically triggers **STEP 2** (Generate Sessions).
+
+      operationId: createClass
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClassRequest'
+            examples:
+              offline_class:
+                summary: Offline English A1 class
+                value:
+                  branchId: 1
+                  courseId: 10
+                  code: "ENG-A1-2024-01"
+                  name: "English A1 Foundation - Morning"
+                  modality: "OFFLINE"
+                  startDate: "2025-01-06"
+                  scheduleDays: [1, 3, 5]
+                  maxCapacity: 20
+              online_class:
+                summary: Online IELTS class
+                value:
+                  branchId: 2
+                  courseId: 15
+                  code: "IELTS-ADV-2024-02"
+                  name: "IELTS Advanced - Evening"
+                  modality: "ONLINE"
+                  startDate: "2025-01-08"
+                  scheduleDays: [2, 4]
+                  maxCapacity: 25
+      responses:
+        '201':
+          description: Class created successfully, sessions auto-generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateClassResponse'
+              examples:
+                success:
+                  summary: Class created with sessions
+                  value:
+                    success: true
+                    message: "Class created successfully with 36 sessions generated"
+                    data:
+                      classId: 101
+                      code: "ENG-A1-2024-01"
+                      branchId: 1
+                      courseId: 10
+                      modality: "OFFLINE"
+                      startDate: "2025-01-06"
+                      scheduleDays: [1, 3, 5]
+                      maxCapacity: 20
+                      status: "DRAFT"
+                      approvalStatus: "PENDING"
+                      sessionsGenerated: 36
+                      createdAt: "2025-01-03T10:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Conflict - Class code already exists for this branch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Class code 'ENG-A1-2024-01' already exists for branch 'Main Campus'"
+                errorCode: "CLASS_CODE_DUPLICATE"
+                timestamp: "2025-01-03T10:30:00Z"
+
+    get:
+      tags:
+        - Utilities
+      summary: List classes with filters
+      description: Get paginated list of classes with filtering and search capabilities
+      operationId: getClasses
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: branchIds
+          in: query
+          description: Filter by branch ID(s)
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+        - name: courseId
+          in: query
+          description: Filter by course ID
+          schema:
+            type: integer
+            format: int64
+        - name: modality
+          in: query
+          description: Filter by modality
+          schema:
+            $ref: '#/components/schemas/Modality'
+        - name: search
+          in: query
+          description: Search in class code, name, course name, branch name
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            default: "startDate"
+        - name: sortDir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: "asc"
+      responses:
+        '200':
+          description: Classes retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassListResponse'
+
+  /classes/{classId}:
+    get:
+      tags:
+        - Utilities
+      summary: Get class details
+      description: Get comprehensive class information including enrollment summary
+      operationId: getClassDetail
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+      responses:
+        '200':
+          description: Class details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== STEP 3: ASSIGN TIME SLOTS ==========
+  /classes/{classId}/time-slots:
+    post:
+      tags:
+        - Step 3 - Assign Time Slots
+      summary: Assign time slots for schedule days
+      description: |
+        **STEP 3** of the workflow: Academic Staff assigns time slots for each day in the schedule.
+
+        **Key Feature:** Different time slots can be assigned for different days
+        - Monday: Morning Slot (08:45-10:15)
+        - Wednesday: Morning Slot (08:45-10:15)
+        - Friday: Afternoon Slot (14:45-16:15)
+
+        **System Logic:** Updates all sessions where `EXTRACT(ISODOW FROM date) = dayOfWeek`
+
+      operationId: assignTimeSlots
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignTimeSlotsRequest'
+            examples:
+              same_timeslot:
+                summary: Same time slot for all days
+                value:
+                  assignments:
+                    - dayOfWeek: 1
+                      timeSlotTemplateId: 2
+                    - dayOfWeek: 3
+                      timeSlotTemplateId: 2
+                    - dayOfWeek: 5
+                      timeSlotTemplateId: 2
+              different_timeslots:
+                summary: Different time slots per day
+                value:
+                  assignments:
+                    - dayOfWeek: 1
+                      timeSlotTemplateId: 2
+                    - dayOfWeek: 3
+                      timeSlotTemplateId: 2
+                    - dayOfWeek: 5
+                      timeSlotTemplateId: 5
+      responses:
+        '200':
+          description: Time slots assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignTimeSlotsResponse'
+              example:
+                success: true
+                message: "Time slots assigned successfully to 36 sessions"
+                data:
+                  classId: 101
+                  assignedSessions: 36
+                  assignments:
+                    - dayOfWeek: 1
+                      timeSlotName: "Morning Slot 2 (08:45-10:15)"
+                      sessionsAssigned: 12
+                    - dayOfWeek: 3
+                      timeSlotName: "Morning Slot 2 (08:45-10:15)"
+                      sessionsAssigned: 12
+                    - dayOfWeek: 5
+                      timeSlotName: "Afternoon Slot 2 (14:45-16:15)"
+                      sessionsAssigned: 12
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /branches/{branchId}/time-slot-templates:
+    get:
+      tags:
+        - Utilities
+      summary: Get available time slot templates for a branch
+      description: Query time slot templates available at a specific branch
+      operationId: getTimeSlotTemplates
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Time slot templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeSlotTemplatesResponse'
+
+  # ========== STEP 4: ASSIGN RESOURCES ==========
+  /classes/{classId}/resources:
+    post:
+      tags:
+        - Step 4 - Assign Resources
+      summary: Assign resources with auto-propagation
+      description: |
+        **STEP 4** of the workflow: Academic Staff assigns resources (rooms) to sessions.
+
+        **HYBRID Approach:**
+        1. **Phase 1 (SQL Bulk)**: Bulk INSERT for all non-conflict sessions (~90%)
+        2. **Phase 2 (Java Analysis)**: Detailed conflict analysis for remaining sessions (~10%)
+
+        **Benefits:**
+        - Fast execution: ~100-200ms for 36 sessions
+        - Detailed conflict reporting
+        - Academic Staff can resolve conflicts manually
+
+      operationId: assignResources
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignResourcesRequest'
+            examples:
+              same_room_all_days:
+                summary: Assign same room for all schedule days
+                value:
+                  pattern:
+                    - dayOfWeek: 1
+                      resourceId: 6
+                    - dayOfWeek: 3
+                      resourceId: 6
+                    - dayOfWeek: 5
+                      resourceId: 6
+              different_rooms:
+                summary: Different rooms for different days
+                value:
+                  pattern:
+                    - dayOfWeek: 1
+                      resourceId: 6
+                    - dayOfWeek: 3
+                      resourceId: 7
+                    - dayOfWeek: 5
+                      resourceId: 6
+      responses:
+        '200':
+          description: Resources assigned with conflict details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignResourcesResponse'
+              examples:
+                full_success:
+                  summary: All sessions assigned successfully
+                  value:
+                    success: true
+                    message: "Resources assigned successfully to all sessions"
+                    data:
+                      classId: 101
+                      totalSessions: 36
+                      successCount: 36
+                      conflictCount: 0
+                      conflicts: []
+                with_conflicts:
+                  summary: Some sessions have conflicts
+                  value:
+                    success: true
+                    message: "Resources assigned with 3 conflicts requiring manual resolution"
+                    data:
+                      classId: 101
+                      totalSessions: 36
+                      successCount: 33
+                      conflictCount: 3
+                      conflicts:
+                        - sessionId: 15
+                          sessionNumber: 15
+                          date: "2024-12-16"
+                          dayOfWeek: 1
+                          timeSlotName: "Morning Slot 2 (08:45-10:15)"
+                          conflictType: "RESOURCE_UNAVAILABLE"
+                          reason: "Room 101 booked by Class ENG-B1-02"
+                          conflictingClassCode: "ENG-B1-02"
+                        - sessionId: 22
+                          sessionNumber: 22
+                          date: "2025-01-13"
+                          dayOfWeek: 1
+                          timeSlotName: "Morning Slot 2 (08:45-10:15)"
+                          conflictType: "RESOURCE_UNAVAILABLE"
+                          reason: "Room 101 under maintenance"
+                        - sessionId: 28
+                          sessionNumber: 28
+                          date: "2025-02-03"
+                          dayOfWeek: 1
+                          timeSlotName: "Morning Slot 2 (08:45-10:15)"
+                          conflictType: "RESOURCE_UNAVAILABLE"
+                          reason: "Room 101 booked by Class ENG-A2-01"
+                          conflictingClassCode: "ENG-A2-01"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /classes/{classId}/available-resources:
+    get:
+      tags:
+        - Utilities
+      summary: Query available resources for a session
+      description: |
+        Get available resources (rooms/online accounts) for a specific session or time slot.
+
+        **Filters:**
+        - Branch match
+        - Resource type match (room for OFFLINE, online_account for ONLINE)
+        - Capacity >= class max_capacity
+        - No conflict on same date + time slot
+
+      operationId: getAvailableResources
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+        - name: sessionId
+          in: query
+          description: Specific session ID (if checking for one session)
+          schema:
+            type: integer
+            format: int64
+        - name: date
+          in: query
+          description: Session date (if sessionId not provided)
+          schema:
+            type: string
+            format: date
+        - name: timeSlotTemplateId
+          in: query
+          description: Time slot template ID (if sessionId not provided)
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Available resources retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailableResourcesResponse'
+
+  # ========== STEP 5: ASSIGN TEACHERS (PRE-CHECK v1.1) ==========
+  /classes/{classId}/available-teachers:
+    get:
+      tags:
+        - Step 5 - Assign Teachers
+      summary: Query available teachers with PRE-CHECK (v1.1)
+      description: |
+        **STEP 5 - PRE-CHECK** (v1.1 Enhancement): Query teachers WITH availability status upfront.
+
+        **Key Improvements:**
+        - ✅ Checks 3 conditions for ALL sessions BEFORE user selection
+        - ✅ Shows availability status: "10/10 ✅" vs "7/10 ⚠️, 3 conflicts"
+        - ✅ No trial-and-error - user sees conflicts upfront
+        - ✅ 20% faster than old approach (120ms vs 200ms)
+
+        **3 Conditions Checked:**
+        1. **Availability**: Teacher registered availability for day_of_week + time_slot
+        2. **Teaching Conflict**: Not teaching another class at same time
+        3. **Leave Conflict**: Not on approved leave
+
+        **Skill Matching:**
+        - `'general'` skill = UNIVERSAL (can teach ANY session)
+        - Other skills must match session's `skill_set`
+
+        **Prioritization:**
+        1. Contract type (full-time > part-time > internship)
+        2. Available sessions (descending)
+        3. Has 'general' skill (more flexible)
+        4. Matched specific skills count
+        5. Highest skill level
+
+      operationId: getAvailableTeachers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+        - name: skillSet
+          in: query
+          description: Filter teachers by specific skill set (optional, for skill group filtering)
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [listening, speaking, reading, writing, general]
+      responses:
+        '200':
+          description: Available teachers with pre-checked availability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailableTeachersResponse'
+              examples:
+                with_availability:
+                  summary: Teachers with availability breakdown
+                  value:
+                    success: true
+                    message: "Available teachers retrieved successfully"
+                    data:
+                      classId: 101
+                      totalSessions: 36
+                      teachers:
+                        - teacherId: 5
+                          fullName: "Jane Doe"
+                          email: "jane.doe@tms.edu.vn"
+                          employeeCode: "T001"
+                          contractType: "full-time"
+                          skills:
+                            - skill: "listening"
+                              level: 3
+                            - skill: "reading"
+                              level: 5
+                          hasGeneralSkill: false
+                          matchedSpecificSkills: 2
+                          availabilityStatus: "fully_available"
+                          totalSessions: 36
+                          availableSessions: 36
+                          availabilityPercentage: 100.0
+                          conflicts:
+                            noAvailability: 0
+                            teachingConflict: 0
+                            leaveConflict: 0
+                        - teacherId: 7
+                          fullName: "John Smith"
+                          email: "john.smith@tms.edu.vn"
+                          employeeCode: "T003"
+                          contractType: "full-time"
+                          skills:
+                            - skill: "listening"
+                              level: 5
+                            - skill: "reading"
+                              level: 4
+                          hasGeneralSkill: false
+                          matchedSpecificSkills: 2
+                          availabilityStatus: "partially_available"
+                          totalSessions: 36
+                          availableSessions: 26
+                          availabilityPercentage: 72.2
+                          conflicts:
+                            noAvailability: 5
+                            teachingConflict: 3
+                            leaveConflict: 2
+                        - teacherId: 12
+                          fullName: "Bob Wilson"
+                          email: "bob.wilson@tms.edu.vn"
+                          employeeCode: "T008"
+                          contractType: "part-time"
+                          skills:
+                            - skill: "general"
+                              level: 5
+                          hasGeneralSkill: true
+                          matchedSpecificSkills: 0
+                          availabilityStatus: "partially_available"
+                          totalSessions: 36
+                          availableSessions: 18
+                          availabilityPercentage: 50.0
+                          conflicts:
+                            noAvailability: 18
+                            teachingConflict: 0
+                            leaveConflict: 0
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /classes/{classId}/teachers:
+    post:
+      tags:
+        - Step 5 - Assign Teachers
+      summary: Assign teacher to sessions
+      description: |
+        **STEP 5 - ASSIGNMENT**: Direct assignment to pre-validated sessions.
+
+        **Simplified Logic** (v1.1):
+        - No need to re-check conflicts (already done in PRE-CHECK)
+        - Direct INSERT to available sessions
+        - If partially available, system returns which sessions need substitute
+
+        **Scenarios:**
+        - **Fully available teacher**: Assign to all sessions ✅
+        - **Partially available teacher**: Assign to available sessions, return conflict list for substitute
+
+      operationId: assignTeacher
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignTeacherRequest'
+            examples:
+              assign_primary:
+                summary: Assign primary teacher to all available sessions
+                value:
+                  teacherId: 5
+                  role: "primary"
+                  skillSet: ["listening", "reading"]
+              assign_substitute:
+                summary: Assign substitute for specific sessions
+                value:
+                  teacherId: 7
+                  role: "substitute"
+                  sessionIds: [15, 22, 28]
+                  skillSet: ["listening", "reading"]
+      responses:
+        '200':
+          description: Teacher assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignTeacherResponse'
+              examples:
+                full_success:
+                  summary: Fully available - all sessions assigned
+                  value:
+                    success: true
+                    message: "Successfully assigned Jane Doe to all 36 sessions"
+                    data:
+                      classId: 101
+                      teacherId: 5
+                      teacherName: "Jane Doe"
+                      role: "primary"
+                      assignedCount: 36
+                      totalSessions: 36
+                      needsSubstitute: false
+                      remainingSessions: []
+                partial_success:
+                  summary: Partially available - needs substitute
+                  value:
+                    success: true
+                    message: "Assigned John Smith to 26 sessions, 10 sessions need substitute"
+                    data:
+                      classId: 101
+                      teacherId: 7
+                      teacherName: "John Smith"
+                      role: "primary"
+                      assignedCount: 26
+                      totalSessions: 36
+                      needsSubstitute: true
+                      remainingSessions:
+                        - sessionId: 5
+                          date: "2025-01-15"
+                          reason: "No availability"
+                        - sessionId: 15
+                          date: "2024-12-16"
+                          reason: "Teaching conflict with ENG-B1-02"
+                        - sessionId: 22
+                          date: "2025-01-13"
+                          reason: "On approved leave"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== STEP 6: VALIDATE ==========
+  /classes/{classId}/validate:
+    post:
+      tags:
+        - Step 6 - Validate
+      summary: Validate class completeness
+      description: |
+        **STEP 6** of the workflow: System validates class is ready for submission.
+
+        **Checks:**
+        1. All sessions have time slots ✅
+        2. All sessions have resources ✅
+        3. All sessions have primary teachers ✅
+
+        **Warnings (non-blocking):**
+        - Multiple teachers per skill group
+        - Start date in the past
+        - Different resources for same skill group
+
+      operationId: validateClass
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateClassResponse'
+              examples:
+                all_valid:
+                  summary: All checks passed
+                  value:
+                    success: true
+                    message: "Class is valid and ready for submission"
+                    data:
+                      classId: 101
+                      isValid: true
+                      canSubmit: true
+                      totalSessions: 36
+                      checks:
+                        timeSlotsAssigned: true
+                        resourcesAssigned: true
+                        teachersAssigned: true
+                      errors: []
+                      warnings:
+                        - "Using multiple teachers for Listening/Reading skill group"
+                        - "3 sessions using alternative resources due to conflicts"
+                with_errors:
+                  summary: Validation failed - missing assignments
+                  value:
+                    success: false
+                    message: "Class has incomplete assignments"
+                    data:
+                      classId: 101
+                      isValid: false
+                      canSubmit: false
+                      totalSessions: 36
+                      checks:
+                        timeSlotsAssigned: true
+                        resourcesAssigned: true
+                        teachersAssigned: false
+                      errors:
+                        - "3 sessions missing teachers (Sessions: 15, 22, 28)"
+                      warnings: []
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========== STEP 7: SUBMIT & APPROVE ==========
+  /classes/{classId}/submit:
+    post:
+      tags:
+        - Step 7 - Submit & Approve
+      summary: Submit class for approval
+      description: |
+        **STEP 7 - SUBMIT**: Academic Staff submits class to Center Head for approval.
+
+        **Pre-conditions:**
+        - Class must pass validation (Step 6)
+        - All sessions fully assigned
+
+        **After submission:**
+        - `submittedAt` timestamp set
+        - Notification sent to Center Head
+        - Status remains `DRAFT` until approved
+
+      operationId: submitClass
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+      responses:
+        '200':
+          description: Class submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitClassResponse'
+              example:
+                success: true
+                message: "Class submitted for approval successfully"
+                data:
+                  classId: 101
+                  code: "ENG-A1-2024-01"
+                  status: "DRAFT"
+                  approvalStatus: "PENDING"
+                  submittedAt: "2025-01-03T14:30:00Z"
+                  submittedBy: "Alice (Academic Staff)"
+        '400':
+          description: Validation failed - cannot submit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Cannot submit class with incomplete assignments"
+                errorCode: "VALIDATION_FAILED"
+                details:
+                  errors:
+                    - "3 sessions missing teachers"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /classes/{classId}/approve:
+    post:
+      tags:
+        - Step 7 - Submit & Approve
+      summary: Approve class (Center Head)
+      description: |
+        **STEP 7 - APPROVE**: Center Head approves the class.
+
+        **After approval:**
+        - `status` → `SCHEDULED`
+        - `approvalStatus` → `APPROVED`
+        - `approvedBy` and `approvedAt` set
+        - Class is ready for student enrollment
+        - Notification sent to Academic Staff
+
+      operationId: approveClass
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+      responses:
+        '200':
+          description: Class approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApproveClassResponse'
+              example:
+                success: true
+                message: "Class approved successfully"
+                data:
+                  classId: 101
+                  code: "ENG-A1-2024-01"
+                  status: "SCHEDULED"
+                  approvalStatus: "APPROVED"
+                  approvedBy: "Dr. John (Center Head)"
+                  approvedAt: "2025-01-03T16:00:00Z"
+        '403':
+          description: Only Center Head can approve
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /classes/{classId}/reject:
+    post:
+      tags:
+        - Step 7 - Submit & Approve
+      summary: Reject class (Center Head)
+      description: |
+        **STEP 7 - REJECT**: Center Head rejects the class with reason.
+
+        **After rejection:**
+        - `status` → `DRAFT`
+        - `approvalStatus` → `REJECTED`
+        - `rejectionReason` stored
+        - `submittedAt` reset to NULL
+        - Notification sent to Academic Staff to fix issues
+
+      operationId: rejectClass
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectClassRequest'
+            example:
+              reason: "Time slot conflicts with another class. Please use different time slots for Wednesday sessions."
+      responses:
+        '200':
+          description: Class rejected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RejectClassResponse'
+              example:
+                success: true
+                message: "Class rejected and sent back to Academic Staff"
+                data:
+                  classId: 101
+                  code: "ENG-A1-2024-01"
+                  status: "DRAFT"
+                  approvalStatus: "REJECTED"
+                  rejectionReason: "Time slot conflicts with another class. Please use different time slots for Wednesday sessions."
+                  rejectedBy: "Dr. John (Center Head)"
+                  rejectedAt: "2025-01-03T16:15:00Z"
+        '400':
+          description: Missing rejection reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# ========== COMPONENTS ==========
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /api/v1/auth/login
+
+  parameters:
+    ClassIdPath:
+      name: classId
+      in: path
+      required: true
+      description: The unique identifier of the class
+      schema:
+        type: integer
+        format: int64
+      example: 101
+
+  schemas:
+    # ========== STEP 1: CREATE CLASS SCHEMAS ==========
+    CreateClassRequest:
+      type: object
+      required:
+        - branchId
+        - courseId
+        - code
+        - modality
+        - startDate
+        - scheduleDays
+        - maxCapacity
+      properties:
+        branchId:
+          type: integer
+          format: int64
+          description: Branch ID where the class will be held
+          example: 1
+        courseId:
+          type: integer
+          format: int64
+          description: Course template ID to use for session generation
+          example: 10
+        code:
+          type: string
+          maxLength: 50
+          description: Unique class code (within branch)
+          example: "ENG-A1-2024-01"
+          pattern: '^[A-Z0-9-]+$'
+        name:
+          type: string
+          maxLength: 255
+          description: Optional descriptive name for the class
+          example: "English A1 Foundation - Morning"
+        modality:
+          $ref: '#/components/schemas/Modality'
+        startDate:
+          type: string
+          format: date
+          description: Class start date (must be in scheduleDays)
+          example: "2025-01-06"
+        scheduleDays:
+          type: array
+          description: Days of week for class sessions (PostgreSQL ISODOW - 1=Mon, 7=Sun)
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+          minItems: 1
+          maxItems: 7
+          example: [1, 3, 5]
+        maxCapacity:
+          type: integer
+          minimum: 1
+          description: Maximum number of students allowed
+          example: 20
+
+    CreateClassResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                classId:
+                  type: integer
+                  format: int64
+                  example: 101
+                code:
+                  type: string
+                  example: "ENG-A1-2024-01"
+                branchId:
+                  type: integer
+                  format: int64
+                courseId:
+                  type: integer
+                  format: int64
+                modality:
+                  $ref: '#/components/schemas/Modality'
+                startDate:
+                  type: string
+                  format: date
+                scheduleDays:
+                  type: array
+                  items:
+                    type: integer
+                maxCapacity:
+                  type: integer
+                status:
+                  $ref: '#/components/schemas/ClassStatus'
+                approvalStatus:
+                  $ref: '#/components/schemas/ApprovalStatus'
+                sessionsGenerated:
+                  type: integer
+                  description: Number of sessions auto-generated
+                  example: 36
+                createdAt:
+                  type: string
+                  format: date-time
+
+    # ========== STEP 3: ASSIGN TIME SLOTS SCHEMAS ==========
+    AssignTimeSlotsRequest:
+      type: object
+      required:
+        - assignments
+      properties:
+        assignments:
+          type: array
+          description: Time slot assignments for each schedule day
+          items:
+            type: object
+            required:
+              - dayOfWeek
+              - timeSlotTemplateId
+            properties:
+              dayOfWeek:
+                type: integer
+                minimum: 1
+                maximum: 7
+                description: Day of week (PostgreSQL ISODOW - 1=Mon, 7=Sun)
+                example: 1
+              timeSlotTemplateId:
+                type: integer
+                format: int64
+                description: Time slot template ID to assign
+                example: 2
+
+    AssignTimeSlotsResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                classId:
+                  type: integer
+                  format: int64
+                assignedSessions:
+                  type: integer
+                  description: Total sessions updated
+                assignments:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      dayOfWeek:
+                        type: integer
+                      timeSlotName:
+                        type: string
+                      sessionsAssigned:
+                        type: integer
+
+    TimeSlotTemplatesResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  name:
+                    type: string
+                    example: "Morning Slot 2"
+                  startTime:
+                    type: string
+                    format: time
+                    example: "08:45:00"
+                  endTime:
+                    type: string
+                    format: time
+                    example: "10:15:00"
+                  durationMin:
+                    type: integer
+                    example: 90
+
+    # ========== STEP 4: ASSIGN RESOURCES SCHEMAS ==========
+    AssignResourcesRequest:
+      type: object
+      required:
+        - pattern
+      properties:
+        pattern:
+          type: array
+          description: Resource assignment pattern for each schedule day
+          items:
+            type: object
+            required:
+              - dayOfWeek
+              - resourceId
+            properties:
+              dayOfWeek:
+                type: integer
+                minimum: 1
+                maximum: 7
+                description: Day of week (ISODOW)
+                example: 1
+              resourceId:
+                type: integer
+                format: int64
+                description: Resource (room/online account) ID
+                example: 6
+
+    AssignResourcesResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                classId:
+                  type: integer
+                  format: int64
+                totalSessions:
+                  type: integer
+                successCount:
+                  type: integer
+                  description: Sessions successfully assigned
+                conflictCount:
+                  type: integer
+                  description: Sessions with conflicts
+                conflicts:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ResourceConflict'
+
+    ResourceConflict:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+          format: int64
+        sessionNumber:
+          type: integer
+        date:
+          type: string
+          format: date
+        dayOfWeek:
+          type: integer
+        timeSlotName:
+          type: string
+        conflictType:
+          type: string
+          enum: [RESOURCE_UNAVAILABLE, RESOURCE_MAINTENANCE]
+        reason:
+          type: string
+          example: "Room 101 booked by Class ENG-B1-02"
+        conflictingClassCode:
+          type: string
+          nullable: true
+
+    AvailableResourcesResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  code:
+                    type: string
+                  name:
+                    type: string
+                  resourceType:
+                    $ref: '#/components/schemas/ResourceType'
+                  capacity:
+                    type: integer
+                  equipment:
+                    type: string
+                    nullable: true
+                  location:
+                    type: string
+                    nullable: true
+                  isAvailable:
+                    type: boolean
+
+    # ========== STEP 5: ASSIGN TEACHERS SCHEMAS ==========
+    AvailableTeachersResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                classId:
+                  type: integer
+                  format: int64
+                totalSessions:
+                  type: integer
+                teachers:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TeacherAvailability'
+
+    TeacherAvailability:
+      type: object
+      description: Teacher availability with PRE-CHECK results (v1.1)
+      properties:
+        teacherId:
+          type: integer
+          format: int64
+        fullName:
+          type: string
+        email:
+          type: string
+        employeeCode:
+          type: string
+        contractType:
+          type: string
+          enum: [full-time, part-time, internship]
+        skills:
+          type: array
+          items:
+            type: object
+            properties:
+              skill:
+                type: string
+                enum: [listening, speaking, reading, writing, general]
+              level:
+                type: integer
+                minimum: 1
+                maximum: 5
+        hasGeneralSkill:
+          type: boolean
+          description: Teacher has 'general' skill (can teach any session)
+        matchedSpecificSkills:
+          type: integer
+          description: Count of specific skills matched (excluding 'general')
+        availabilityStatus:
+          type: string
+          enum: [fully_available, partially_available, unavailable]
+          description: Overall availability status
+        totalSessions:
+          type: integer
+          description: Total sessions this teacher can teach (skill-matched)
+        availableSessions:
+          type: integer
+          description: Sessions where teacher is available (no conflicts)
+        availabilityPercentage:
+          type: number
+          format: float
+          description: Percentage of sessions available
+        conflicts:
+          type: object
+          description: Breakdown of conflicts
+          properties:
+            noAvailability:
+              type: integer
+              description: Sessions where teacher has no registered availability
+            teachingConflict:
+              type: integer
+              description: Sessions where teacher is teaching another class
+            leaveConflict:
+              type: integer
+              description: Sessions where teacher is on approved leave
+
+    AssignTeacherRequest:
+      type: object
+      required:
+        - teacherId
+        - role
+      properties:
+        teacherId:
+          type: integer
+          format: int64
+          description: Teacher ID to assign
+        role:
+          type: string
+          enum: [primary, substitute]
+          description: Teacher role (primary or substitute)
+        sessionIds:
+          type: array
+          description: Specific session IDs (for substitute assignments)
+          items:
+            type: integer
+            format: int64
+        skillSet:
+          type: array
+          description: Skill set for this assignment (for validation)
+          items:
+            type: string
+            enum: [listening, speaking, reading, writing, general]
+
+    AssignTeacherResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                classId:
+                  type: integer
+                  format: int64
+                teacherId:
+                  type: integer
+                  format: int64
+                teacherName:
+                  type: string
+                role:
+                  type: string
+                assignedCount:
+                  type: integer
+                totalSessions:
+                  type: integer
+                needsSubstitute:
+                  type: boolean
+                remainingSessions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      sessionId:
+                        type: integer
+                        format: int64
+                      date:
+                        type: string
+                        format: date
+                      reason:
+                        type: string
+
+    # ========== STEP 6: VALIDATE SCHEMAS ==========
+    ValidateClassResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                classId:
+                  type: integer
+                  format: int64
+                isValid:
+                  type: boolean
+                canSubmit:
+                  type: boolean
+                totalSessions:
+                  type: integer
+                checks:
+                  type: object
+                  properties:
+                    timeSlotsAssigned:
+                      type: boolean
+                    resourcesAssigned:
+                      type: boolean
+                    teachersAssigned:
+                      type: boolean
+                errors:
+                  type: array
+                  items:
+                    type: string
+                warnings:
+                  type: array
+                  items:
+                    type: string
+
+    # ========== STEP 7: SUBMIT & APPROVE SCHEMAS ==========
+    SubmitClassResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                classId:
+                  type: integer
+                  format: int64
+                code:
+                  type: string
+                status:
+                  $ref: '#/components/schemas/ClassStatus'
+                approvalStatus:
+                  $ref: '#/components/schemas/ApprovalStatus'
+                submittedAt:
+                  type: string
+                  format: date-time
+                submittedBy:
+                  type: string
+
+    ApproveClassResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                classId:
+                  type: integer
+                  format: int64
+                code:
+                  type: string
+                status:
+                  $ref: '#/components/schemas/ClassStatus'
+                approvalStatus:
+                  $ref: '#/components/schemas/ApprovalStatus'
+                approvedBy:
+                  type: string
+                approvedAt:
+                  type: string
+                  format: date-time
+
+    RejectClassRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          description: Reason for rejection
+          minLength: 10
+          maxLength: 2000
+          example: "Time slot conflicts with another class. Please use different time slots for Wednesday sessions."
+
+    RejectClassResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                classId:
+                  type: integer
+                  format: int64
+                code:
+                  type: string
+                status:
+                  $ref: '#/components/schemas/ClassStatus'
+                approvalStatus:
+                  $ref: '#/components/schemas/ApprovalStatus'
+                rejectionReason:
+                  type: string
+                rejectedBy:
+                  type: string
+                rejectedAt:
+                  type: string
+                  format: date-time
+
+    # ========== UTILITIES SCHEMAS ==========
+    ClassListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                content:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      classId:
+                        type: integer
+                        format: int64
+                      code:
+                        type: string
+                      name:
+                        type: string
+                      branchName:
+                        type: string
+                      courseName:
+                        type: string
+                      modality:
+                        $ref: '#/components/schemas/Modality'
+                      startDate:
+                        type: string
+                        format: date
+                      status:
+                        $ref: '#/components/schemas/ClassStatus'
+                      approvalStatus:
+                        $ref: '#/components/schemas/ApprovalStatus'
+                      currentEnrollment:
+                        type: integer
+                      maxCapacity:
+                        type: integer
+                page:
+                  type: integer
+                size:
+                  type: integer
+                totalElements:
+                  type: integer
+                  format: int64
+                totalPages:
+                  type: integer
+
+    ClassDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                classId:
+                  type: integer
+                  format: int64
+                code:
+                  type: string
+                name:
+                  type: string
+                branch:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int64
+                    name:
+                      type: string
+                course:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int64
+                    name:
+                      type: string
+                    code:
+                      type: string
+                modality:
+                  $ref: '#/components/schemas/Modality'
+                startDate:
+                  type: string
+                  format: date
+                plannedEndDate:
+                  type: string
+                  format: date
+                  nullable: true
+                scheduleDays:
+                  type: array
+                  items:
+                    type: integer
+                maxCapacity:
+                  type: integer
+                status:
+                  $ref: '#/components/schemas/ClassStatus'
+                approvalStatus:
+                  $ref: '#/components/schemas/ApprovalStatus'
+                enrollmentSummary:
+                  type: object
+                  properties:
+                    currentEnrollment:
+                      type: integer
+                    availableSlots:
+                      type: integer
+                    waitingList:
+                      type: integer
+                upcomingSessions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      sessionId:
+                        type: integer
+                        format: int64
+                      date:
+                        type: string
+                        format: date
+                      timeSlot:
+                        type: string
+                      topic:
+                        type: string
+
+    # ========== ENUMS ==========
+    Modality:
+      type: string
+      enum:
+        - ONLINE
+        - OFFLINE
+        - HYBRID
+      description: Class delivery modality
+
+    ClassStatus:
+      type: string
+      enum:
+        - DRAFT
+        - SCHEDULED
+        - ONGOING
+        - COMPLETED
+        - CANCELLED
+      description: Current class status
+
+    ApprovalStatus:
+      type: string
+      enum:
+        - PENDING
+        - APPROVED
+        - REJECTED
+      description: Approval status from Center Head
+
+    ResourceType:
+      type: string
+      enum:
+        - ROOM
+        - ONLINE_ACCOUNT
+        - EQUIPMENT
+      description: Type of resource
+
+    # ========== COMMON SCHEMAS ==========
+    ResponseWrapper:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        message:
+          type: string
+          description: Human-readable message
+        timestamp:
+          type: string
+          format: date-time
+          description: Response timestamp
+
+    ErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ResponseWrapper'
+        - type: object
+          properties:
+            errorCode:
+              type: string
+              description: Machine-readable error code
+            details:
+              type: object
+              description: Additional error details
+              additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: "Invalid request parameters"
+            errorCode: "BAD_REQUEST"
+            timestamp: "2025-01-03T10:30:00Z"
+
+    Unauthorized:
+      description: Unauthorized - Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: "Authentication required"
+            errorCode: "UNAUTHORIZED"
+            timestamp: "2025-01-03T10:30:00Z"
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: "You do not have permission to perform this action"
+            errorCode: "FORBIDDEN"
+            timestamp: "2025-01-03T10:30:00Z"
+
+    NotFound:
+      description: Not found - Resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: "Class not found"
+            errorCode: "NOT_FOUND"
+            timestamp: "2025-01-03T10:30:00Z"
+
+security:
+  - bearerAuth: []
