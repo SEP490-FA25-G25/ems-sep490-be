@@ -10,6 +10,15 @@ import java.util.List;
 public interface StudentService {
 
     /**
+     * Create a new student with auto-generated student code
+     *
+     * @param request Student creation request
+     * @param currentUserId ID of the user creating the student (Academic Affair)
+     * @return Created student information including temporary password if generated
+     */
+    CreateStudentResponse createStudent(CreateStudentRequest request, Long currentUserId);
+
+    /**
      * Get students in accessible branches with filters
      */
     Page<StudentListItemDTO> getStudents(

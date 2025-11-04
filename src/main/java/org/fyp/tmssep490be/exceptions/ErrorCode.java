@@ -99,6 +99,8 @@ public enum ErrorCode {
     STUDENT_NOT_FOUND(1100, "Student not found"),
     STUDENT_CODE_ALREADY_EXISTS(1101, "Student code already exists"),
     STUDENT_ACCESS_DENIED(1102, "Access denied: Student not in your assigned branches"),
+    EMAIL_ALREADY_EXISTS(1103, "Email already exists"),
+    STUDENT_ROLE_NOT_FOUND(1105, "STUDENT role not configured in system"),
 
     // Enrollment errors (1200-1299)
     ENROLLMENT_NOT_FOUND(1200, "Enrollment not found"),

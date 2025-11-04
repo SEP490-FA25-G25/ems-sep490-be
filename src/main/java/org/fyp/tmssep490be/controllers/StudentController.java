@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -35,6 +37,35 @@ import java.util.List;
 public class StudentController {
 
     private final StudentService studentService;
+
+    /**
+     * Create a new student with auto-generated student code
+     * POST /api/v1/students
+     */
+    @PostMapping
+    @Operation(
+            summary = "Create a new student",
+            description = "Create a new student with auto-generated student code. Academic Affairs can add students to their accessible branches."
+    )
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    public ResponseEntity<ResponseObject<CreateStudentResponse>> createStudent(
+            @Valid @RequestBody CreateStudentRequest request,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("User {} creating new student with email: {}", currentUser.getId(), request.getEmail());
+
+        CreateStudentResponse response = studentService.createStudent(request, currentUser.getId());
+
+        log.info("Successfully created student with code: {} by user: {}",
+                response.getStudentCode(), currentUser.getId());
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ResponseObject.<CreateStudentResponse>builder()
+                        .success(true)
+                        .message("Student created successfully")
+                        .data(response)
+                        .build());
+    }
 
     /**
      * Get list of students accessible to academic affairs user
