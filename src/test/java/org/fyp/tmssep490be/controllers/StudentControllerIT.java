@@ -232,14 +232,14 @@ class StudentControllerIT {
         // Arrange
         SkillAssessmentInput assessment1 = SkillAssessmentInput.builder()
                 .skill(Skill.GENERAL)
-                .levelCode("B1")
+                .levelId(101L)
                 .score(75)
                 .note("Placement test result")
                 .build();
 
         SkillAssessmentInput assessment2 = SkillAssessmentInput.builder()
                 .skill(Skill.SPEAKING)
-                .levelCode("B1")
+                .levelId(101L)
                 .score(80)
                 .build();
 
@@ -326,12 +326,12 @@ class StudentControllerIT {
     }
 
     @Test
-    @DisplayName("POST /api/v1/students - Should reject when level code not found")
-    void shouldRejectWhenLevelCodeNotFound() throws Exception {
+    @DisplayName("POST /api/v1/students - Should reject when level not found")
+    void shouldRejectWhenLevelNotFound() throws Exception {
         // Arrange
         SkillAssessmentInput invalidAssessment = SkillAssessmentInput.builder()
                 .skill(Skill.GENERAL)
-                .levelCode("INVALID_LEVEL")
+                .levelId(999L) // Non-existent level ID
                 .score(75)
                 .build();
         validRequest.setSkillAssessments(Arrays.asList(invalidAssessment));

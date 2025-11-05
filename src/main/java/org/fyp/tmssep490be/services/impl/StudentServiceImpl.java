@@ -61,10 +61,10 @@ public class StudentServiceImpl implements StudentService {
             throw new CustomException(ErrorCode.BRANCH_ACCESS_DENIED);
         }
 
-        // 3. VALIDATE: Level codes exist (if skill assessments provided)
+        // 3. VALIDATE: Level IDs exist (if skill assessments provided)
         if (request.getSkillAssessments() != null && !request.getSkillAssessments().isEmpty()) {
             for (SkillAssessmentInput assessment : request.getSkillAssessments()) {
-                if (!levelRepository.findByCodeIgnoreCase(assessment.getLevelCode()).isPresent()) {
+                if (!levelRepository.existsById(assessment.getLevelId())) {
                     throw new CustomException(ErrorCode.LEVEL_NOT_FOUND);
                 }
             }
@@ -138,7 +138,7 @@ public class StudentServiceImpl implements StudentService {
         int assessmentsCreated = 0;
         if (request.getSkillAssessments() != null && !request.getSkillAssessments().isEmpty()) {
             for (SkillAssessmentInput input : request.getSkillAssessments()) {
-                Level level = levelRepository.findByCodeIgnoreCase(input.getLevelCode())
+                Level level = levelRepository.findById(input.getLevelId())
                         .orElseThrow(() -> new CustomException(ErrorCode.LEVEL_NOT_FOUND));
 
                 ReplacementSkillAssessment assessment = new ReplacementSkillAssessment();
@@ -157,7 +157,7 @@ public class StudentServiceImpl implements StudentService {
                 replacementSkillAssessmentRepository.save(assessment);
                 assessmentsCreated++;
                 log.debug("Created {} assessment for student {} at level {} with score {}",
-                        input.getSkill(), savedStudent.getId(), input.getLevelCode(), input.getScore());
+                        input.getSkill(), savedStudent.getId(), level.getCode(), input.getScore());
             }
         }
 

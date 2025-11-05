@@ -2,7 +2,6 @@ package org.fyp.tmssep490be.dtos.studentmanagement;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,8 +22,8 @@ public class SkillAssessmentInput {
     @NotNull(message = "Skill is required")
     private Skill skill;
 
-    @NotBlank(message = "Level code is required")
-    private String levelCode;
+    @NotNull(message = "Level ID is required")
+    private Long levelId;
 
     @NotNull(message = "Score is required")
     @Min(value = 0, message = "Score must be >= 0")

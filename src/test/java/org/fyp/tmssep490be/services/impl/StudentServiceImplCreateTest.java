@@ -191,14 +191,14 @@ class StudentServiceImplCreateTest {
         // Arrange
         SkillAssessmentInput assessment1 = SkillAssessmentInput.builder()
                 .skill(Skill.GENERAL)
-                .levelCode("B1")
+                .levelId(1L)
                 .score(75)
                 .note("Placement test")
                 .build();
 
         SkillAssessmentInput assessment2 = SkillAssessmentInput.builder()
                 .skill(Skill.SPEAKING)
-                .levelCode("B1")
+                .levelId(1L)
                 .score(80)
                 .build();
 
@@ -206,7 +206,8 @@ class StudentServiceImplCreateTest {
 
         when(userAccountRepository.findByEmail(anyString())).thenReturn(Optional.empty());
         when(branchRepository.findById(1L)).thenReturn(Optional.of(testBranch));
-        when(levelRepository.findByCodeIgnoreCase("B1")).thenReturn(Optional.of(testLevel));
+        when(levelRepository.existsById(1L)).thenReturn(true);
+        when(levelRepository.findById(1L)).thenReturn(Optional.of(testLevel));
         when(passwordEncoder.encode("12345678")).thenReturn("encodedPassword");
         when(userAccountRepository.save(any(UserAccount.class))).thenReturn(testUser);
         when(studentRepository.save(any(Student.class))).thenReturn(testStudent);
@@ -224,7 +225,7 @@ class StudentServiceImplCreateTest {
         assertThat(response).isNotNull();
         assertThat(response.getSkillAssessmentsCreated()).isEqualTo(2);
         assertThat(response.getDefaultPassword()).isEqualTo("12345678");
-        verify(levelRepository, atLeastOnce()).findByCodeIgnoreCase("B1"); // Changed from times(2) to atLeastOnce()
+        verify(levelRepository, atLeastOnce()).existsById(1L); // Changed from times(2) to atLeastOnce()
         verify(replacementSkillAssessmentRepository, times(2)).save(any(ReplacementSkillAssessment.class));
     }
 
@@ -280,26 +281,26 @@ class StudentServiceImplCreateTest {
     }
 
     @Test
-    @DisplayName("Should throw exception when level code not found")
-    void shouldThrowExceptionWhenLevelCodeNotFound() {
+    @DisplayName("Should throw exception when level not found")
+    void shouldThrowExceptionWhenLevelNotFound() {
         // Arrange
         SkillAssessmentInput assessment = SkillAssessmentInput.builder()
                 .skill(Skill.GENERAL)
-                .levelCode("INVALID")
+                .levelId(999L) // Non-existent level ID
                 .score(75)
                 .build();
         validRequest.setSkillAssessments(Arrays.asList(assessment));
 
         when(userAccountRepository.findByEmail(anyString())).thenReturn(Optional.empty());
         when(branchRepository.findById(1L)).thenReturn(Optional.of(testBranch));
-        when(levelRepository.findByCodeIgnoreCase("INVALID")).thenReturn(Optional.empty());
+        when(levelRepository.existsById(999L)).thenReturn(false);
 
         // Act & Assert
         assertThatThrownBy(() -> studentService.createStudent(validRequest, currentUserId))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LEVEL_NOT_FOUND);
 
-        verify(levelRepository).findByCodeIgnoreCase("INVALID");
+        verify(levelRepository).existsById(999L);
         verify(userAccountRepository, never()).save(any());
     }
 

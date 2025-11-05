@@ -152,6 +152,11 @@ public class TestDataBuilder {
             return this;
         }
 
+        public SubjectBuilder status(SubjectStatus status) {
+            subject.setStatus(status);
+            return this;
+        }
+
         public Subject build() {
             return subject;
         }
@@ -189,8 +194,18 @@ public class TestDataBuilder {
             return this;
         }
 
+        public LevelBuilder description(String description) {
+            level.setDescription(description);
+            return this;
+        }
+
         public LevelBuilder sortOrder(Integer order) {
             level.setSortOrder(order);
+            return this;
+        }
+
+        public LevelBuilder expectedDurationHours(Integer hours) {
+            level.setExpectedDurationHours(hours);
             return this;
         }
 
