@@ -12,6 +12,7 @@ import org.fyp.tmssep490be.services.ClassService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -226,8 +227,13 @@ public class ClassServiceImpl implements ClassService {
 
         // Get available students from the same branch, excluding already enrolled ones
         // Remove sort from pageable since matchPriority doesn't exist in entity
+        // AND nested sorting (userAccount.fullName) causes PostgreSQL errors
         Long branchId = classEntity.getBranch().getId();
-        Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        Pageable unsortedPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.unsorted() // Explicitly unsorted to prevent nested field sorting errors
+        );
         Page<Student> availableStudents = studentRepository.findAvailableStudentsForClass(
                 classId, branchId, search, unsortedPageable
         );
@@ -638,7 +644,7 @@ public class ClassServiceImpl implements ClassService {
                 .id(assessment.getId())
                 .skill(assessment.getSkill().name())
                 .level(convertToLevelInfoDTO(assessment.getLevel()))
-                .score(assessment.getScore())
+                .score(assessment.getScaledScore() != null ? assessment.getScaledScore().intValue() : 0)
                 .assessmentDate(assessment.getAssessmentDate())
                 .assessmentType(assessment.getAssessmentType())
                 .note(assessment.getNote())

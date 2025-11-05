@@ -252,11 +252,14 @@ CREATE TABLE level (
 CREATE TABLE replacement_skill_assessment (
   id BIGSERIAL PRIMARY KEY,
   student_id BIGINT NOT NULL,
-  skill VARCHAR(20) NOT NULL,  -- Sử dụng lại enum: general, reading, writing, speaking, listening
-  level_id BIGINT,  -- Link đến bảng level (ví dụ: A1, A2, B1, B2...)
-  score INTEGER,  -- Điểm số cụ thể (ví dụ: IELTS band score * 10 = 65 cho 6.5)
+  skill VARCHAR(20) NOT NULL,  -- Enum: GENERAL, READING, WRITING, SPEAKING, LISTENING, VOCABULARY, GRAMMAR, KANJI
+  level_id BIGINT,  -- Link đến bảng level (ví dụ: A1, A2, B1, B2, N5, N4, N3, N2, N1...)
+  raw_score DECIMAL(10,2),  -- Raw score from assessment (e.g., 32 out of 40 questions)
+  scaled_score DECIMAL(10,2),  -- Converted score (e.g., 7.5 IELTS band, 750 TOEIC)
+  score_scale VARCHAR(100),  -- Score scale description (e.g., "0-9", "0-990", "N1-N5")
+  assessment_category VARCHAR(50),  -- Assessment category: PLACEMENT, MOCK, OFFICIAL, PRACTICE
   assessment_date DATE NOT NULL,  -- Ngày đánh giá
-  assessment_type VARCHAR(100),  -- Loại đánh giá: 'placement_test', 'ielts', 'toeic', 'internal_exam', 'self_assessment'
+  assessment_type VARCHAR(100),  -- Loại đánh giá: 'placement_test', 'ielts', 'toeic', 'jlpt', 'internal_exam', 'self_assessment'
   note TEXT,  -- Ghi chú thêm
   assessed_by BIGINT,  -- Người đánh giá (teacher/academic staff)
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -264,8 +267,8 @@ CREATE TABLE replacement_skill_assessment (
   CONSTRAINT fk_student_skill_student FOREIGN KEY(student_id) REFERENCES student(id) ON DELETE CASCADE,
   CONSTRAINT fk_student_skill_level FOREIGN KEY(level_id) REFERENCES level(id) ON DELETE SET NULL,
   CONSTRAINT fk_student_skill_assessed_by FOREIGN KEY(assessed_by) REFERENCES user_account(id) ON DELETE SET NULL,
-  CONSTRAINT uq_student_skill_assessment UNIQUE(student_id, skill, assessment_date),  -- Một student có thể test lại nhiều lần
-  CONSTRAINT chk_replacement_skill CHECK (skill IN ('GENERAL', 'READING', 'WRITING', 'SPEAKING', 'LISTENING'))
+  CONSTRAINT uq_student_skill_assessment UNIQUE(student_id, skill, assessment_date, assessment_category),
+  CONSTRAINT chk_replacement_skill CHECK (skill IN ('GENERAL', 'READING', 'WRITING', 'SPEAKING', 'LISTENING', 'VOCABULARY', 'GRAMMAR', 'KANJI'))
 );
 
 CREATE TABLE course (

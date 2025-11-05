@@ -527,7 +527,10 @@ public class TestDataBuilder {
             // Set defaults
             assessment.setSkill(Skill.READING);
             assessment.setAssessmentDate(LocalDate.now());
-            assessment.setScore(75);
+            assessment.setRawScore(BigDecimal.valueOf(75));
+            assessment.setScaledScore(BigDecimal.valueOf(75));
+            assessment.setScoreScale("0-100");
+            assessment.setAssessmentCategory("PLACEMENT");
         }
 
         public ReplacementSkillAssessmentBuilder student(Student student) {
@@ -550,8 +553,23 @@ public class TestDataBuilder {
             return this;
         }
 
-        public ReplacementSkillAssessmentBuilder score(Integer score) {
-            assessment.setScore(score);
+        public ReplacementSkillAssessmentBuilder rawScore(BigDecimal rawScore) {
+            assessment.setRawScore(rawScore);
+            return this;
+        }
+
+        public ReplacementSkillAssessmentBuilder scaledScore(BigDecimal scaledScore) {
+            assessment.setScaledScore(scaledScore);
+            return this;
+        }
+
+        public ReplacementSkillAssessmentBuilder scoreScale(String scoreScale) {
+            assessment.setScoreScale(scoreScale);
+            return this;
+        }
+
+        public ReplacementSkillAssessmentBuilder assessmentCategory(String assessmentCategory) {
+            assessment.setAssessmentCategory(assessmentCategory);
             return this;
         }
 

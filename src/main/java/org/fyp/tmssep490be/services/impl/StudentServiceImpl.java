@@ -13,6 +13,7 @@ import org.fyp.tmssep490be.services.StudentService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -145,7 +146,10 @@ public class StudentServiceImpl implements StudentService {
                 assessment.setStudent(savedStudent);
                 assessment.setSkill(input.getSkill());
                 assessment.setLevel(level);
-                assessment.setScore(input.getScore());
+                assessment.setRawScore(input.getRawScore());
+                assessment.setScaledScore(input.getScaledScore());
+                assessment.setScoreScale(input.getScoreScale());
+                assessment.setAssessmentCategory(input.getAssessmentCategory());
                 assessment.setAssessmentDate(LocalDate.now());
                 assessment.setAssessmentType("manual_creation");
                 assessment.setNote(input.getNote());
@@ -156,8 +160,8 @@ public class StudentServiceImpl implements StudentService {
 
                 replacementSkillAssessmentRepository.save(assessment);
                 assessmentsCreated++;
-                log.debug("Created {} assessment for student {} at level {} with score {}",
-                        input.getSkill(), savedStudent.getId(), level.getCode(), input.getScore());
+                log.debug("Created {} assessment for student {} at level {} with scaled score {}",
+                        input.getSkill(), savedStudent.getId(), level.getCode(), input.getScaledScore());
             }
         }
 
@@ -253,6 +257,10 @@ public class StudentServiceImpl implements StudentService {
             branchIds = getUserAccessibleBranches(userId);
         }
 
+        // Map sort field: Student entity doesn't have fullName, it's in userAccount
+        // Transform pageable to use correct entity path for sorting
+        pageable = mapStudentSortField(pageable);
+
         Page<Student> students;
 
         // Filter by course if specified
@@ -263,6 +271,54 @@ public class StudentServiceImpl implements StudentService {
         }
 
         return students.map(this::convertToStudentListItemDTO);
+    }
+
+    /**
+     * Map sort fields from DTO field names to entity paths
+     * Since Student queries join with UserAccount, need to map fields correctly
+     * 
+     * NOTE: Nested path sorting (e.g., userAccount.fullName) doesn't work with Spring Data JPA
+     * dynamic queries. For now, we only support sorting by Student's own fields.
+     */
+    private Pageable mapStudentSortField(Pageable pageable) {
+        if (pageable.getSort().isUnsorted()) {
+            return pageable;
+        }
+
+        // Check if sorting by unsupported nested fields
+        boolean hasNestedSort = pageable.getSort().stream()
+                .anyMatch(order -> {
+                    String prop = order.getProperty();
+                    return prop.equals("fullName") || prop.equals("name") || 
+                           prop.equals("email") || prop.equals("phone") || 
+                           prop.equals("status");
+                });
+
+        // If trying to sort by nested fields, remove sort and use default (studentCode)
+        if (hasNestedSort) {
+            log.warn("Sorting by UserAccount fields not supported in dynamic queries. Using default sort by studentCode.");
+            return PageRequest.of(
+                pageable.getPageNumber(), 
+                pageable.getPageSize(), 
+                Sort.by(Sort.Direction.ASC, "studentCode")
+            );
+        }
+
+        // Only map Student's own fields
+        List<Sort.Order> mappedOrders = pageable.getSort().stream()
+                .map(order -> {
+                    String property = order.getProperty();
+                    String mappedProperty = switch (property) {
+                        case "studentCode", "code" -> "studentCode";
+                        case "createdAt", "created" -> "createdAt";
+                        default -> "studentCode"; // Fallback to safe field
+                    };
+                    return new Sort.Order(order.getDirection(), mappedProperty);
+                })
+                .collect(Collectors.toList());
+
+        Sort mappedSort = Sort.by(mappedOrders);
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), mappedSort);
     }
 
     @Override

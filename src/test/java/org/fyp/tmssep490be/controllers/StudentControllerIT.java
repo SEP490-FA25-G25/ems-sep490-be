@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -233,14 +234,20 @@ class StudentControllerIT {
         SkillAssessmentInput assessment1 = SkillAssessmentInput.builder()
                 .skill(Skill.GENERAL)
                 .levelId(testLevel.getId())
-                .score(75)
+                .rawScore(BigDecimal.valueOf(75))
+                .scaledScore(BigDecimal.valueOf(7.5))
+                .scoreScale("0-9")
+                .assessmentCategory("PLACEMENT")
                 .note("Placement test result")
                 .build();
 
         SkillAssessmentInput assessment2 = SkillAssessmentInput.builder()
                 .skill(Skill.SPEAKING)
                 .levelId(testLevel.getId())
-                .score(80)
+                .rawScore(BigDecimal.valueOf(80))
+                .scaledScore(BigDecimal.valueOf(8.0))
+                .scoreScale("0-9")
+                .assessmentCategory("PLACEMENT")
                 .build();
 
         validRequest.setSkillAssessments(Arrays.asList(assessment1, assessment2));
@@ -332,7 +339,10 @@ class StudentControllerIT {
         SkillAssessmentInput invalidAssessment = SkillAssessmentInput.builder()
                 .skill(Skill.GENERAL)
                 .levelId(999L) // Non-existent level ID
-                .score(75)
+                .rawScore(BigDecimal.valueOf(75))
+                .scaledScore(BigDecimal.valueOf(7.5))
+                .scoreScale("0-9")
+                .assessmentCategory("PLACEMENT")
                 .build();
         validRequest.setSkillAssessments(Arrays.asList(invalidAssessment));
 

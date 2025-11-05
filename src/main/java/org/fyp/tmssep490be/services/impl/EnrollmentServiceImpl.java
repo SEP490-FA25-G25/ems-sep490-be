@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -669,7 +670,10 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             assessment.setStudent(student);
             assessment.setSkill(Skill.GENERAL);
             assessment.setLevel(level);
-            assessment.setScore(0); // Default score, can be updated later
+            assessment.setRawScore(BigDecimal.ZERO);
+            assessment.setScaledScore(BigDecimal.ZERO);
+            assessment.setScoreScale("0-100");
+            assessment.setAssessmentCategory("PLACEMENT");
             assessment.setAssessmentDate(LocalDate.now());
             assessment.setAssessmentType("enrollment_initial");
             assessment.setNote("Initial assessment created during student enrollment");
@@ -774,7 +778,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 return SkillAssessmentData.empty(null);
             }
 
-            return SkillAssessmentData.valid(null, levelCode, score);
+            return SkillAssessmentData.valid(null, levelCode, 
+                    BigDecimal.valueOf(score), BigDecimal.valueOf(score), "0-100", "PLACEMENT");
 
         } catch (NumberFormatException e) {
             log.warn("Invalid score format in skill assessment: '{}'. Score must be a number", value);
@@ -805,7 +810,10 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             assessment.setStudent(student);
             assessment.setSkill(skill);
             assessment.setLevel(level);
-            assessment.setScore(assessmentData.getScore());
+            assessment.setRawScore(assessmentData.getRawScore());
+            assessment.setScaledScore(assessmentData.getScaledScore());
+            assessment.setScoreScale(assessmentData.getScoreScale());
+            assessment.setAssessmentCategory(assessmentData.getAssessmentCategory());
             assessment.setAssessmentDate(LocalDate.now());
             assessment.setAssessmentType("excel_import");
             assessment.setNote("Imported from Excel enrollment file");
@@ -818,8 +826,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             }
 
             replacementSkillAssessmentRepository.save(assessment);
-            log.debug("Created {} assessment for student {} at level {} with score {}",
-                    skill, student.getId(), assessmentData.getLevelCode(), assessmentData.getScore());
+            log.debug("Created {} assessment for student {} at level {} with scaled score {}",
+                    skill, student.getId(), assessmentData.getLevelCode(), assessmentData.getScaledScore());
 
         } catch (Exception e) {
             log.error("Failed to create {} assessment for student {}: {}",

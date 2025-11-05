@@ -14,6 +14,7 @@ import org.fyp.tmssep490be.services.StudentLevelService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -102,7 +103,11 @@ public class StudentLevelServiceImpl implements StudentLevelService {
             assessment.setStudent(student);
             assessment.setSkill(Skill.GENERAL);
             assessment.setLevel(level);
-            assessment.setScore(0); // Default score, can be updated later
+            // Set default scores (can be updated later)
+            assessment.setRawScore(BigDecimal.ZERO);
+            assessment.setScaledScore(BigDecimal.ZERO);
+            assessment.setScoreScale("0-100");
+            assessment.setAssessmentCategory("PLACEMENT");
             assessment.setAssessmentDate(LocalDate.now());
             assessment.setAssessmentType("enrollment_initial");
             assessment.setNote("Initial assessment created during student enrollment");
@@ -193,7 +198,11 @@ public class StudentLevelServiceImpl implements StudentLevelService {
                 assessment.setStudent(student);
                 assessment.setSkill(skill);
                 assessment.setLevel(level);
-                assessment.setScore(data.getScore());
+                // New flexible scoring fields
+                assessment.setRawScore(data.getRawScore());
+                assessment.setScaledScore(data.getScaledScore());
+                assessment.setScoreScale(data.getScoreScale());
+                assessment.setAssessmentCategory(data.getAssessmentCategory());
                 assessment.setAssessmentDate(LocalDate.now());
                 assessment.setAssessmentType("bulk_import");
                 assessment.setNote("Bulk import of multiple skill assessments");
@@ -207,8 +216,8 @@ public class StudentLevelServiceImpl implements StudentLevelService {
 
                 ReplacementSkillAssessment savedAssessment = assessmentRepository.save(assessment);
                 createdAssessments.add(savedAssessment);
-                log.debug("Created {} assessment for student {} at level {} with score {}",
-                        skill, studentId, data.getLevelCode(), data.getScore());
+                log.debug("Created {} assessment for student {} at level {} with scaled score {}",
+                        skill, studentId, data.getLevelCode(), data.getScaledScore());
 
             } catch (Exception e) {
                 log.error("Failed to create {} assessment for student {}: {}",
@@ -261,7 +270,10 @@ public class StudentLevelServiceImpl implements StudentLevelService {
             assessment.setStudent(student);
             assessment.setSkill(skill);
             assessment.setLevel(level);
-            assessment.setScore(score);
+            assessment.setRawScore(score != null ? BigDecimal.valueOf(score) : BigDecimal.ZERO);
+            assessment.setScaledScore(score != null ? BigDecimal.valueOf(score) : BigDecimal.ZERO);
+            assessment.setScoreScale("0-100");
+            assessment.setAssessmentCategory("PLACEMENT");
             assessment.setAssessmentDate(LocalDate.now());
             assessment.setAssessmentType(assessmentType != null ? assessmentType : "manual_entry");
             assessment.setNote(note != null ? note : "Manual assessment entry");

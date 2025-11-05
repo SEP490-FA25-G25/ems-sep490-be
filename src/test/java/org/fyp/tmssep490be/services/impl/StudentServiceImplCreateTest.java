@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
@@ -192,14 +193,20 @@ class StudentServiceImplCreateTest {
         SkillAssessmentInput assessment1 = SkillAssessmentInput.builder()
                 .skill(Skill.GENERAL)
                 .levelId(1L)
-                .score(75)
+                .rawScore(BigDecimal.valueOf(75))
+                .scaledScore(BigDecimal.valueOf(7.5))
+                .scoreScale("0-9")
+                .assessmentCategory("PLACEMENT")
                 .note("Placement test")
                 .build();
 
         SkillAssessmentInput assessment2 = SkillAssessmentInput.builder()
                 .skill(Skill.SPEAKING)
                 .levelId(1L)
-                .score(80)
+                .rawScore(BigDecimal.valueOf(80))
+                .scaledScore(BigDecimal.valueOf(8.0))
+                .scoreScale("0-9")
+                .assessmentCategory("PLACEMENT")
                 .build();
 
         validRequest.setSkillAssessments(Arrays.asList(assessment1, assessment2));
@@ -287,7 +294,10 @@ class StudentServiceImplCreateTest {
         SkillAssessmentInput assessment = SkillAssessmentInput.builder()
                 .skill(Skill.GENERAL)
                 .levelId(999L) // Non-existent level ID
-                .score(75)
+                .rawScore(BigDecimal.valueOf(75))
+                .scaledScore(BigDecimal.valueOf(7.5))
+                .scoreScale("0-9")
+                .assessmentCategory("PLACEMENT")
                 .build();
         validRequest.setSkillAssessments(Arrays.asList(assessment));
 

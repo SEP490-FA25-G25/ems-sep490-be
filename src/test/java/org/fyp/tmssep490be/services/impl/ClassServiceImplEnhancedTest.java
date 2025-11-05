@@ -18,6 +18,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -140,7 +141,10 @@ class ClassServiceImplEnhancedTest {
                         .student(testStudent)
                         .skill(Skill.READING)
                         .level(assessedLevel)
-                        .score(85)
+                        .rawScore(BigDecimal.valueOf(85))
+                        .scaledScore(BigDecimal.valueOf(85))
+                        .scoreScale("0-100")
+                        .assessmentCategory("PLACEMENT")
                         .assessmentDate(LocalDate.of(2024, 10, 15))
                         .assessmentType("Placement Test")
                         .note("Good comprehension")
@@ -151,7 +155,10 @@ class ClassServiceImplEnhancedTest {
                         .student(testStudent)
                         .skill(Skill.WRITING)
                         .level(assessedLevel)
-                        .score(72)
+                        .rawScore(BigDecimal.valueOf(72))
+                        .scaledScore(BigDecimal.valueOf(7.2))
+                        .scoreScale("0-9")
+                        .assessmentCategory("PLACEMENT")
                         .assessmentDate(LocalDate.of(2024, 10, 15))
                         .assessmentType("Placement Test")
                         .note("Needs improvement")
