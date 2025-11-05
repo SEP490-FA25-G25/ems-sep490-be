@@ -92,4 +92,44 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
             @Param("branchIds") List<Long> branchIds,
             Pageable pageable
     );
+
+    /**
+     * Find available students for enrollment with computed match priority
+     * Database-first approach: computes matchPriority in SQL for consistent pagination
+     *
+     * @param classId Class ID for enrollment
+     * @param classSubjectId Subject ID of the class's course level
+     * @param classLevelId Level ID of the class's course
+     * @param branchId Branch ID to filter students from
+     * @param search Search term for student details
+     * @param pageable Pagination and sorting parameters
+     * @return Page of students with computed match priority
+     */
+    /**
+     * Find all available students for enrollment in a class (no pagination)
+     * Hybrid approach: fetch all students for in-memory sorting
+     */
+    @Query("SELECT s FROM Student s " +
+           "INNER JOIN s.userAccount u " +
+           "INNER JOIN u.userBranches ub " +
+           "INNER JOIN ub.branch b " +
+           "WHERE b.id = :branchId " +
+           "AND u.status = org.fyp.tmssep490be.entities.enums.UserStatus.ACTIVE " +
+           "AND NOT EXISTS (" +
+           "  SELECT 1 FROM Enrollment e " +
+           "  WHERE e.student.id = s.id " +
+           "  AND e.classId = :classId " +
+           "  AND e.status = org.fyp.tmssep490be.entities.enums.EnrollmentStatus.ENROLLED" +
+           ") " +
+           "AND (COALESCE(:search, '') = '' OR " +
+           "  LOWER(s.studentCode) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "  LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "  LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           "  LOWER(COALESCE(u.phone, '')) LIKE LOWER(CONCAT('%', :search, '%'))" +
+           ")")
+    List<Student> findAllAvailableStudentsForClass(
+            @Param("classId") Long classId,
+            @Param("branchId") Long branchId,
+            @Param("search") String search
+    );
 }

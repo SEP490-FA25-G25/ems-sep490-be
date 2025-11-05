@@ -176,8 +176,8 @@ class ClassServiceImplEnhancedTest {
 
         when(classRepository.findById(classId)).thenReturn(Optional.of(testClass));
         when(userBranchesRepository.findBranchIdsByUserId(userId)).thenReturn(List.of(1L));
-        when(studentRepository.findAvailableStudentsForClass(eq(classId), eq(1L), isNull(), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(testStudent)));
+        when(studentRepository.findAllAvailableStudentsForClass(eq(classId), eq(1L), isNull()))
+                .thenReturn(List.of(testStudent));
         when(skillAssessmentRepository.findByStudentIdIn(List.of(2000L))).thenReturn(testAssessments);
         when(enrollmentRepository.countByStudentIdAndStatus(2000L, EnrollmentStatus.ENROLLED)).thenReturn(1);
 
@@ -235,8 +235,8 @@ class ClassServiceImplEnhancedTest {
 
         when(classRepository.findById(classId)).thenReturn(Optional.of(testClass));
         when(userBranchesRepository.findBranchIdsByUserId(userId)).thenReturn(List.of(1L));
-        when(studentRepository.findAvailableStudentsForClass(eq(classId), eq(1L), isNull(), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(testStudent)));
+        when(studentRepository.findAllAvailableStudentsForClass(eq(classId), eq(1L), isNull()))
+                .thenReturn(List.of(testStudent));
         when(skillAssessmentRepository.findByStudentIdIn(List.of(2000L))).thenReturn(List.of());
         when(enrollmentRepository.countByStudentIdAndStatus(2000L, EnrollmentStatus.ENROLLED)).thenReturn(0);
 

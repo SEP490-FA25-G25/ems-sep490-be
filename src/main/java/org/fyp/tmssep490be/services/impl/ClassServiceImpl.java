@@ -225,25 +225,18 @@ public class ClassServiceImpl implements ClassService {
                 .orElseThrow(() -> new CustomException(ErrorCode.CLASS_NOT_FOUND));
         validateClassAccess(classEntity, userId);
 
-        // Get available students from the same branch, excluding already enrolled ones
-        // Remove sort from pageable since matchPriority doesn't exist in entity
-        // AND nested sorting (userAccount.fullName) causes PostgreSQL errors
+        // Get class details for skill assessment matching
         Long branchId = classEntity.getBranch().getId();
-        Pageable unsortedPageable = PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize(),
-                Sort.unsorted() // Explicitly unsorted to prevent nested field sorting errors
-        );
-        Page<Student> availableStudents = studentRepository.findAvailableStudentsForClass(
-                classId, branchId, search, unsortedPageable
-        );
-
-        // Get class's course subject and level for skill assessment matching
         Long classSubjectId = classEntity.getCourse().getLevel().getSubject().getId();
         Long classLevelId = classEntity.getCourse().getLevel().getId();
 
-        // Batch fetch ALL skill assessments for all students (not just matching subject)
-        List<Long> studentIds = availableStudents.getContent().stream()
+        // Hybrid approach: Get ALL available students without pagination for proper sorting
+        List<Student> allAvailableStudents = studentRepository.findAllAvailableStudentsForClass(
+                classId, branchId, search
+        );
+
+        // Batch fetch ALL skill assessments for all students
+        List<Long> studentIds = allAvailableStudents.stream()
                 .map(Student::getId)
                 .collect(Collectors.toList());
 
@@ -256,7 +249,7 @@ public class ClassServiceImpl implements ClassService {
                 .collect(Collectors.groupingBy(assessment -> assessment.getStudent().getId()));
 
         // Convert to DTOs with complete assessment data and sort by matchPriority
-        List<AvailableStudentDTO> dtos = availableStudents.getContent().stream()
+        List<AvailableStudentDTO> allDtos = allAvailableStudents.stream()
                 .map(student -> convertToAvailableStudentDTO(
                         student,
                         assessmentsByStudent.get(student.getId()),
@@ -275,11 +268,17 @@ public class ClassServiceImpl implements ClassService {
                 })
                 .collect(Collectors.toList());
 
-        // Create new Page with sorted DTOs
+        // Apply pagination manually on sorted list
+        int start = pageable.getPageNumber() * pageable.getPageSize();
+        int end = Math.min(start + pageable.getPageSize(), allDtos.size());
+        List<AvailableStudentDTO> paginatedDtos = start < allDtos.size() ?
+                allDtos.subList(start, end) : List.of();
+
+        // Create Page with correct pagination metadata
         return new org.springframework.data.domain.PageImpl<>(
-                dtos,
+                paginatedDtos,
                 pageable,
-                availableStudents.getTotalElements()
+                allDtos.size()
         );
     }
 
@@ -525,6 +524,21 @@ public class ClassServiceImpl implements ClassService {
             Long classSubjectId,
             Long classLevelId
     ) {
+        return convertToAvailableStudentDTO(student, assessments, classSubjectId, classLevelId, null, null);
+    }
+
+    /**
+     * Convert Student to AvailableStudentDTO with assessment data
+     * Overloaded method that accepts pre-computed match priority for database-first approach
+     */
+    private AvailableStudentDTO convertToAvailableStudentDTO(
+            Student student,
+            List<ReplacementSkillAssessment> assessments,
+            Long classSubjectId,
+            Long classLevelId,
+            Integer preComputedMatchPriority,
+            String preComputedMatchingSkill
+    ) {
         UserAccount userAccount = student.getUserAccount();
 
         // Get branch info (take first branch)
@@ -543,11 +557,23 @@ public class ClassServiceImpl implements ClassService {
                         .collect(Collectors.toList()) :
                 List.of();
 
-        // Find matching assessment for priority calculation
-        ReplacementSkillAssessment matchingAssessment = findMatchingAssessment(assessments, classSubjectId, classLevelId);
-
-        // Calculate match priority and context
-        AvailableStudentDTO.ClassMatchInfoDTO classMatchInfo = calculateClassMatchInfo(matchingAssessment, classSubjectId, classLevelId);
+        // Use pre-computed match priority if provided, otherwise calculate it
+        AvailableStudentDTO.ClassMatchInfoDTO classMatchInfo;
+        if (preComputedMatchPriority != null) {
+            // Use database-computed values for better performance and consistency
+            ReplacementSkillAssessment matchingAssessment = findMatchingAssessment(assessments, classSubjectId, classLevelId);
+            classMatchInfo = AvailableStudentDTO.ClassMatchInfoDTO.builder()
+                    .matchPriority(preComputedMatchPriority)
+                    .matchingSkill(preComputedMatchingSkill)
+                    .matchingLevel(matchingAssessment != null && matchingAssessment.getLevel() != null ?
+                            convertToLevelInfoDTO(matchingAssessment.getLevel()) : null)
+                    .matchReason(getMatchReason(preComputedMatchPriority))
+                    .build();
+        } else {
+            // Legacy calculation method (kept for backward compatibility)
+            ReplacementSkillAssessment matchingAssessment = findMatchingAssessment(assessments, classSubjectId, classLevelId);
+            classMatchInfo = calculateClassMatchInfo(matchingAssessment, classSubjectId, classLevelId);
+        }
 
         // Get active enrollments count
         int activeEnrollments = enrollmentRepository.countByStudentIdAndStatus(
@@ -637,6 +663,18 @@ public class ClassServiceImpl implements ClassService {
                 .matchingLevel(matchingLevel)
                 .matchReason(matchReason)
                 .build();
+    }
+
+    /**
+     * Get match reason based on priority level
+     */
+    private String getMatchReason(Integer matchPriority) {
+        return switch (matchPriority) {
+            case 1 -> "Perfect match - Assessment matches both Subject AND Level";
+            case 2 -> "Partial match - Assessment matches Subject only";
+            case 3 -> "No skill assessment found for this course's subject";
+            default -> "Unknown match priority";
+        };
     }
 
     private AvailableStudentDTO.SkillAssessmentDTO convertToSkillAssessmentDTO(ReplacementSkillAssessment assessment) {
