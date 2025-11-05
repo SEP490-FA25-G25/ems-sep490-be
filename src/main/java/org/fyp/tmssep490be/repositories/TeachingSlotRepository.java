@@ -14,4 +14,14 @@ public interface TeachingSlotRepository extends JpaRepository<TeachingSlot, Teac
 
     @Query("SELECT ts FROM TeachingSlot ts WHERE ts.session.classEntity.id = :classId AND ts.status = :status")
     List<TeachingSlot> findByClassEntityIdAndStatus(@Param("classId") Long classId, @Param("status") TeachingSlotStatus status);
+    
+    /**
+     * Check if teacher owns (is assigned to) a session
+     * Teacher owns session if there's a teaching_slot with status SCHEDULED or SUBSTITUTED
+     */
+    boolean existsByIdSessionIdAndIdTeacherIdAndStatusIn(
+            Long sessionId,
+            Long teacherId,
+            List<TeachingSlotStatus> statuses
+    );
 }

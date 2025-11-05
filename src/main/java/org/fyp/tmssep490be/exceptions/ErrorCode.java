@@ -141,6 +141,17 @@ public enum ErrorCode {
     TEACHER_SCHEDULE_NOT_FOUND(3007, "Teacher schedule not found"),
     TEACHER_WORKLOAD_EXCEEDED(3008, "Teacher workload exceeds maximum capacity"),
 
+    // Teacher Request errors (5000-5099)
+    TEACHER_REQUEST_NOT_FOUND(5000, "Teacher request not found"),
+    TEACHER_DOES_NOT_OWN_SESSION(5001, "Teacher does not own this session"),
+    TEACHER_REQUEST_NOT_PENDING(5002, "Request is not in pending status"),
+    TEACHER_REQUEST_DUPLICATE(5003, "Duplicate teacher request already exists for this session"),
+    SESSION_NOT_IN_TIME_WINDOW(5004, "Session must be within 7 days from today"),
+    RESOURCE_NOT_AVAILABLE(5005, "Resource is not available at the specified time"),
+    INVALID_RESOURCE_FOR_MODALITY(5006, "Invalid resource for modality change"),
+    TEACHER_REQUEST_NOT_WAITING_CONFIRM(5007, "Request is not in waiting_confirm status"),
+    REPLACEMENT_TEACHER_CONFLICT(5008, "Replacement teacher has a schedule conflict"),
+
     // Student Request errors (4100-4199)
     STUDENT_REQUEST_NOT_FOUND(4100, "Student request not found"),
     STUDENT_NOT_ENROLLED_IN_CLASS(4101, "Student is not enrolled in this class"),
