@@ -232,14 +232,14 @@ class StudentControllerIT {
         // Arrange
         SkillAssessmentInput assessment1 = SkillAssessmentInput.builder()
                 .skill(Skill.GENERAL)
-                .levelId(101L)
+                .levelId(testLevel.getId())
                 .score(75)
                 .note("Placement test result")
                 .build();
 
         SkillAssessmentInput assessment2 = SkillAssessmentInput.builder()
                 .skill(Skill.SPEAKING)
-                .levelId(101L)
+                .levelId(testLevel.getId())
                 .score(80)
                 .build();
 

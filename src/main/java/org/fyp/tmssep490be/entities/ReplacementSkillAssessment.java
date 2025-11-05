@@ -49,9 +49,9 @@ public class ReplacementSkillAssessment {
     @JoinColumn(name = "assessed_by")
     private UserAccount assessedBy;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", insertable = false)
     private OffsetDateTime updatedAt;
 }
