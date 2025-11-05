@@ -1,8 +1,17 @@
 {
   "permissions": {
     "allow": [
+      "Bash(find:*)",
       "Bash(mvn test:*)",
-      "Bash(export JAVA_HOME=\"/c/Users/tmtmt/.jdks/openjdk-21.0.1:*)"
+      "Bash(./mvnw test:*)",
+      "Bash($env:JAVA_HOME = \"C:\\Users\\tmtmt\\.jdks\\openjdk-21.0.1\")",
+      "Bash($env:PATH = \"$env:JAVA_HOME\\bin;$env:PATH\")",
+      "Bash(.mvnw test:*)",
+      "Bash(set:*)",
+      "Bash(set PATH=%JAVA_HOME%bin)",
+      "Bash(%PATH%)",
+      "Bash(export JAVA_HOME=\"/c/Users/tmtmt/.jdks/openjdk-21.0.1\":*)",
+      "Bash(export PATH=\"$JAVA_HOME/bin:$PATH\":*)"
     ],
     "deny": [],
     "ask": []
