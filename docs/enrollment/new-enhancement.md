@@ -1,6 +1,6 @@
 # ENROLLMENT SYSTEM IMPROVEMENT PLAN
 
-**Purpose:** Comprehensive improvement plan for Excel-based student enrollment system
+**Purpose:** Simplified improvement plan for Excel-based student enrollment system
 **Status:** Analysis Complete - Ready for Implementation
 **Last Updated:** 2025-11-06
 **Target Implementation:** Coding Agent with full context
@@ -9,10 +9,10 @@
 
 ## 🎯 EXECUTIVE SUMMARY
 
-Current Excel enrollment system works but has significant UX issues. This plan provides complete analysis, edge cases, and implementation roadmap for transforming the enrollment experience from technically-functional to user-friendly.
+Current Excel enrollment system works but has significant UX issues. Based on real-world academic workflow analysis, this plan focuses on simplification rather than complexity. The system should support academic decisions, not replace them.
 
-**Current State:** 71% of edge cases handled, poor UX, rigid Excel format
-**Target State:** 95%+ edge cases handled, excellent UX, flexible import options
+**Current State:** 13 columns with complex assessment data - over-engineered for actual workflow
+**Target State:** 7 columns with simple student data - matches real academic operations
 
 ---
 
@@ -23,20 +23,23 @@ Current Excel enrollment system works but has significant UX issues. This plan p
 - ✅ **Pessimistic locking:** Prevents race conditions
 - ✅ **Flexible strategies:** ALL/PARTIAL/OVERRIDE options
 - ✅ **Audit trail:** Complete tracking of who enrolled what
-- ✅ **Auto session generation:** Saves manual work
 - ✅ **Robust parsing:** Multiple date formats, gender normalization
+- ✅ **Class-specific import:** Import into specific class context
 
-### **Critical UX Issues (Fix These)**
-- ❌ **Fixed Excel format:** 7 columns, no template available
-- ❌ **No template download:** Users must guess format
+### **Critical Issues (Over-engineering Problems)**
+- ❌ **13 columns Excel format:** Too complex with unnecessary assessment data
+- ❌ **Wrong workflow:** Trying to automate academic placement decisions
+- ❌ **Assessment complexity:** 5 skill columns that don't match real enrollment process
+- ❌ **No template download:** Users must guess complex format
 - ❌ **Poor error messages:** Technical errors, not user-friendly
-- ❌ **No progress feedback:** Black box processing
-- ❌ **No partial recovery:** All-or-nothing approach
 
-### **Missing Business Logic (Add These)**
-- ❌ **Skill level warnings:** No mismatch detection between student level and class level
-- ❌ **Candidate pool:** Cannot create student + user account without class enrollment (CREATE_ONLY strategy)
-- ❌ **Cross-class validation:** No conflict detection
+### **Real-world Workflow (What Actually Happens)**
+1. **Sales consultation:** Student discusses needs with sales team
+2. **Class selection:** Sales recommends specific class (e.g., "IELTS Foundation T2-4-6")
+3. **Student decision:** Student chooses class schedule/format
+4. **Payment:** Student pays for selected class
+5. **Data entry:** Sales fills simple student info into class-specific Excel
+6. **Academic import:** Academic staff imports basic student data into pre-selected class
 
 ---
 
@@ -44,116 +47,119 @@ Current Excel enrollment system works but has significant UX issues. This plan p
 
 ### **User Personas & Workflows**
 
-#### **Academic Affairs Staff**
+#### **Academic Affairs Staff (Primary Users)**
 **Current Pain Points:**
 1. Must create Excel files from scratch (no template)
-2. Must know exact 7-column format (student_code, full_name, email, phone, gender, dob, level)
-3. Cannot fix errors during import
-4. Cannot recover from partial failures
+2. Must know complex 13-column format with assessment data
+3. Assessment columns don't match actual workflow
+4. Cannot fix errors during import
+5. Error messages are too technical
 
-**Desired Experience:**
-1. Download Excel template with sample data
-2. Upload with real-time progress feedback
-3. See clear error messages with row-by-row validation
-4. Retry only failed students, not entire file
+**Real Needs:**
+1. Download simple Excel template (7 columns - student_code auto-generated)
+2. Import student data into pre-selected class
+3. Clear, user-friendly error messages
+4. Fast, reliable enrollment process
 
-#### **Sales Team**
+#### **Sales Team (Data Providers)**
 **Current Workflow:**
-- Creates class-specific Excel files
-- Includes assessment scores for placement
-- No visibility into enrollment results
+- Consults with students and recommends specific classes
+- Collects basic student information
+- Fills class-specific Excel files
+- Hands off to academic staff for system entry
 
-**Desired Workflow:**
-- Create student + user accounts with assessments (candidate pools)
-- Track which students were placed where
-- Get feedback on placement decisions
+**Requirements:**
+- Simple Excel format (no assessment data needed)
+- Include facebookUrl and address for sales consultation
+- Clear instructions on required fields
+- Class-specific templates
 
 #### **System Administrators**
 **Current Pain Points:**
-1. Limited visibility into bulk operations
-2. No rollback capabilities for critical errors
+1. Complex system due to over-engineered assessment features
+2. Hard to debug when validation fails on assessment data
 
 **Desired Experience:**
-1. Better audit logging for capacity overrides
-2. Bulk rollback capabilities for critical errors
+1. Simplified system with fewer failure points
+2. Clear audit trail for enrollment operations
+3. Easy rollback for critical errors
 
 ---
 
-## 🔢 EDGE CASE ANALYSIS (40 Cases)
+## 🔢 SIMPLIFIED SCOPE ANALYSIS
 
-### **✅ Already Handled (25/40)**
-- Capacity management (all 5 cases)
-- Student resolution logic (7/10 cases)
-- Excel parsing quality (3/5 cases)
-- Class status validation (5/5 cases)
-- Concurrency control (3/3 cases)
-- Permission management (2/2 cases)
+### **Core Requirements (What Actually Matters)**
 
-### **⚠️ Partially Handled (5/40)**
-- Large file processing (no progress feedback)
-- Field validation (basic but not user-friendly)
-- Transaction rollback (works but no recovery)
+#### **Essential Features (Must Have)**
+1. **Student Data Creation:** Create student + user accounts from Excel
+2. **Class Enrollment:** Enroll students into specific class
+3. **Basic Validation:** Required fields (full_name, email, phone)
+4. **Error Handling:** Clear, actionable error messages
+5. **Template Download:** Simple Excel template generation
 
-### **❌ Not Handled (7/40)**
-- Skill level mismatch warnings
-- Required field validation
-- Field length validation
-- Cross-class enrollment conflicts
-- Template generation
-- Progress indicators
-- User-friendly error messages
+#### **Out of Scope (What We're Removing)**
+1. **Assessment Data Import:** Wrong workflow - assessments handled separately
+2. **Auto-placement Algorithms:** Academic staff decide placement
+3. **Skill Level Validation:** Not relevant for enrollment
+4. **Complex Assessment Parsing:** Over-engineered complexity
+5. **Multiple Exam Types:** Simple format handles all cases
+
+#### **Simplified Excel Format (7 Columns)**
+```
+full_name, email, phone, facebook_url, address, gender, dob
+```
+
+**Benefits:**
+- ✅ Easy for sales team to fill out
+- ✅ Student code auto-generated by system (format: ST{branchId}{name_part}{random})
+- ✅ Include social media (facebookUrl) for better student communication
+- ✅ Include address for location-based class recommendations
+- ✅ Easy for academic staff to validate
+- ✅ Works for all language programs (IELTS, TOEIC, JLPT, etc.)
+- ✅ Clear separation of concerns
+- ✅ Matches real-world workflow
 
 ---
 
-## 📋 ENHANCED BUSINESS LOGIC
+## 📋 SIMPLIFIED BUSINESS LOGIC
 
-### **New Enrollment Strategies**
+### **Core Enrollment Strategies (Keep These)**
 ```java
-public enum EnhancedEnrollmentStrategy {
-    ALL,           // Current: Enroll all suitable students into class
-    PARTIAL,       // Current: Enroll selected students only into class
-    OVERRIDE,      // Current: Enroll all regardless of capacity
-    CREATE_ONLY,   // NEW: Create student + user account but NO class enrollment
-    MIXED,         // NEW: Some enroll into class, some create-only
-    VALIDATE_ONLY  // NEW: Parse and validate only, no changes
+public enum EnrollmentStrategy {
+    ALL,       // Enroll all suitable students into class
+    PARTIAL,   // Enroll selected students only into class
+    OVERRIDE   // Enroll all regardless of capacity
 }
 ```
 
-### **Improved Excel Format**
-**Current (7 columns, rigid):**
+### **Simplified Excel Format**
+**Current (13 columns, over-engineered):**
 ```
-student_code, full_name, email, phone, gender, dob, level
-```
-
-**Proposed (7 columns, with template):**
-```
-student_code (optional), full_name (required), email (required),
-phone (required), gender (required), dob (required), level (optional)
+student_code, full_name, email, phone, facebook_url, address, gender, dob,
+general, reading, writing, speaking, listening
 ```
 
-**Improvements:**
-- Template download with sample data
-- Better validation for required fields
-- Clear error messages
+**Proposed (7 columns, simple):**
+```
+full_name (required), email (required), phone (required),
+facebook_url (optional), address (optional), gender (required), dob (required)
+```
 
-### **Enhanced Validation Rules**
+**Key Change:**
+- **Student code removed**: System auto-generates unique student codes using format `ST{branchId}{name_part}{random_suffix}`
+- **Example generated code**: `ST1NGUYENVANA123` for student "Nguyen Van A" at branch 1
+
+**Key Improvements:**
+- Template download with sample data and instructions
+- Include facebook_url for social media communication
+- Include address for location-based recommendations
+- Focus on core student information only
+- Class context provided by import endpoint (class-specific)
+- Clear separation between enrollment and assessment
+
+### **Simple Validation Rules**
 ```java
-// Skill level validation - compare student level with class level
-if (student.getLevel() != null && classEntity.getCourse().getLevel() != null) {
-    if (!isCompatibleLevel(student.getLevel(), classEntity.getCourse().getLevel())) {
-        warnings.add(String.format(
-            "Student level (%s) may not match class level (%s). Please verify placement.",
-            student.getLevel(), classEntity.getCourse().getLevel()
-        ));
-    }
-}
-
-// Field length validation
-if (student.getFullName().length() > 100) {
-    errors.add("Student name too long (max 100 characters)");
-}
-
-// Required field validation with user-friendly messages
+// Required field validation with clear messages
 if (student.getFullName() == null || student.getFullName().trim().isEmpty()) {
     errors.add("Row " + rowNumber + ": Full name is required and cannot be empty");
 }
@@ -161,173 +167,241 @@ if (student.getFullName() == null || student.getFullName().trim().isEmpty()) {
 if (student.getEmail() == null || !isValidEmail(student.getEmail())) {
     errors.add("Row " + rowNumber + ": '" + student.getEmail() + "' is not a valid email address");
 }
+
+if (student.getPhone() == null || student.getPhone().trim().isEmpty()) {
+    errors.add("Row " + rowNumber + ": Phone number is required");
+}
+
+// Optional field validation (facebook_url, address)
+if (student.getFacebookUrl() != null && !student.getFacebookUrl().trim().isEmpty()) {
+    if (!isValidUrl(student.getFacebookUrl())) {
+        errors.add("Row " + rowNumber + ": '" + student.getFacebookUrl() + "' is not a valid URL for Facebook");
+    }
+}
+
+// Basic field length validation
+if (student.getFullName().length() > 100) {
+    errors.add("Row " + rowNumber + ": Full name is too long (max 100 characters)");
+}
+
+if (student.getEmail().length() > 255) {
+    errors.add("Row " + rowNumber + ": Email address is too long (max 255 characters)");
+}
+
+if (student.getFacebookUrl() != null && student.getFacebookUrl().length() > 500) {
+    errors.add("Row " + rowNumber + ": Facebook URL is too long (max 500 characters)");
+}
+
+if (student.getAddress() != null && student.getAddress().length() > 500) {
+    errors.add("Row " + rowNumber + ": Address is too long (max 500 characters)");
+}
 ```
 
 ---
 
-## 🚀 IMPLEMENTATION ROADMAP
+## 🚀 SIMPLIFIED IMPLEMENTATION ROADMAP
 
-### **Phase 1: Core UX Improvements (High Priority)**
-**Target:** Improve basic user experience
+### **Phase 1: Core Simplification (High Priority)**
+**Target:** Simplify system to match real-world workflow
 
 **Implementation Tasks:**
-1. **Excel Template Download Endpoint**
+1. **Simplify Excel Format (7 columns)**
    ```java
-   GET /api/v1/enrollments/template
-   Response: Downloadable Excel template with sample data
+   // Update ExcelParserServiceImpl to handle 7 columns instead of 13
+   // Student code will be auto-generated by system
+   full_name, email, phone, facebook_url, address, gender, dob
    ```
 
-2. **Enhanced Error Messages**
+2. **Remove Assessment Processing**
+   ```java
+   // Remove skill assessment parsing from enrollment flow
+   // Assessments handled separately through dedicated endpoints
+   ```
+
+3. **Excel Template Download**
+   ```java
+   GET /api/v1/enrollments/template?classId={classId}
+   Response: Downloadable Excel template with 7 columns and sample data
+   ```
+
+4. **Update StudentEnrollmentData DTO**
+   ```java
+   // Remove assessment fields
+   private String general, reading, writing, speaking, listening; // REMOVE
+
+   // Remove studentCode - will be auto-generated by system
+   // private String studentCode; // REMOVE - auto-generated
+
+   // Keep core student data only
+   private String fullName, email, phone;
+   private String facebookUrl, address; // Optional fields
+   private Gender gender;
+   private LocalDate dob;
+   ```
+
+### **Phase 2: Enhanced User Experience (Medium Priority)**
+**Target:** Improve academic staff experience
+
+**Implementation Tasks:**
+1. **User-Friendly Error Messages**
    ```java
    // Before: "Row 5: Invalid email format"
    // After: "Row 5: 'not-an-email' is not a valid email address. Please use format: name@domain.com"
    ```
 
-3. **Progress Indicators**
-   ```java
-   // Add progress tracking to parsing process
-   @Service
-   public class ExcelParserServiceImpl {
-       public void parseWithProgress(MultipartFile file, ProgressCallback callback) {
-           // Report parsing progress every 10 rows
-       }
-   }
-   ```
-
-4. **Required Field Validation**
+2. **Basic Field Validation**
    ```java
    private void validateRequiredFields(StudentEnrollmentData data, int rowNumber) {
        if (data.getFullName() == null || data.getFullName().isBlank()) {
-           data.setStatus(StudentResolutionStatus.ERROR);
-           data.setErrorMessage("Row " + rowNumber + ": Full name is required");
+           data.setErrorMessage("Row " + rowNumber + ": Full name is required and cannot be empty");
            return;
        }
-       // Similar for other required fields
-   }
-   ```
-
-### **Phase 2: Advanced Features (Medium Priority)**
-**Target:** Add business logic and flexibility
-
-**Implementation Tasks:**
-1. **Enhanced Enrollment Strategies**
-   ```java
-   @PostMapping("/classes/{classId}/import/execute")
-   public ResponseEntity<ResponseObject> executeEnhancedImport(
-           @PathVariable Long classId,
-           @RequestBody @Valid EnhancedEnrollmentRequest request
-   ) {
-       // Handle CREATE_ONLY (create student+user only) and MIXED strategies
-   }
-   ```
-
-2. **Skill Level Validation**
-   ```java
-   private List<String> validateStudentClassFit(Student student, ClassEntity classEntity) {
-       List<String> warnings = new ArrayList<>();
-
-       // Skill level validation - compare student level with class level
-       if (student.getLevel() != null && classEntity.getCourse().getLevel() != null) {
-           if (!isCompatibleLevel(student.getLevel(), classEntity.getCourse().getLevel())) {
-               warnings.add(String.format(
-                   "Student level (%s) may not match class level (%s). Please verify placement.",
-                   student.getLevel(), classEntity.getCourse().getLevel()
-               ));
-           }
+       if (data.getEmail() == null || !isValidEmail(data.getEmail())) {
+           data.setErrorMessage("Row " + rowNumber + ": '" + data.getEmail() + "' is not a valid email address");
+           return;
+       }
+       if (data.getPhone() == null || data.getPhone().isBlank()) {
+           data.setErrorMessage("Row " + rowNumber + ": Phone number is required");
+           return;
        }
 
-       return warnings;
+       // Optional field validation for Facebook URL
+       if (data.getFacebookUrl() != null && !data.getFacebookUrl().isBlank()) {
+           if (!isValidUrl(data.getFacebookUrl())) {
+               data.setErrorMessage("Row " + rowNumber + ": '" + data.getFacebookUrl() + "' is not a valid URL for Facebook");
+               return;
+           }
+       }
    }
    ```
 
-### **Phase 3: Advanced UX Features (Low Priority)**
-**Target:** Complete user experience transformation
+3. **Class-Specific Template Generation**
+   ```java
+   @GetMapping("/classes/{classId}/template")
+   public ResponseEntity<Resource> downloadClassTemplate(@PathVariable Long classId) {
+       // Generate template with class name in filename
+       // Include sample data relevant to this class
+   }
+   ```
+
+### **Phase 3: System Polish (Low Priority)**
+**Target:** Complete system refinement
 
 **Implementation Tasks:**
-1. **Partial Recovery System**
+1. **Progress Indicators for Large Files**
    ```java
-   @PostMapping("/classes/{classId}/import/retry")
-   public ResponseEntity<ResponseObject> retryFailedStudents(
+   // Simple progress feedback without complex WebSocket implementation
+   public ImportProgress getImportProgress(String importId) {
+       // Return current parsing progress
+   }
+   ```
+
+2. **Enhanced Audit Logging**
+   ```java
+   // Better logging for capacity overrides and enrollment decisions
+   @PostMapping("/classes/{classId}/import/execute")
+   public ResponseEntity<ResponseObject> executeImport(
            @PathVariable Long classId,
-           @RequestBody RetryFailedRequest request
+           @RequestBody @Valid EnrollmentRequest request
    ) {
-       // Retry only failed students from previous import
+       // Log detailed audit information for all enrollment actions
    }
    ```
 
-2. **Bulk Rollback Capability**
-   ```java
-   @PostMapping("/enrollments/bulk/rollback")
-   public ResponseEntity<ResponseObject> rollbackEnrollmentBatch(
-           @RequestBody RollbackRequest request
-   ) {
-       // Rollback entire import batch
-   }
-   ```
-
-3. **Enhanced Audit Dashboard**
-   ```java
-   @GetMapping("/enrollments/audit")
-   public ResponseEntity<ResponseObject> getCapacityOverrides() {
-       // Return recent capacity overrides with reasons and users
-   }
-   ```
+3. **Documentation and Training Materials**
+   - Create user guide for academic staff
+   - Document simplified Excel format
+   - Provide troubleshooting guide for common errors
 
 ---
 
-## 🔧 TECHNICAL ARCHITECTURE
+## 🔧 SIMPLIFIED TECHNICAL ARCHITECTURE
 
-### **New Components to Add**
+### **Changes to Existing Components**
 
-#### **1. Enhanced DTOs**
+#### **1. Updated StudentEnrollmentData DTO**
 ```java
-// Enhanced enrollment request
-public class EnhancedEnrollmentRequest {
-    private Long classId;
-    private EnhancedEnrollmentStrategy strategy;
-    private List<Long> enrollStudentIds;      // For MIXED strategy
-    private List<Long> createOnlyStudentIds;  // For MIXED strategy
-    private String overrideReason;
-    private List<StudentEnrollmentData> students;
-}
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class StudentEnrollmentData {
+    // Core student information only
+    // private String studentCode; // REMOVED - auto-generated by system
+    private String fullName;     // Required
+    private String email;        // Required
+    private String phone;        // Required
+    private String facebookUrl;  // Optional - important for sales communication
+    private String address;      // Optional - important for location-based recommendations
+    private Gender gender;       // Required
+    private LocalDate dob;       // Required
 
-// Progress tracking
-public class ImportProgress {
-    private int currentRow;
-    private int totalRows;
-    private int percentComplete;
-    private String currentOperation;
+    // Resolution result (existing - keep these)
+    private StudentResolutionStatus status;
+    private Long resolvedStudentId;
+    private String errorMessage;
+
+    // REMOVE: Assessment fields (moved to separate workflow)
+    // private String general, reading, writing, speaking, listening;
 }
 ```
 
-#### **2. New Services**
+#### **2. Simplified ExcelParserService**
+```java
+@Service
+public class ExcelParserServiceImpl implements ExcelParserService {
+    // Update column constants for 7-column format (student_code removed)
+    private static final int COLUMN_FULL_NAME = 0;
+    private static final int COLUMN_EMAIL = 1;
+    private static final int COLUMN_PHONE = 2;
+    private static final int COLUMN_FACEBOOK_URL = 3;
+    private static final int COLUMN_ADDRESS = 4;
+    private static final int COLUMN_GENDER = 5;
+    private static final int COLUMN_DOB = 6;
+
+    // Remove assessment parsing logic
+    // Focus on basic student data parsing only
+    // Include validation for facebookUrl (optional URL format)
+    // Student code will be auto-generated during student creation
+}
+```
+
+#### **3. New Template Service**
 ```java
 @Service
 public class EnrollmentTemplateService {
     public byte[] generateExcelTemplate();
     public byte[] generateExcelTemplateWithClassInfo(Long classId);
-}
 
-@Service
-public class EnrollmentValidationService {
-    public List<String> validateStudentClassFit(Student student, ClassEntity classEntity);
-    public List<String> validateBusinessRules(List<Student> students, ClassEntity classEntity);
-    public void validateRequiredFields(StudentEnrollmentData data, int rowNumber);
+    private void addSampleData(Workbook workbook, ClassEntity classEntity) {
+        // Add 2-3 sample rows with realistic data including:
+        // - Facebook URLs for sample students
+        // - Address information for location context
+        // - Note: Student codes will be auto-generated during import
+        // - Class name in filename for clarity
+    }
 }
 ```
 
-#### **3. Enhanced Repository Methods**
+#### **4. Updated EnrollmentServiceImpl**
 ```java
-public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
-    // New methods for advanced validation
-    boolean existsByStudentIdAndClassEntityIdAndStatus(Long studentId, Long classId, EnrollmentStatus status);
-    List<Enrollment> findByClassEntityIdAndEnrolledByAndCreatedAtBetween(Long classId, Long userId, OffsetDateTime start, OffsetDateTime end);
-}
+@Service
+public class EnrollmentServiceImpl {
+    // Remove assessment creation from enrollment flow
+    public int createEnrollments(Long classId, List<StudentEnrollmentData> validStudents, Long enrolledBy) {
+        // Only create students and enrollments
+        // Student codes auto-generated using existing generateStudentCode() method
+        // No skill assessment creation here
 
-public interface StudentRepository extends JpaRepository<Student, Long> {
-    // Enhanced student validation
-    boolean existsByEmailAndStatus(String email, UserStatus status);
-    List<Student> findByAgeBetweenAndSkillLevel(int minAge, int maxAge, String skillLevel);
+        // Assessment import handled by separate endpoints:
+        // POST /api/v1/assessments/import
+    }
+
+    // Use existing student code generation method:
+    private String generateStudentCode(Long branchId, String fullName, String email) {
+        // Format: ST{branchId}{name_part}{random_suffix}
+        // Example: ST1NGUYENVANA123
+    }
 }
 ```
 
@@ -335,31 +409,36 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
 ## 📱 FRONTEND INTEGRATION POINTS
 
-### **Enhanced Upload Component**
+### **Simplified Upload Component**
 ```javascript
-// Upload with progress tracking
-const uploadComponent = {
+// Simple upload for class-specific enrollment
+const enrollmentComponent = {
   uploadFile: async (file, classId) => {
     const formData = new FormData();
     formData.append('file', file);
 
     return fetch(`/api/v1/enrollments/classes/${classId}/import/preview`, {
       method: 'POST',
-      body: formData,
-      onUploadProgress: (progress) => {
-        updateProgressBar(progress.percent);
-      }
+      body: formData
     });
   },
 
   downloadTemplate: async (classId) => {
-    const response = await fetch(`/api/v1/enrollments/template?classId=${classId}`);
-    downloadFile(response, 'enrollment-template.xlsx');
+    const response = await fetch(`/api/v1/enrollments/classes/${classId}/template`);
+    downloadFile(response, `${className}-enrollment-template.xlsx`);
+  },
+
+  executeEnrollment: async (classId, request) => {
+    return fetch(`/api/v1/enrollments/classes/${classId}/import/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    });
   }
 };
 ```
 
-### **Enhanced Preview Component**
+### **Simple Preview Component**
 ```javascript
 const previewComponent = {
   displayPreview: (previewData) => {
@@ -368,61 +447,111 @@ const previewComponent = {
         totalStudents: previewData.students.length,
         validStudents: previewData.totalValid,
         errorCount: previewData.errorCount,
-        capacityWarning: previewData.exceedsCapacity
+        className: previewData.className
       },
       studentList: previewData.students.map(student => ({
-        ...student,
-        statusIcon: getStatusIcon(student.status),
-        errorMessage: formatErrorMessage(student.errorMessage)
+        // studentCode removed - auto-generated by system
+        fullName: student.fullName,
+        email: student.email,
+        phone: student.phone,
+        facebookUrl: student.facebookUrl,
+        address: student.address,
+        gender: student.gender,
+        dob: student.dob,
+        status: student.status,
+        errorMessage: student.errorMessage
       })),
       recommendation: previewData.recommendation
     };
+  },
+
+  formatErrorMessage: (error) => {
+    // Make error messages more user-friendly
+    return error.replace(/Row \d+: /, '').trim();
   }
 };
 ```
 
 ---
 
-## 🧪 TESTING STRATEGY
+## 🧪 SIMPLIFIED TESTING STRATEGY
 
-### **New Test Cases to Add**
+### **Core Test Cases (Focus on What Matters)**
 
-#### **Enhanced Validation Tests**
+#### **Excel Format Tests**
 ```java
 @Test
-void testSkillLevelValidation_StudentLevelMismatch_ShouldWarn() {
-    // Test skill level mismatch between student and class
+void testExcelFormat_7Columns_ShouldParseCorrectly() {
+    // Test that 7-column format parses correctly (no student_code column)
+    // Verify assessment fields are ignored
+    // Verify facebookUrl and address are parsed correctly
+    // Verify student code is auto-generated during import
 }
 
 @Test
-void testRequiredFieldValidation_MissingEmail_ShouldError() {
-    // Test required field validation with clear error messages
+void testExcelFormat_13Columns_ShouldStillWork() {
+    // Backward compatibility test
+    // Should ignore assessment columns and student_code column
+    // Should parse core student data and auto-generate student codes
+    // Should handle facebookUrl and address from existing format
 }
 
 @Test
-void testRequiredFieldValidation_MissingFullName_ShouldError() {
-    // Test required field validation for full name
+void testRequiredFields_MissingRequiredData_ShouldShowClearErrors() {
+    // Test validation of required fields: full_name, email, phone, gender, dob
+    // Test optional fields: facebookUrl, address
+    // Verify studentCode is not required in Excel (auto-generated)
+}
+
+@Test
+void testFacebookUrlValidation_InvalidUrl_ShouldShowError() {
+    // Test that invalid Facebook URLs show clear error messages
+    // Test that valid Facebook URLs are accepted
+}
+
+@Test
+void testAddressValidation_Length_ShouldBeValidated() {
+    // Test address length validation (max 500 characters)
 }
 ```
 
-#### **New Strategy Tests**
+#### **Template Generation Tests**
 ```java
 @Test
-void testCreateOnlyStrategy_ShouldCreateStudentUserWithoutClassEnrollment() {
-    // Test CREATE_ONLY strategy (create student+user only, no class enrollment)
+void testTemplateGeneration_ShouldCreate7ColumnTemplate() {
+    // Test that generated template has exactly 7 columns (no student_code)
+    // Verify sample data includes facebookUrl and address
+    // Verify template explains student codes are auto-generated
 }
 
 @Test
-void testMixedStrategy_ShouldEnrollSomeAndCreateOthers() {
-    // Test MIXED strategy (some enroll into class, others create-only)
+void testClassSpecificTemplate_ShouldIncludeClassName() {
+    // Test template filename includes class name
+    // Test template has relevant sample data with Facebook URLs and addresses
+    // Verify template notes that student codes will be generated automatically
 }
 ```
 
-#### **Progress Tracking Tests**
+#### **Simplified Enrollment Tests**
 ```java
 @Test
-void testLargeFileProgress_ShouldReportProgress() {
-    // Test progress reporting for large files
+void testEnrollmentFlow_WithoutAssessment_ShouldCreateStudentAndEnrollment() {
+    // Test that enrollment works without assessment data
+    // Verify student is created and enrolled in specified class
+}
+
+@Test
+void testErrorMessages_ShouldBeUserFriendly() {
+    // Test that error messages are clear and actionable
+    // Verify technical errors are converted to user-friendly format
+}
+```
+
+#### **Integration Tests**
+```java
+@Test
+void testCompleteWorkflow_SalesToAcademic_ShouldWork() {
+    // Test complete flow: sales creates Excel → academic imports → student enrolled
 }
 ```
 
@@ -431,21 +560,30 @@ void testLargeFileProgress_ShouldReportProgress() {
 ## 📊 SUCCESS METRICS
 
 ### **Before Implementation**
-- Import success rate: ~70% (many failures due to format issues)
-- User satisfaction: Poor (no feedback, no recovery)
-- Support tickets: High (format questions, error recovery)
+- Import success rate: ~60% (complex 13-column format causes confusion)
+- User satisfaction: Poor (assessment data doesn't match workflow)
+- Support tickets: High (format questions, assessment validation errors)
+- Academic staff time: ~15 minutes per import (debugging complex errors)
 
 ### **After Implementation (Target)**
-- Import success rate: 95%+ (better validation, templates)
-- User satisfaction: Excellent (clear feedback, recovery options)
-- Support tickets: Low (self-service capabilities)
+- Import success rate: 95%+ (simple 6-column format)
+- User satisfaction: Excellent (clear separation of concerns)
+- Support tickets: Low (self-service with templates)
+- Academic staff time: ~3 minutes per import (straightforward process)
 
 ### **Key Performance Indicators**
-1. **Import Success Rate:** Target 95%+
-2. **Average Import Time:** < 30 seconds for 100 students
-3. **Error Recovery Time:** < 5 minutes
-4. **User Completion Rate:** 90%+ (users finish what they start)
-5. **Support Ticket Reduction:** 80% fewer enrollment-related tickets
+1. **Import Success Rate:** Target 95%+ (simple format reduces errors)
+2. **Average Import Time:** < 30 seconds for 100 students (no assessment processing)
+3. **Template Usage:** 100% of imports use provided templates
+4. **Error Resolution Time:** < 2 minutes (clear error messages)
+5. **Academic Staff Efficiency:** 80% time reduction per import
+6. **Support Ticket Reduction:** 90% fewer enrollment-related tickets
+
+### **Business Value**
+- **Faster onboarding:** Students enrolled and ready for class immediately
+- **Reduced training time:** New academic staff learn process in minutes
+- **Better data quality:** Simple format ensures consistent, accurate data
+- **Scalable process:** Easy to handle peak enrollment periods
 
 ---
 
@@ -453,82 +591,92 @@ void testLargeFileProgress_ShouldReportProgress() {
 
 ### **Technical Requirements**
 - Spring Boot 3.5.7 with Java 21
-- Apache POI for Excel manipulation
+- Apache POI for Excel manipulation (already available)
 - PostgreSQL for data storage
 - JWT authentication already in place
 
-### **Dependencies to Add**
-```xml
-<!-- For Excel template generation -->
-<dependency>
-    <groupId>org.apache.poi</groupId>
-    <artifactId>poi-ooxml</artifactId>
-    <version>5.2.3</version>
-</dependency>
-
-<!-- For progress tracking -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-websocket</artifactId>
-</dependency>
-```
+### **No New Dependencies Required**
+- All required dependencies already exist in current system
+- Apache POI is already included for Excel processing
+- No WebSocket needed for simplified approach
 
 ### **Database Schema Changes**
-**No new tables required** - using existing schema with enhanced validation:
+**No new tables required** - simplifying existing usage:
 
 ```sql
--- No schema changes needed for Phase 1 improvements
--- Enhanced validation uses existing enrollment and student tables
--- Capacity override audit already stored in enrollment table
+-- No schema changes needed
+-- Using existing student and enrollment tables
+-- Removing assessment creation from enrollment flow
+-- Simplifying ExcelParserServiceImpl to use 6 columns
 
--- Future: Enhanced audit queries for reporting
-CREATE INDEX idx_enrollment_class_override ON enrollment(class_entity_id, capacity_override) WHERE capacity_override = true;
+-- Optional: Add index for better query performance
+CREATE INDEX idx_enrollment_class_date ON enrollment(class_entity_id, created_at);
 ```
+
+### **Code Changes Required**
+1. **Update ExcelParserServiceImpl** - change from 13 to 6 columns
+2. **Update StudentEnrollmentData** - remove assessment fields
+3. **Add EnrollmentTemplateService** - generate 6-column templates
+4. **Update error message formatting** - make user-friendly
+5. **Update EnrollmentServiceImpl** - remove assessment creation logic
 
 ---
 
 ## 🎯 NEXT STEPS FOR CODING AGENT
 
-### **Immediate Implementation Order:**
+### **Immediate Implementation Order (Simplified Approach):**
 
-1. **Phase 1.1:** Excel Template Download Feature
-   - Create `EnrollmentTemplateService`
-   - Add template generation endpoint `GET /api/v1/enrollments/template`
-   - Include sample data with 7 columns: student_code, full_name, email, phone, gender, dob, level
-   - Test template download functionality
+1. **Phase 1.1:** Simplify ExcelParserServiceImpl
+   - Update from 13 columns to 7 columns: `full_name, email, phone, facebook_url, address, gender, dob`
+   - Remove student_code column - will be auto-generated by system
+   - Remove assessment parsing logic completely
+   - Update column constants and parsing methods (start from COLUMN_FULL_NAME = 0)
+   - Test with existing 13-column files (should ignore student_code and assessment columns)
+   - Add validation for Facebook URL (optional) and address (optional)
+   - Student codes will be auto-generated using existing generateStudentCode() method
 
-2. **Phase 1.2:** Enhanced Error Messages
-   - Update error message formatting in `ExcelParserServiceImpl`
-   - Replace technical errors with user-friendly messages
-   - Add specific format examples in error messages
+2. **Phase 1.2:** Update StudentEnrollmentData DTO
+   - Remove assessment fields: `general, reading, writing, speaking, listening`
+   - Remove studentCode field - will be auto-generated by system during import
+   - Keep core student fields including facebookUrl and address
+   - Update validation methods to handle optional fields
+   - Ensure backward compatibility
 
-3. **Phase 1.3:** Required Field Validation
-   - Add comprehensive field validation in `EnrollmentValidationService`
-   - Validate: full_name, email, phone, gender, dob (required fields)
-   - Add row-by-row validation with clear error messages
+3. **Phase 1.3:** Create EnrollmentTemplateService
+   - Generate 7-column Excel templates (no student_code column)
+   - Include sample data with clear instructions for sales team
+   - Note in template: "Student codes will be automatically generated"
+   - Add class-specific template generation
+   - Create endpoint: `GET /api/v1/enrollments/classes/{classId}/template`
 
-4. **Phase 1.4:** Progress Indicators
-   - Implement progress tracking for large file processing
-   - Add progress callbacks to report parsing progress
-   - Consider WebSocket or simple polling for progress updates
+4. **Phase 1.4:** Simplify EnrollmentServiceImpl
+   - Remove assessment creation logic from enrollment flow
+   - Focus on student creation and class enrollment only
+   - Use existing generateStudentCode() method for auto-generation
+   - Update error message formatting to be user-friendly
+   - Add basic field validation with clear messages
+   - Include Facebook URL validation and address length validation
 
 ### **Acceptance Criteria:**
-- [ ] Users can download Excel templates with correct 7-column format
-- [ ] Error messages are clear and actionable with specific examples
-- [ ] Required fields (full_name, email, phone, gender, dob) are validated
-- [ ] Large file uploads show progress indicators
+- [ ] Excel format simplified to 7 columns (no student_code - auto-generated)
+- [ ] Template download works for any class with clear instructions about auto-generated codes
+- [ ] Error messages are clear and actionable
+- [ ] Required fields (full_name, email, phone, gender, dob) validated
+- [ ] Optional fields (facebookUrl, address) properly validated
+- [ ] Student codes auto-generated using existing generateStudentCode() method
+- [ ] Assessment processing removed from enrollment flow
+- [ ] Backward compatibility maintained for existing 13-column files
 - [ ] All existing functionality remains intact
-- [ ] Test coverage exceeds 90% for new features
-- [ ] No new database tables required for Phase 1
+- [ ] Test coverage exceeds 90% for core functionality
 
 ### **Code Quality Standards:**
-- Follow existing Spring Boot patterns
-- Maintain transaction boundaries
-- Preserve existing audit trail capabilities (capacity_override, override_reason)
-- Keep backward compatibility with existing Excel format
+- Follow existing Spring Boot patterns and architecture
+- Maintain transaction boundaries and audit trail
+- Preserve existing business logic for capacity management
+- Keep separation of concerns (enrollment vs assessment)
 - Add comprehensive logging for debugging
-- Use existing entities and DTOs where possible
+- Use existing entities and repositories where possible
 
 ---
 
-**This plan provides complete context for implementing enrollment system improvements while maintaining system integrity and existing functionality.**
+**This simplified plan focuses on real-world workflow while maintaining system integrity and reducing complexity.**
