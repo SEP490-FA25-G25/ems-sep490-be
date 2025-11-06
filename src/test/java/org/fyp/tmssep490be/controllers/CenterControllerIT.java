@@ -169,9 +169,9 @@ class CenterControllerIT {
                 .andExpect(jsonPath("$.data.content").isArray())
                 .andExpect(jsonPath("$.data.content", hasSize(1)))
                 .andExpect(jsonPath("$.data.content[0].code").value("TC001"))
-                .andExpect(jsonPath("$.data.pageable.pageNumber").value(0))
-                .andExpect(jsonPath("$.data.pageable.pageSize").value(10))
-                .andExpect(jsonPath("$.data.totalElements").value(1));
+                .andExpect(jsonPath("$.data.page.number").value(0))
+                .andExpect(jsonPath("$.data.page.size").value(10))
+                .andExpect(jsonPath("$.data.page.totalElements").value(1));
     }
 
     @Test
@@ -300,10 +300,10 @@ class CenterControllerIT {
                 .param("page", "1")
                 .param("size", "2"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.number").value(1))
-                .andExpect(jsonPath("$.data.size").value(2))
+                .andExpect(jsonPath("$.data.page.number").value(1))
+                .andExpect(jsonPath("$.data.page.size").value(2))
                 .andExpect(jsonPath("$.data.content", hasSize(2)))
-                .andExpect(jsonPath("$.data.totalElements").value(5));
+                .andExpect(jsonPath("$.data.page.totalElements").value(5));
 
         // Test sorting
         mockMvc.perform(get("/api/v1/centers")
