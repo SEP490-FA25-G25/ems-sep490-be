@@ -1,7 +1,7 @@
 # ENROLLMENT IMPLEMENTATION STATUS
 
 **Status:** ✅ COMPLETED & TESTED  
-**Last Updated:** 2025-11-04
+**Last Updated:** 2025-11-06
 
 ---
 
@@ -73,7 +73,7 @@
 
 ---
 
-### 3. DTOs (9 files)
+### 3. DTOs (10 files)
 
 **Path:** `dtos/enrollment/`
 
@@ -89,6 +89,7 @@
 | `StudentResolutionStatus` (enum) | `FOUND, CREATE, DUPLICATE, ERROR` |
 | `RecommendationType` (enum) | `OK, PARTIAL_SUGGESTED, OVERRIDE_AVAILABLE, BLOCKED` |
 | `EnrollmentStrategy` (enum) | `ALL, PARTIAL, OVERRIDE` |
+| `SkillAssessmentData` | Multi-skill assessment parsing ("Level-Score" format) |
 
 ---
 
@@ -116,6 +117,10 @@
 #### EnrollmentRepository
 - `countByClassIdAndStatus()` - Current enrolled count
 - `existsByClassIdAndStudentIdAndStatus()` - Check duplicate enrollment
+- `findEnrolledStudentsByClass()` - Paginated student listing with search
+- `findStudentEnrollmentHistory()` - Student history with branch filtering
+- `countByStudentIdAndStatus()` - Active enrollment counting
+- `findLatestEnrollmentByStudent()` - Latest enrollment lookup
 
 #### SessionRepository
 - `findByClassEntityIdAndDateGreaterThanEqualAndStatusOrderByDateAsc()` - Future sessions for auto-generation
@@ -129,12 +134,14 @@
 
 ---
 
-### 6. Error Codes (10 added)
+### 6. Error Codes (13 added)
 
 **Path:** `exceptions/ErrorCode.java`
 
 | Code | Error |
 |------|-------|
+| 1200 | `ENROLLMENT_NOT_FOUND` |
+| 1201 | `ENROLLMENT_ALREADY_EXISTS` |
 | 1205 | `EXCEL_FILE_EMPTY` |
 | 1206 | `EXCEL_PARSE_FAILED` |
 | 1207 | `CLASS_NOT_APPROVED` |
@@ -145,6 +152,7 @@
 | 1212 | `PARTIAL_STRATEGY_MISSING_IDS` |
 | 1213 | `SELECTED_STUDENTS_EXCEED_CAPACITY` |
 | 1214 | `INVALID_FILE_TYPE_XLSX` |
+| 1215 | `OVERRIDE_REASON_TOO_SHORT` |
 
 **Pattern:** All use `throw new CustomException(ErrorCode.XXX)`
 
@@ -200,6 +208,11 @@
 ### Email Notifications
 - Code present but commented out
 - Ready for future implementation with async processing
+
+### Skill Assessment Integration
+- `SkillAssessmentData` DTO supports multi-skill format parsing
+- Format: "Level-Score" (e.g., "A1-85", "B2-92")
+- Integration with assessment system for student placement
 
 ---
 
