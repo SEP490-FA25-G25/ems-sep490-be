@@ -11,7 +11,10 @@
       "Bash(set PATH=%JAVA_HOME%bin)",
       "Bash(%PATH%)",
       "Bash(export JAVA_HOME=\"/c/Users/tmtmt/.jdks/openjdk-21.0.1\":*)",
-      "Bash(export PATH=\"$JAVA_HOME/bin:$PATH\":*)"
+      "Bash(export PATH=\"$JAVA_HOME/bin:$PATH\":*)",
+      "Bash(mvn clean compile:*)",
+      "Bash(./mvnw:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
