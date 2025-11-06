@@ -1,5 +1,6 @@
 package org.fyp.tmssep490be.dtos.teacherrequest;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,11 +13,13 @@ import java.time.OffsetDateTime;
 
 /**
  * DTO for Teacher Request response
+ * Fields with null value will be excluded from JSON response
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class TeacherRequestResponseDTO {
 
     private Long id;
@@ -31,7 +34,7 @@ public class TeacherRequestResponseDTO {
     private String note;
     private OffsetDateTime submittedAt;
     private OffsetDateTime decidedAt;
-    private Long newSessionId; // For RESCHEDULE - session mới được tạo
+    private Long newSessionId;
 }
 
 
