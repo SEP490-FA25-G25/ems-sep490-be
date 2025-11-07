@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Java Spring Boot 3.5.7** application using **Java 21** for a Tuition Management System (TMS). The application follows a clean layered architecture with JWT-based authentication and PostgreSQL database.
+This is a **Java Spring Boot 3.5.7** application using **Java 21** for a Trainning Management System (TMS). The application follows a clean layered architecture with JWT-based authentication and PostgreSQL database.
 
 **Key Technologies:**
 - Spring Boot 3.5.7 with Java 21
