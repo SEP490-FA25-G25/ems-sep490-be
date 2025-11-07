@@ -14,7 +14,8 @@
       "Bash(export PATH=\"$JAVA_HOME/bin:$PATH\":*)",
       "Bash(mvn clean compile:*)",
       "Bash(./mvnw:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []
