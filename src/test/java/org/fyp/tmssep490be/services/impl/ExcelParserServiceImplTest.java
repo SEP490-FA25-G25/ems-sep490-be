@@ -42,28 +42,30 @@ class ExcelParserServiceImplTest {
         assertThat(result).hasSize(3);
 
         StudentEnrollmentData student1 = result.get(0);
-        assertThat(student1.getStudentCode()).isEqualTo("ST001");
+        // REMOVED: getStudentCode() - student codes are auto-generated now
         assertThat(student1.getFullName()).isEqualTo("Nguyen Van A");
         assertThat(student1.getEmail()).isEqualTo("nguyenvana@email.com");
         assertThat(student1.getPhone()).isEqualTo("0901234567");
         assertThat(student1.getGender()).isEqualTo(Gender.MALE);
         assertThat(student1.getDob()).isEqualTo(LocalDate.of(1995, 1, 15));
-        // Note: Skill assessments (general, reading, writing, speaking, listening) can be validated if needed
+        // REMOVED: Skill assessments validation - not handled in enrollment flow
     }
 
     @Test
-    @DisplayName("Should handle empty student code gracefully")
-    void shouldHandleEmptyStudentCode() throws IOException {
+    @DisplayName("Should handle missing email gracefully")
+    void shouldHandleMissingEmail() throws IOException {
         // Arrange
-        MultipartFile file = createExcelWithEmptyStudentCode();
+        MultipartFile file = createExcelWithMissingEmail();
 
         // Act
         List<StudentEnrollmentData> result = excelParserService.parseStudentEnrollment(file);
 
         // Assert
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getStudentCode()).isNull();
-        assertThat(result.get(0).getEmail()).isNotNull();
+        // Parser should still create the object but email will be empty/null
+        // Validation happens at enrollment time, not parsing time
+        assertThat(result.get(0).getFullName()).isEqualTo("Tran Thi B");
+        assertThat(result.get(0).getEmail()).isNullOrEmpty(); // Empty string from Excel
     }
 
     @Test
@@ -151,14 +153,14 @@ class ExcelParserServiceImplTest {
         createHeaderRow(header);
 
         // Data rows
-        createStudentRow(sheet, 1, "ST001", "Nguyen Van A", "nguyenvana@email.com", "0901234567", "male", "1995-01-15", "A1");
-        createStudentRow(sheet, 2, "ST002", "Tran Thi B", "tranthib@email.com", "0902345678", "female", "1996-03-20", "A1");
-        createStudentRow(sheet, 3, "ST003", "Le Van C", "levanc@email.com", "0903456789", "male", "1997-05-10", "A1");
+        createStudentRow(sheet, 1, "Nguyen Van A", "nguyenvana@email.com", "0901234567", "https://facebook.com/nguyenvana", "123 Đường ABC, Quận 1", "male", "1995-01-15");
+        createStudentRow(sheet, 2, "Tran Thi B", "tranthib@email.com", "0902345678", "", "456 Đường XYZ, Quận 3", "female", "1996-03-20");
+        createStudentRow(sheet, 3, "Le Van C", "levanc@email.com", "0903456789", "https://facebook.com/levanc", "", "male", "1997-05-10");
 
         return convertWorkbookToMultipartFile(workbook, "students.xlsx");
     }
 
-    private MultipartFile createExcelWithEmptyStudentCode() throws IOException {
+    private MultipartFile createExcelWithMissingEmail() throws IOException {
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Students");
 
@@ -166,22 +168,17 @@ class ExcelParserServiceImplTest {
         Row header = sheet.createRow(0);
         createHeaderRow(header);
 
-        // Data row with empty student_code
+        // Data row with missing email
         Row row = sheet.createRow(1);
-        row.createCell(0).setCellValue(""); // Empty student_code
-        row.createCell(1).setCellValue("Tran Thi B");
-        row.createCell(2).setCellValue("tranthib@email.com");
-        row.createCell(3).setCellValue("0902345678");
-        row.createCell(4).setCellValue(""); // facebook_url
-        row.createCell(5).setCellValue(""); // address
-        row.createCell(6).setCellValue("female");
-        row.createCell(7).setCellValue("1996-03-20");
-        row.createCell(8).setCellValue("A1-70"); // general
-        row.createCell(9).setCellValue("A1-68"); // reading
-        row.createCell(10).setCellValue("A1-72"); // writing
-        row.createCell(11).setCellValue("A1-75"); // speaking
-        row.createCell(12).setCellValue("A1-73"); // listening
+        row.createCell(0).setCellValue("Tran Thi B");     // full_name (0)
+        row.createCell(1).setCellValue("");               // Empty email (1) - required field
+        row.createCell(2).setCellValue("0902345678");     // phone (2)
+        row.createCell(3).setCellValue("");               // facebook_url (3)
+        row.createCell(4).setCellValue("");               // address (4)
+        row.createCell(5).setCellValue("female");        // gender (5)
+        row.createCell(6).setCellValue("1996-03-20");     // dob (6)
 
+        // REMOVED: Assessment cells - not part of 7-column format
         return convertWorkbookToMultipartFile(workbook, "students.xlsx");
     }
 
@@ -195,19 +192,13 @@ class ExcelParserServiceImplTest {
 
         // Data row with invalid gender
         Row row = sheet.createRow(1);
-        row.createCell(0).setCellValue("ST001");
-        row.createCell(1).setCellValue("Nguyen Van A");
-        row.createCell(2).setCellValue("nguyenvana@email.com");
-        row.createCell(3).setCellValue("0901234567");
-        row.createCell(4).setCellValue(""); // facebook_url
-        row.createCell(5).setCellValue(""); // address
-        row.createCell(6).setCellValue("invalid_gender");
-        row.createCell(7).setCellValue("1995-01-15");
-        row.createCell(8).setCellValue("A1-70");
-        row.createCell(9).setCellValue("A1-68");
-        row.createCell(10).setCellValue("A1-72");
-        row.createCell(11).setCellValue("A1-75");
-        row.createCell(12).setCellValue("A1-73");
+        row.createCell(0).setCellValue("Nguyen Van A");     // full_name (0)
+        row.createCell(1).setCellValue("nguyenvana@email.com"); // email (1)
+        row.createCell(2).setCellValue("0901234567");     // phone (2)
+        row.createCell(3).setCellValue("");               // facebook_url (3)
+        row.createCell(4).setCellValue("");               // address (4)
+        row.createCell(5).setCellValue("invalid_gender"); // gender (5) - invalid value
+        row.createCell(6).setCellValue("1995-01-15");     // dob (6)
 
         return convertWorkbookToMultipartFile(workbook, "students.xlsx");
     }
@@ -259,9 +250,9 @@ class ExcelParserServiceImplTest {
         createHeaderRow(header);
 
         // Different date formats
-        createStudentRow(sheet, 1, "ST001", "Student A", "studenta@email.com", "0901111111", "male", "1995-01-15", "A1"); // yyyy-MM-dd
-        createStudentRow(sheet, 2, "ST002", "Student B", "studentb@email.com", "0902222222", "female", "20/03/1996", "A1"); // dd/MM/yyyy
-        createStudentRow(sheet, 3, "ST003", "Student C", "studentc@email.com", "0903333333", "male", "10/05/1997", "A1"); // MM/dd/yyyy (May 10)
+        createStudentRow(sheet, 1, "Student A", "studenta@email.com", "0901111111", "https://facebook.com/studenta", "789 Đường DEF, Quận 5", "male", "1995-01-15"); // yyyy-MM-dd
+        createStudentRow(sheet, 2, "Student B", "studentb@email.com", "0902222222", "", "321 Đường GHI, Quận 7", "female", "1996-03-20"); // dd/MM/yyyy
+        createStudentRow(sheet, 3, "Student C", "studentc@email.com", "0903333333", "https://facebook.com/studentc", "654 Đường JKL, Quận 2", "male", "1997-05-10"); // MM/dd/yyyy (May 10)
 
         return convertWorkbookToMultipartFile(workbook, "students.xlsx");
     }
@@ -275,46 +266,35 @@ class ExcelParserServiceImplTest {
         createHeaderRow(header);
 
         // Gender variations
-        createStudentRow(sheet, 1, "ST001", "Student A", "studenta@email.com", "0901111111", "m", "1995-01-15", "A1");
-        createStudentRow(sheet, 2, "ST002", "Student B", "studentb@email.com", "0902222222", "F", "1996-03-20", "A1");
-        createStudentRow(sheet, 3, "ST003", "Student C", "studentc@email.com", "0903333333", "Other", "1997-05-10", "A1");
+        createStudentRow(sheet, 1, "Student A", "studenta@email.com", "0901111111", "https://facebook.com/studenta", "789 Đường DEF, Quận 5", "m", "1995-01-15");
+        createStudentRow(sheet, 2, "Student B", "studentb@email.com", "0902222222", "", "321 Đường GHI, Quận 7", "F", "1996-03-20");
+        createStudentRow(sheet, 3, "Student C", "studentc@email.com", "0903333333", "https://facebook.com/studentc", "654 Đường JKL, Quận 2", "Other", "1997-05-10");
 
         return convertWorkbookToMultipartFile(workbook, "students.xlsx");
     }
 
     private void createHeaderRow(Row header) {
-        header.createCell(0).setCellValue("student_code");
-        header.createCell(1).setCellValue("full_name");
-        header.createCell(2).setCellValue("email");
-        header.createCell(3).setCellValue("phone");
-        header.createCell(4).setCellValue("facebook_url");
-        header.createCell(5).setCellValue("address");
-        header.createCell(6).setCellValue("gender");
-        header.createCell(7).setCellValue("dob");
-        header.createCell(8).setCellValue("general");
-        header.createCell(9).setCellValue("reading");
-        header.createCell(10).setCellValue("writing");
-        header.createCell(11).setCellValue("speaking");
-        header.createCell(12).setCellValue("listening");
+        // UPDATED: Simplified 7-column format - removed student_code and assessment fields
+        header.createCell(0).setCellValue("full_name");
+        header.createCell(1).setCellValue("email");
+        header.createCell(2).setCellValue("phone");
+        header.createCell(3).setCellValue("facebook_url");
+        header.createCell(4).setCellValue("address");
+        header.createCell(5).setCellValue("gender");
+        header.createCell(6).setCellValue("dob");
     }
 
-    private void createStudentRow(Sheet sheet, int rowNum, String code, String name, String email,
-                                   String phone, String gender, String dob, String level) {
+    private void createStudentRow(Sheet sheet, int rowNum, String name, String email,
+                                   String phone, String facebookUrl, String address, String gender, String dob) {
         Row row = sheet.createRow(rowNum);
-        row.createCell(0).setCellValue(code);
-        row.createCell(1).setCellValue(name);
-        row.createCell(2).setCellValue(email);
-        row.createCell(3).setCellValue(phone);
-        row.createCell(4).setCellValue(""); // facebook_url
-        row.createCell(5).setCellValue(""); // address
-        row.createCell(6).setCellValue(gender);
-        row.createCell(7).setCellValue(dob);
-        // Skill assessments - use level parameter for all skills
-        row.createCell(8).setCellValue(level + "-70"); // general
-        row.createCell(9).setCellValue(level + "-68"); // reading
-        row.createCell(10).setCellValue(level + "-72"); // writing
-        row.createCell(11).setCellValue(level + "-75"); // speaking
-        row.createCell(12).setCellValue(level + "-73"); // listening
+        // UPDATED: Simplified 7-column format - removed student_code and assessment fields
+        row.createCell(0).setCellValue(name);       // full_name
+        row.createCell(1).setCellValue(email);      // email
+        row.createCell(2).setCellValue(phone);      // phone
+        row.createCell(3).setCellValue(facebookUrl); // facebook_url
+        row.createCell(4).setCellValue(address);     // address
+        row.createCell(5).setCellValue(gender);     // gender
+        row.createCell(6).setCellValue(dob);        // dob
     }
 
     private MultipartFile convertWorkbookToMultipartFile(Workbook workbook, String filename) throws IOException {

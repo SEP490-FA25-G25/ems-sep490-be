@@ -15,6 +15,10 @@ import org.fyp.tmssep490be.exceptions.CustomException;
 import org.fyp.tmssep490be.exceptions.ErrorCode;
 import org.fyp.tmssep490be.security.UserPrincipal;
 import org.fyp.tmssep490be.services.EnrollmentService;
+import org.fyp.tmssep490be.services.EnrollmentTemplateService;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,8 +39,66 @@ import org.springframework.web.multipart.MultipartFile;
 public class EnrollmentController {
 
     private final EnrollmentService enrollmentService;
+    private final EnrollmentTemplateService enrollmentTemplateService;
 
     private static final String XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    /**
+     * Download generic Excel template for student enrollment
+     * GET /api/v1/enrollments/template
+     *
+     * Simplified 7-column format: full_name, email, phone, facebook_url, address, gender, dob
+     */
+    @GetMapping("/template")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    @Operation(
+            summary = "Download Excel enrollment template",
+            description = "Download a generic Excel template with 7 columns for student enrollment"
+    )
+    public ResponseEntity<Resource> downloadGenericTemplate(
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("User {} requested generic enrollment template", currentUser.getId());
+
+        byte[] templateData = enrollmentTemplateService.generateExcelTemplate();
+        ByteArrayResource resource = new ByteArrayResource(templateData);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(XLSX_CONTENT_TYPE))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=student-enrollment-template.xlsx")
+                .body(resource);
+    }
+
+    /**
+     * Download class-specific Excel template
+     * GET /api/v1/enrollments/classes/{classId}/template
+     *
+     * Includes class information and sample data in the template
+     */
+    @GetMapping("/classes/{classId}/template")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    @Operation(
+            summary = "Download class-specific Excel template",
+            description = "Download a class-specific Excel template with class information and sample data"
+    )
+    public ResponseEntity<Resource> downloadClassTemplate(
+            @PathVariable Long classId,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("User {} requested class-specific enrollment template for class {}",
+                currentUser.getId(), classId);
+
+        byte[] templateData = enrollmentTemplateService.generateExcelTemplateWithClassInfo(classId);
+        ByteArrayResource resource = new ByteArrayResource(templateData);
+
+        // Get class name for filename (optional enhancement)
+        String filename = "class-" + classId + "-enrollment-template.xlsx";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(XLSX_CONTENT_TYPE))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+                .body(resource);
+    }
 
     /**
      * Preview import Excel cho class enrollment

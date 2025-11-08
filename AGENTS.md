@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Java Spring Boot 3.5.7** application using **Java 21** for a Tuition Management System (TMS). The application follows a clean layered architecture with JWT-based authentication and PostgreSQL database.
+This is a **Java Spring Boot 3.5.7** application using **Java 21** for a Trainning Management System (TMS). The application follows a clean layered architecture with JWT-based authentication and PostgreSQL database.
 
 **Key Technologies:**
 - Spring Boot 3.5.7 with Java 21
@@ -37,6 +37,39 @@ This is a **Java Spring Boot 3.5.7** application using **Java 21** for a Tuition
 **4. Final Deliverable:**
 
 - **Solid & Maintainable Code:** The final code must be robust, reliable, well-documented, and easy for other developers to understand, modify, and maintain in the future.
+
+## Acknowledging Correct Feedback
+
+When feedback IS correct:
+
+✅ "Fixed. [Brief description of what changed]"
+✅ "Good catch – [specific issue]. Fixed in [location]."
+✅ [Just fix it and show in the code]
+
+❌ "You're absolutely right!"
+❌ "Great point!"
+❌ "Thanks for catching that!"
+❌ "Thanks for [anything]!"
+❌ ANY gratitude expression
+
+**Why no thanks:** Actions speak. Just fix it. The code itself shows you heard the feedback.
+
+**If you catch yourself about to write "Thanks":** DELETE IT. State the fix instead.
+
+---
+
+## Gracefully Correcting Your Pushback
+
+If you pushed back and were wrong:
+
+✅ "You were right – I checked [X] and it does [Y]. Implementing now."
+✅ "Verified this and you're correct. My initial understanding was wrong because [reason]. Fixing."
+
+❌ Long apology  
+❌ Defending why you pushed back  
+❌ Over-explaining
+
+State the correction factually and move on.
 
 ## Development Commands
 

@@ -18,6 +18,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -140,7 +141,10 @@ class ClassServiceImplEnhancedTest {
                         .student(testStudent)
                         .skill(Skill.READING)
                         .level(assessedLevel)
-                        .score(85)
+                        .rawScore(BigDecimal.valueOf(85))
+                        .scaledScore(BigDecimal.valueOf(85))
+                        .scoreScale("0-100")
+                        .assessmentCategory("PLACEMENT")
                         .assessmentDate(LocalDate.of(2024, 10, 15))
                         .assessmentType("Placement Test")
                         .note("Good comprehension")
@@ -151,7 +155,10 @@ class ClassServiceImplEnhancedTest {
                         .student(testStudent)
                         .skill(Skill.WRITING)
                         .level(assessedLevel)
-                        .score(72)
+                        .rawScore(BigDecimal.valueOf(72))
+                        .scaledScore(BigDecimal.valueOf(7.2))
+                        .scoreScale("0-9")
+                        .assessmentCategory("PLACEMENT")
                         .assessmentDate(LocalDate.of(2024, 10, 15))
                         .assessmentType("Placement Test")
                         .note("Needs improvement")
@@ -169,8 +176,8 @@ class ClassServiceImplEnhancedTest {
 
         when(classRepository.findById(classId)).thenReturn(Optional.of(testClass));
         when(userBranchesRepository.findBranchIdsByUserId(userId)).thenReturn(List.of(1L));
-        when(studentRepository.findAvailableStudentsForClass(eq(classId), eq(1L), isNull(), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(testStudent)));
+        when(studentRepository.findAllAvailableStudentsForClass(eq(classId), eq(1L), isNull()))
+                .thenReturn(List.of(testStudent));
         when(skillAssessmentRepository.findByStudentIdIn(List.of(2000L))).thenReturn(testAssessments);
         when(enrollmentRepository.countByStudentIdAndStatus(2000L, EnrollmentStatus.ENROLLED)).thenReturn(1);
 
@@ -228,8 +235,8 @@ class ClassServiceImplEnhancedTest {
 
         when(classRepository.findById(classId)).thenReturn(Optional.of(testClass));
         when(userBranchesRepository.findBranchIdsByUserId(userId)).thenReturn(List.of(1L));
-        when(studentRepository.findAvailableStudentsForClass(eq(classId), eq(1L), isNull(), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(testStudent)));
+        when(studentRepository.findAllAvailableStudentsForClass(eq(classId), eq(1L), isNull()))
+                .thenReturn(List.of(testStudent));
         when(skillAssessmentRepository.findByStudentIdIn(List.of(2000L))).thenReturn(List.of());
         when(enrollmentRepository.countByStudentIdAndStatus(2000L, EnrollmentStatus.ENROLLED)).thenReturn(0);
 

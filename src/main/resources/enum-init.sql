@@ -31,7 +31,7 @@ CREATE TYPE resource_type_enum AS ENUM ('ROOM', 'VIRTUAL');
 CREATE TYPE modality_enum AS ENUM ('OFFLINE', 'ONLINE', 'HYBRID');
 
 -- Enum for Skill
-CREATE TYPE skill_enum AS ENUM ('GENERAL', 'READING', 'WRITING', 'SPEAKING', 'LISTENING');
+CREATE TYPE skill_enum AS ENUM ('GENERAL', 'READING', 'WRITING', 'SPEAKING', 'LISTENING', 'VOCABULARY', 'GRAMMAR', 'KANJI');
 
 -- Enum for Teaching Role
 CREATE TYPE teaching_role_enum AS ENUM ('PRIMARY', 'ASSISTANT');

@@ -1,7 +1,8 @@
 # ENROLLMENT IMPLEMENTATION STATUS
 
-**Status:** ✅ COMPLETED & TESTED  
-**Last Updated:** 2025-11-04
+**Status:** ✅ COMPLETED & TESTED
+**Last Updated:** 2025-11-06
+**Improvement Status:** ✅ **SIMPLIFICATION COMPLETED** - 13 columns → 7 columns, assessment separation implemented
 
 ---
 
@@ -17,6 +18,8 @@
 | `/api/v1/enrollments/classes/{classId}/import/preview` | POST | ACADEMIC_AFFAIR | Parse Excel, preview enrollment |
 | `/api/v1/enrollments/classes/{classId}/import/execute` | POST | ACADEMIC_AFFAIR | Execute enrollment with strategy |
 | `/api/v1/enrollments/classes/{classId}/students` | POST | ACADEMIC_AFFAIR | Enroll existing students |
+| `/api/v1/enrollments/template` | GET | ACADEMIC_AFFAIR | Download generic Excel template |
+| `/api/v1/enrollments/classes/{classId}/template` | GET | ACADEMIC_AFFAIR | Download class-specific Excel template |
 
 #### ClassController
 **Path:** `controllers/ClassController.java`
@@ -54,32 +57,47 @@
 
 **Features:**
 - Pessimistic locking to prevent race conditions
-- Student resolution: code → email → create new
+- Student resolution: email → create new (student_code auto-generated)
 - Capacity validation and override handling
 - Audit trail: `enrolled_by`, `capacity_override`, `override_reason`
 - Session auto-generation for future sessions
 - Transaction management
+- **Simplified 7-column Excel format** (removed 13-column complexity)
+- **Assessment workflow separation** (handled via individual student creation)
+
+**Recent Improvements (2025-11-06):**
+- ✅ **Excel Format Simplified:** 13 columns → 7 columns (full_name, email, phone, facebook_url, address, gender, dob)
+- ✅ **Template Download Service:** Generic and class-specific Excel templates
+- ✅ **Auto-generated Student Codes:** Removed manual student_code handling
+- ✅ **Assessment Separation:** Removed assessment creation from enrollment flow
+- ✅ **User Experience:** Clear templates with sample data and instructions
 
 #### ExcelParserService (Interface + Impl)
 **Path:** `services/impl/ExcelParserServiceImpl.java`
 
 **Features:**
 - Apache POI for `.xlsx` parsing
-- Flexible column detection (case-insensitive)
+- **Simplified 7-column format** (full_name, email, phone, facebook_url, address, gender, dob)
+- Class-specific template detection (auto-skips class info row)
 - Multiple date formats: `yyyy-MM-dd`, `dd/MM/yyyy`, `MM/dd/yyyy`
 - Gender normalization: m/male → MALE, f/female → FEMALE
 - Graceful error handling (mark rows as ERROR, don't crash)
 - Skip empty rows
 
+**Template Service:** `services/impl/EnrollmentTemplateServiceImpl.java`
+- Generate 7-column Excel templates with sample data
+- Class-specific templates with course information
+- Auto-formatting and column sizing
+
 ---
 
-### 3. DTOs (9 files)
+### 3. DTOs (10 files)
 
 **Path:** `dtos/enrollment/`
 
 | DTO | Purpose |
 |-----|---------|
-| `StudentEnrollmentData` | Student data from Excel + resolution status |
+| `StudentEnrollmentData` | Student data from Excel + resolution status (**simplified 7 fields**) |
 | `ClassEnrollmentImportPreview` | Preview response: students, capacity, recommendation |
 | `ClassEnrollmentImportPreviewRequest` | Request: classId + file |
 | `ClassEnrollmentImportExecuteRequest` | Execute request: strategy, selectedStudentIds, overrideReason |
@@ -88,7 +106,8 @@
 | `EnrollExistingStudentsRequest` | Enroll existing students |
 | `StudentResolutionStatus` (enum) | `FOUND, CREATE, DUPLICATE, ERROR` |
 | `RecommendationType` (enum) | `OK, PARTIAL_SUGGESTED, OVERRIDE_AVAILABLE, BLOCKED` |
-| `EnrollmentStrategy` (enum) | `ALL, PARTIAL, OVERRIDE` |
+| `EnrollmentStrategy` (enum) | `ALL, PARTIAL, OVERRIDE` (**fixed zero-based indexing**) |
+| `SkillAssessmentData` | Multi-skill assessment parsing (**used for individual student creation only**) |
 
 ---
 
@@ -116,6 +135,10 @@
 #### EnrollmentRepository
 - `countByClassIdAndStatus()` - Current enrolled count
 - `existsByClassIdAndStudentIdAndStatus()` - Check duplicate enrollment
+- `findEnrolledStudentsByClass()` - Paginated student listing with search
+- `findStudentEnrollmentHistory()` - Student history with branch filtering
+- `countByStudentIdAndStatus()` - Active enrollment counting
+- `findLatestEnrollmentByStudent()` - Latest enrollment lookup
 
 #### SessionRepository
 - `findByClassEntityIdAndDateGreaterThanEqualAndStatusOrderByDateAsc()` - Future sessions for auto-generation
@@ -129,12 +152,14 @@
 
 ---
 
-### 6. Error Codes (10 added)
+### 6. Error Codes (13 added)
 
 **Path:** `exceptions/ErrorCode.java`
 
 | Code | Error |
 |------|-------|
+| 1200 | `ENROLLMENT_NOT_FOUND` |
+| 1201 | `ENROLLMENT_ALREADY_EXISTS` |
 | 1205 | `EXCEL_FILE_EMPTY` |
 | 1206 | `EXCEL_PARSE_FAILED` |
 | 1207 | `CLASS_NOT_APPROVED` |
@@ -145,6 +170,7 @@
 | 1212 | `PARTIAL_STRATEGY_MISSING_IDS` |
 | 1213 | `SELECTED_STUDENTS_EXCEED_CAPACITY` |
 | 1214 | `INVALID_FILE_TYPE_XLSX` |
+| 1215 | `OVERRIDE_REASON_TOO_SHORT` |
 
 **Pattern:** All use `throw new CustomException(ErrorCode.XXX)`
 
@@ -153,26 +179,28 @@
 ### 7. Tests (21 passing)
 
 #### ExcelParserServiceImplTest (8 tests)
-- Parse valid Excel
-- Handle empty student code
-- Invalid gender/date → ERROR status
-- Empty file → Exception
-- Multiple date formats
-- Gender variations
+- ✅ Parse valid Excel (7-column format)
+- ✅ Handle missing required fields
+- ✅ Invalid gender/date → ERROR status
+- ✅ Empty file → Exception
+- ✅ Multiple date formats
+- ✅ Gender variations
+- ✅ Class-specific template parsing
+- ✅ Auto-skip class info rows
 
 #### EnrollmentServiceImplTest (13 tests)
-- Preview: sufficient capacity
-- Preview: capacity exceeded
-- Class validation (not found, not approved, invalid status)
-- Detect duplicate emails
-- Execute: ALL strategy
-- Execute: OVERRIDE strategy + log verification
-- Execute: PARTIAL strategy
-- Capacity validation
-- Override reason validation
-- Create new students (CREATE status)
-- Student already enrolled
-- Mid-course enrollment (join_session_id)
+- ✅ Preview: sufficient capacity
+- ✅ Preview: capacity exceeded
+- ✅ Class validation (not found, not approved, invalid status)
+- ✅ Detect duplicate emails
+- ✅ Execute: ALL strategy
+- ✅ Execute: OVERRIDE strategy + log verification
+- ✅ Execute: PARTIAL strategy (**fixed zero-based indexing**)
+- ✅ Capacity validation
+- ✅ Override reason validation
+- ✅ Create new students (CREATE status)
+- ✅ Student already enrolled
+- ✅ Mid-course enrollment (join_session_id)
 
 ---
 
@@ -201,6 +229,12 @@
 - Code present but commented out
 - Ready for future implementation with async processing
 
+### Skill Assessment Integration
+- `SkillAssessmentData` DTO supports multi-skill format parsing
+- Format: "Level-Score" (e.g., "A1-85", "B2-92")
+- **Separated from enrollment flow** - handled via `CreateStudentRequest` with `SkillAssessmentInput`
+- Individual student creation supports assessment data
+
 ---
 
 ## TESTING COMMANDS
@@ -218,6 +252,31 @@ mvn clean verify jacoco:report
 # View coverage report
 start target/site/jacoco/index.html
 ```
+
+---
+
+## RECENT IMPROVEMENTS COMPLETED (2025-11-06)
+
+### ✅ Excel Simplification
+- **13 columns → 7 columns:** Removed student_code and assessment fields
+- **Template download:** Generic and class-specific Excel templates
+- **Auto-formatting:** Professional styling with sample data
+- **Smart parsing:** Auto-detects class-specific templates
+
+### ✅ Assessment Workflow Separation
+- **Enrollment focus:** Basic student information only
+- **Assessment handling:** Via individual `CreateStudentRequest` API
+- **Backward compatibility:** Individual student creation unchanged
+
+### ✅ User Experience Improvements
+- **Template download:** `/api/v1/enrollments/template` and `/api/v1/enrollments/classes/{id}/template`
+- **Clear instructions:** Sample data and column requirements
+- **Better error handling:** User-friendly error messages
+
+### ✅ Technical Fixes
+- **PARTIAL strategy:** Fixed zero-based index matching
+- **Test suite:** Updated all tests to use 7-column format
+- **Documentation:** Complete frontend handoff guide
 
 ---
 

@@ -4,12 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.fyp.tmssep490be.entities.enums.Skill;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "replacement_skill_assessment", uniqueConstraints = {
-    @UniqueConstraint(name = "uq_student_skill_assessment", columnNames = {"student_id", "skill", "assessment_date"})
+    @UniqueConstraint(name = "uq_student_skill_assessment", columnNames = {"student_id", "skill", "assessment_date", "assessment_category"})
 })
 @Getter
 @Setter
@@ -34,7 +35,29 @@ public class ReplacementSkillAssessment {
     @JoinColumn(name = "level_id")
     private Level level;
 
-    private Integer score;
+    /**
+     * Raw score from the assessment (e.g., 32 out of 40 questions correct)
+     */
+    @Column(name = "raw_score", precision = 10, scale = 2)
+    private BigDecimal rawScore;
+
+    /**
+     * Scaled/converted score (e.g., 7.5 for IELTS band, 750 for TOEIC)
+     */
+    @Column(name = "scaled_score", precision = 10, scale = 2)
+    private BigDecimal scaledScore;
+
+    /**
+     * Score scale description (e.g., "0-9" for IELTS, "0-990" for TOEIC, "N1-N5" for JLPT)
+     */
+    @Column(name = "score_scale", length = 100)
+    private String scoreScale;
+
+    /**
+     * Assessment category (e.g., PLACEMENT, MOCK, OFFICIAL, PRACTICE)
+     */
+    @Column(name = "assessment_category", length = 50)
+    private String assessmentCategory;
 
     @Column(name = "assessment_date", nullable = false)
     private LocalDate assessmentDate;
@@ -49,9 +72,9 @@ public class ReplacementSkillAssessment {
     @JoinColumn(name = "assessed_by")
     private UserAccount assessedBy;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", insertable = false)
     private OffsetDateTime updatedAt;
 }
