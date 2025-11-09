@@ -1,10 +1,6 @@
 package org.fyp.tmssep490be.services;
 
-import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestApproveDTO;
-import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestCreateDTO;
-import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestListDTO;
-import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestResponseDTO;
-import org.fyp.tmssep490be.entities.TeacherRequest;
+import org.fyp.tmssep490be.dtos.teacherrequest.*;
 
 import java.util.List;
 
@@ -51,4 +47,14 @@ public interface TeacherRequestService {
      * @return Rejected teacher request
      */
     TeacherRequestResponseDTO rejectRequest(Long requestId, String reason, Long userId);
+
+    /**
+     * Suggest valid time slots for rescheduling a session on a given date
+     */
+    List<RescheduleSlotSuggestionDTO> suggestSlots(Long sessionId, java.time.LocalDate date, Long userId);
+
+    /**
+     * Suggest valid resources for rescheduling with given date and time slot
+     */
+    List<RescheduleResourceSuggestionDTO> suggestResources(Long sessionId, java.time.LocalDate date, Long timeSlotId, Long userId);
 }

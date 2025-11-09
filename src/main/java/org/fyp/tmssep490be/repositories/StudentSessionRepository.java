@@ -14,6 +14,13 @@ import java.util.Optional;
 public interface StudentSessionRepository extends JpaRepository<StudentSession, StudentSession.StudentSessionId> {
 
     /**
+     * Count số học viên trong một session
+     * Bao gồm cả học viên học bù và học viên tham gia buổi đó
+     */
+    @Query("SELECT COUNT(ss) FROM StudentSession ss WHERE ss.session.id = :sessionId")
+    long countBySessionId(@Param("sessionId") Long sessionId);
+
+    /**
      * Find weekly schedule for a student with all related data
      * Uses JOIN FETCH to prevent N+1 queries
      */

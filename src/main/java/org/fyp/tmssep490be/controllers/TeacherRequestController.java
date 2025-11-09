@@ -58,6 +58,45 @@ public class TeacherRequestController {
     }
 
     /**
+     * Suggest time slots (RESCHEDULE) for a session on a selected date
+     */
+    @GetMapping("/{sessionId}/reschedule/slots")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(summary = "Suggest time slots for reschedule", description = "List time slots without conflicts on the selected date")
+    public ResponseEntity<ResponseObject<List<RescheduleSlotSuggestionDTO>>> suggestSlots(
+            @PathVariable Long sessionId,
+            @RequestParam("date") java.time.LocalDate date,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        List<RescheduleSlotSuggestionDTO> items = teacherRequestService.suggestSlots(sessionId, date, currentUser.getId());
+        return ResponseEntity.ok(ResponseObject.<List<RescheduleSlotSuggestionDTO>>builder()
+                .success(true)
+                .message(items.isEmpty() ? "No suitable time slots for the selected date" : "OK")
+                .data(items)
+                .build());
+    }
+
+    /**
+     * Suggest resources (RESCHEDULE) for a session with selected date and time slot
+     */
+    @GetMapping("/{sessionId}/reschedule/suggestions")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(summary = "Suggest resources for reschedule", description = "List resources without conflicts for date + time slot")
+    public ResponseEntity<ResponseObject<List<RescheduleResourceSuggestionDTO>>> suggestResources(
+            @PathVariable Long sessionId,
+            @RequestParam("date") java.time.LocalDate date,
+            @RequestParam("timeSlotId") Long timeSlotId,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        List<RescheduleResourceSuggestionDTO> items = teacherRequestService.suggestResources(sessionId, date, timeSlotId, currentUser.getId());
+        return ResponseEntity.ok(ResponseObject.<List<RescheduleResourceSuggestionDTO>>builder()
+                .success(true)
+                .message(items.isEmpty() ? "No suitable resources for the selected slot" : "OK")
+                .data(items)
+                .build());
+    }
+
+    /**
      * Get all requests for current teacher
      * GET /api/v1/teacher-requests/me
      */

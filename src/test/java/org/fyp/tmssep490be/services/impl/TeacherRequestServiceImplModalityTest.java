@@ -38,6 +38,8 @@ class TeacherRequestServiceImplModalityTest {
     @MockitoBean private ClassRepository classRepository;
     @MockitoBean private TeachingSlotRepository teachingSlotRepository;
     @MockitoBean private UserAccountRepository userAccountRepository;
+    @MockitoBean private StudentSessionRepository studentSessionRepository;
+    @MockitoBean private TimeSlotTemplateRepository timeSlotTemplateRepository;
 
     private Teacher mockTeacher(Long id, Long userId) {
         Teacher t = new Teacher();
@@ -78,6 +80,7 @@ class TeacherRequestServiceImplModalityTest {
         r.setId(id);
         r.setName(type == ResourceType.VIRTUAL ? "Zoom-1" : "Room-101");
         r.setResourceType(type);
+        r.setCapacity(50); // Set capacity for testing
         return r;
     }
 
@@ -90,10 +93,10 @@ class TeacherRequestServiceImplModalityTest {
         Long resourceId = 40L;
 
         Teacher teacher = mockTeacher(teacherId, userId);
-        ClassEntity classEntity = mockClass(Modality.ONLINE);
+        ClassEntity classEntity = mockClass(Modality.ONLINE); // ONLINE class
         TimeSlotTemplate timeSlot = mockTimeSlot(5L);
         Session session = mockSession(sessionId, classEntity, timeSlot, LocalDate.now().plusDays(2));
-        Resource resource = mockResource(resourceId, ResourceType.VIRTUAL);
+        Resource resource = mockResource(resourceId, ResourceType.ROOM); // ONLINE class → ROOM resource (chuyển sang offline)
 
         when(teacherRepository.findByUserAccountId(userId)).thenReturn(Optional.of(teacher));
         when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
@@ -104,6 +107,9 @@ class TeacherRequestServiceImplModalityTest {
         UserAccount ua = new UserAccount(); ua.setId(userId);
         when(userAccountRepository.findById(userId)).thenReturn(Optional.of(ua));
         when(resourceRepository.findById(resourceId)).thenReturn(Optional.of(resource));
+        when(sessionResourceRepository.existsByResourceIdAndDateAndTimeSlotAndStatusIn(eq(resourceId), any(), eq(timeSlot.getId()), anyList(), eq(sessionId)))
+                .thenReturn(false);
+        when(studentSessionRepository.countBySessionId(sessionId)).thenReturn(10L); // 10 students in session
         when(teacherRequestRepository.save(any(TeacherRequest.class))).thenAnswer(invocation -> {
             TeacherRequest tr = invocation.getArgument(0);
             tr.setId(999L);
@@ -126,8 +132,8 @@ class TeacherRequestServiceImplModalityTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("createRequest - missing newResourceId - throws INVALID_INPUT")
-    void createRequest_modality_missingResource_throwsInvalidInput() {
+    @org.junit.jupiter.api.DisplayName("createRequest - without newResourceId - success (teacher không chọn, staff sẽ chọn khi approve)")
+    void createRequest_modality_withoutResource_success() {
         Long userId = 10L;
         Long teacherId = 20L;
         Long sessionId = 30L;
@@ -141,31 +147,42 @@ class TeacherRequestServiceImplModalityTest {
         when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
         when(teachingSlotRepository.existsByIdSessionIdAndIdTeacherIdAndStatusIn(eq(sessionId), eq(teacherId), anyList()))
                 .thenReturn(true);
+        when(teacherRequestRepository.existsBySessionIdAndRequestTypeAndStatus(eq(sessionId), eq(TeacherRequestType.MODALITY_CHANGE), eq(RequestStatus.PENDING)))
+                .thenReturn(false);
+        UserAccount ua = new UserAccount(); ua.setId(userId);
+        when(userAccountRepository.findById(userId)).thenReturn(Optional.of(ua));
+        when(teacherRequestRepository.save(any(TeacherRequest.class))).thenAnswer(invocation -> {
+            TeacherRequest tr = invocation.getArgument(0);
+            tr.setId(999L);
+            return tr;
+        });
 
         TeacherRequestCreateDTO dto = TeacherRequestCreateDTO.builder()
                 .sessionId(sessionId)
                 .requestType(TeacherRequestType.MODALITY_CHANGE)
                 .reason("Need to switch")
+                // newResourceId = null - teacher không chọn, staff sẽ chọn khi approve
                 .build();
 
-        assertThatThrownBy(() -> service.createRequest(dto, userId))
-                .isInstanceOf(CustomException.class)
-                .hasMessageContaining("Invalid input");
-        verify(teacherRequestRepository, never()).save(any());
+        TeacherRequestResponseDTO resp = service.createRequest(dto, userId);
+
+        assertThat(resp.getId()).isEqualTo(999L);
+        assertThat(resp.getRequestType()).isEqualTo(TeacherRequestType.MODALITY_CHANGE);
+        assertThat(resp.getStatus()).isEqualTo(RequestStatus.PENDING);
+        assertThat(resp.getNewResourceId()).isNull(); // Teacher không chọn resource
+        verify(teacherRequestRepository).save(any(TeacherRequest.class));
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("approveRequest - modality - updates session_resource only")
-    void approveRequest_modality_success_updatesResourceOnly() {
+    @org.junit.jupiter.api.DisplayName("approveRequest - modality - teacher không chọn resource → throw error")
+    void approveRequest_modality_teacherNotSelect_throwsInvalidInput() {
         Long staffId = 99L;
         Long requestId = 777L;
         Long sessionId = 30L;
-        Long newResourceId = 123L;
 
         ClassEntity classEntity = mockClass(Modality.OFFLINE);
         TimeSlotTemplate timeSlot = mockTimeSlot(5L);
         Session session = mockSession(sessionId, classEntity, timeSlot, LocalDate.now().plusDays(2));
-        Resource newResource = mockResource(newResourceId, ResourceType.VIRTUAL);
 
         Teacher teacher = new Teacher(); teacher.setId(20L);
         TeacherRequest tr = TeacherRequest.builder()
@@ -174,25 +191,114 @@ class TeacherRequestServiceImplModalityTest {
                 .session(session)
                 .requestType(TeacherRequestType.MODALITY_CHANGE)
                 .status(RequestStatus.PENDING)
+                .newResource(null) // Teacher không chọn resource → bắt buộc phải chọn
                 .build();
 
         when(teacherRequestRepository.findByIdWithTeacherAndSession(requestId)).thenReturn(Optional.of(tr));
         UserAccount staff = new UserAccount(); staff.setId(staffId);
         when(userAccountRepository.findById(staffId)).thenReturn(Optional.of(staff));
         when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
-        when(resourceRepository.findById(newResourceId)).thenReturn(Optional.of(newResource));
-        when(sessionResourceRepository.existsByResourceIdAndDateAndTimeSlotAndStatusIn(eq(newResourceId), any(), eq(timeSlot.getId()), anyList(), eq(sessionId)))
+
+        TeacherRequestApproveDTO approve = TeacherRequestApproveDTO.builder()
+                .note("Staff approve")
+                .build();
+
+        assertThatThrownBy(() -> service.approveRequest(requestId, approve, staffId))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("approveRequest - modality - teacher chọn, staff không override → dùng teacher chọn")
+    void approveRequest_modality_teacherSelected_staffNotOverride_usesTeacherResource() {
+        Long staffId = 99L;
+        Long requestId = 777L;
+        Long sessionId = 30L;
+        Long teacherResourceId = 123L;
+
+        ClassEntity classEntity = mockClass(Modality.OFFLINE);
+        TimeSlotTemplate timeSlot = mockTimeSlot(5L);
+        Session session = mockSession(sessionId, classEntity, timeSlot, LocalDate.now().plusDays(2));
+        Resource teacherResource = mockResource(teacherResourceId, ResourceType.VIRTUAL);
+
+        Teacher teacher = new Teacher(); teacher.setId(20L);
+        TeacherRequest tr = TeacherRequest.builder()
+                .id(requestId)
+                .teacher(teacher)
+                .session(session)
+                .requestType(TeacherRequestType.MODALITY_CHANGE)
+                .status(RequestStatus.PENDING)
+                .newResource(teacherResource) // Teacher đã chọn resource
+                .build();
+
+        when(teacherRequestRepository.findByIdWithTeacherAndSession(requestId)).thenReturn(Optional.of(tr));
+        UserAccount staff = new UserAccount(); staff.setId(staffId);
+        when(userAccountRepository.findById(staffId)).thenReturn(Optional.of(staff));
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        // Không cần mock resourceRepository.findById vì dùng trực tiếp request.getNewResource()
+        when(sessionResourceRepository.existsByResourceIdAndDateAndTimeSlotAndStatusIn(eq(teacherResourceId), any(), eq(timeSlot.getId()), anyList(), eq(sessionId)))
                 .thenReturn(false);
+        when(studentSessionRepository.countBySessionId(sessionId)).thenReturn(10L);
         when(teacherRequestRepository.save(any(TeacherRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         TeacherRequestApproveDTO approve = TeacherRequestApproveDTO.builder()
-                .newResourceId(newResourceId)
+                .newResourceId(null) // Staff không override, dùng resource của teacher
                 .note("ok")
                 .build();
 
         TeacherRequestResponseDTO resp = service.approveRequest(requestId, approve, staffId);
 
         assertThat(resp.getStatus()).isEqualTo(RequestStatus.APPROVED);
+        verify(sessionResourceRepository).deleteBySessionId(sessionId);
+        verify(sessionResourceRepository).save(any(SessionResource.class));
+        verify(classRepository, never()).save(any(ClassEntity.class));
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("approveRequest - modality - teacher chọn, staff override → dùng staff chọn")
+    void approveRequest_modality_teacherSelected_staffOverride_usesStaffResource() {
+        Long staffId = 99L;
+        Long requestId = 777L;
+        Long sessionId = 30L;
+        Long teacherResourceId = 123L;
+        Long staffResourceId = 456L;
+
+        ClassEntity classEntity = mockClass(Modality.OFFLINE);
+        TimeSlotTemplate timeSlot = mockTimeSlot(5L);
+        Session session = mockSession(sessionId, classEntity, timeSlot, LocalDate.now().plusDays(2));
+        Resource teacherResource = mockResource(teacherResourceId, ResourceType.VIRTUAL);
+        Resource staffResource = mockResource(staffResourceId, ResourceType.VIRTUAL);
+
+        Teacher teacher = new Teacher(); teacher.setId(20L);
+        TeacherRequest tr = TeacherRequest.builder()
+                .id(requestId)
+                .teacher(teacher)
+                .session(session)
+                .requestType(TeacherRequestType.MODALITY_CHANGE)
+                .status(RequestStatus.PENDING)
+                .newResource(teacherResource) // Teacher đã chọn resource
+                .build();
+
+        when(teacherRequestRepository.findByIdWithTeacherAndSession(requestId)).thenReturn(Optional.of(tr));
+        UserAccount staff = new UserAccount(); staff.setId(staffId);
+        when(userAccountRepository.findById(staffId)).thenReturn(Optional.of(staff));
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(resourceRepository.findById(staffResourceId)).thenReturn(Optional.of(staffResource));
+        when(sessionResourceRepository.existsByResourceIdAndDateAndTimeSlotAndStatusIn(eq(staffResourceId), any(), eq(timeSlot.getId()), anyList(), eq(sessionId)))
+                .thenReturn(false);
+        when(studentSessionRepository.countBySessionId(sessionId)).thenReturn(10L);
+        when(teacherRequestRepository.save(any(TeacherRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TeacherRequestApproveDTO approve = TeacherRequestApproveDTO.builder()
+                .newResourceId(staffResourceId) // Staff override resource từ teacher
+                .note("Resource của teacher bị conflict, chọn resource khác")
+                .build();
+
+        TeacherRequestResponseDTO resp = service.approveRequest(requestId, approve, staffId);
+
+        assertThat(resp.getStatus()).isEqualTo(RequestStatus.APPROVED);
+        verify(resourceRepository).findById(staffResourceId); // Verify staff resource được dùng
         verify(sessionResourceRepository).deleteBySessionId(sessionId);
         verify(sessionResourceRepository).save(any(SessionResource.class));
         verify(classRepository, never()).save(any(ClassEntity.class));
@@ -235,6 +341,78 @@ class TeacherRequestServiceImplModalityTest {
         TeacherRequestResponseDTO resp = service.rejectRequest(requestId, "not appropriate", staffId);
         assertThat(resp.getStatus()).isEqualTo(RequestStatus.REJECTED);
         assertThat(resp.getNote()).contains("not appropriate");
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("createRequest - invalid resource type for modality - throws INVALID_RESOURCE_FOR_MODALITY")
+    void createRequest_modality_invalidResourceType_throwsInvalidResourceForModality() {
+        Long userId = 10L;
+        Long teacherId = 20L;
+        Long sessionId = 30L;
+        Long resourceId = 40L;
+
+        Teacher teacher = mockTeacher(teacherId, userId);
+        ClassEntity classEntity = mockClass(Modality.OFFLINE); // OFFLINE class
+        TimeSlotTemplate timeSlot = mockTimeSlot(5L);
+        Session session = mockSession(sessionId, classEntity, timeSlot, LocalDate.now().plusDays(2));
+        Resource resource = mockResource(resourceId, ResourceType.ROOM); // ROOM resource - should be VIRTUAL for OFFLINE class
+
+        when(teacherRepository.findByUserAccountId(userId)).thenReturn(Optional.of(teacher));
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(teachingSlotRepository.existsByIdSessionIdAndIdTeacherIdAndStatusIn(eq(sessionId), eq(teacherId), anyList()))
+                .thenReturn(true);
+        when(resourceRepository.findById(resourceId)).thenReturn(Optional.of(resource));
+        when(sessionResourceRepository.existsByResourceIdAndDateAndTimeSlotAndStatusIn(eq(resourceId), any(), eq(timeSlot.getId()), anyList(), eq(sessionId)))
+                .thenReturn(false);
+
+        TeacherRequestCreateDTO dto = TeacherRequestCreateDTO.builder()
+                .sessionId(sessionId)
+                .requestType(TeacherRequestType.MODALITY_CHANGE)
+                .newResourceId(resourceId)
+                .reason("Need to switch")
+                .build();
+
+        assertThatThrownBy(() -> service.createRequest(dto, userId))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("Invalid resource for modality change");
+        verify(teacherRequestRepository, never()).save(any());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("createRequest - insufficient resource capacity - throws RESOURCE_CAPACITY_INSUFFICIENT")
+    void createRequest_modality_insufficientCapacity_throwsResourceCapacityInsufficient() {
+        Long userId = 10L;
+        Long teacherId = 20L;
+        Long sessionId = 30L;
+        Long resourceId = 40L;
+
+        Teacher teacher = mockTeacher(teacherId, userId);
+        ClassEntity classEntity = mockClass(Modality.ONLINE);
+        TimeSlotTemplate timeSlot = mockTimeSlot(5L);
+        Session session = mockSession(sessionId, classEntity, timeSlot, LocalDate.now().plusDays(2));
+        Resource resource = mockResource(resourceId, ResourceType.ROOM);
+        resource.setCapacity(5); // Capacity = 5
+
+        when(teacherRepository.findByUserAccountId(userId)).thenReturn(Optional.of(teacher));
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(teachingSlotRepository.existsByIdSessionIdAndIdTeacherIdAndStatusIn(eq(sessionId), eq(teacherId), anyList()))
+                .thenReturn(true);
+        when(resourceRepository.findById(resourceId)).thenReturn(Optional.of(resource));
+        when(sessionResourceRepository.existsByResourceIdAndDateAndTimeSlotAndStatusIn(eq(resourceId), any(), eq(timeSlot.getId()), anyList(), eq(sessionId)))
+                .thenReturn(false);
+        when(studentSessionRepository.countBySessionId(sessionId)).thenReturn(10L); // 10 students > capacity 5
+
+        TeacherRequestCreateDTO dto = TeacherRequestCreateDTO.builder()
+                .sessionId(sessionId)
+                .requestType(TeacherRequestType.MODALITY_CHANGE)
+                .newResourceId(resourceId)
+                .reason("Need to switch")
+                .build();
+
+        assertThatThrownBy(() -> service.createRequest(dto, userId))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("Resource capacity is insufficient");
+        verify(teacherRequestRepository, never()).save(any());
     }
 }
 
