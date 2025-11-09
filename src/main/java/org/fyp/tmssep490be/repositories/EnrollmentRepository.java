@@ -76,4 +76,9 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
            "ORDER BY e.enrolledAt DESC " +
            "LIMIT 1")
     Enrollment findLatestEnrollmentByStudent(@Param("studentId") Long studentId);
+
+    /**
+     * Find specific enrollment for validation
+     */
+    Enrollment findByStudentIdAndClassIdAndStatus(Long studentId, Long classId, EnrollmentStatus status);
 }
