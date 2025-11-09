@@ -245,7 +245,500 @@ absence_request:
 
 ## API Endpoints
 
-### 1. Get Available Sessions for Date
+### 1. Get My Requests (Student)
+
+**When to Call:** When student opens "My Requests" page
+
+**Purpose:** List all requests submitted by the current student
+
+**Request:**
+```http
+GET /api/v1/students/me/requests?requestType={type}&status={status}&page={page}&size={size}&sort={sort}
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `requestType` (optional): Filter by type - `ABSENCE`, `MAKEUP`, `TRANSFER`
+- `status` (optional): Filter by status - `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`
+- `page` (optional): Page number (default: 0)
+- `size` (optional): Page size (default: 10)
+- `sort` (optional): Sort criteria (default: `submittedAt,desc`)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": 42,
+        "requestType": "ABSENCE",
+        "status": "PENDING",
+        "currentClass": {
+          "id": 101,
+          "code": "CHN-A1-01",
+          "name": "Chinese A1 - Morning Class"
+        },
+        "targetSession": {
+          "id": 1012,
+          "date": "2025-11-10",
+          "courseSessionNumber": 12,
+          "courseSessionTitle": "Grammar",
+          "timeSlot": {
+            "startTime": "08:00:00",
+            "endTime": "10:00:00"
+          }
+        },
+        "requestReason": "I have a medical appointment.",
+        "note": "Will review materials.",
+        "submittedAt": "2025-11-07T14:30:00+07:00",
+        "decidedAt": null,
+        "decidedBy": null,
+        "rejectionReason": null
+      },
+      {
+        "id": 38,
+        "requestType": "ABSENCE",
+        "status": "APPROVED",
+        "currentClass": {
+          "id": 101,
+          "code": "CHN-A1-01",
+          "name": "Chinese A1 - Morning Class"
+        },
+        "targetSession": {
+          "id": 1008,
+          "date": "2025-11-05",
+          "courseSessionNumber": 11,
+          "courseSessionTitle": "Listening",
+          "timeSlot": {
+            "startTime": "08:00:00",
+            "endTime": "10:00:00"
+          }
+        },
+        "requestReason": "Family emergency.",
+        "note": "Approved due to valid reason.",
+        "submittedAt": "2025-11-03T10:00:00+07:00",
+        "decidedAt": "2025-11-03T15:30:00+07:00",
+        "decidedBy": {
+          "id": 789,
+          "fullName": "AA Staff Nguyen",
+          "email": "aa.staff@example.com"
+        },
+        "rejectionReason": null
+      }
+    ],
+    "pageable": {
+      "pageNumber": 0,
+      "pageSize": 10,
+      "sort": {
+        "sorted": true,
+        "unsorted": false
+      }
+    },
+    "totalElements": 15,
+    "totalPages": 2,
+    "last": false,
+    "first": true
+  }
+}
+```
+
+**Frontend Usage:**
+```typescript
+// Load student's requests
+const loadMyRequests = async (filters: RequestFilters) => {
+  const params = new URLSearchParams({
+    ...(filters.type && { requestType: filters.type }),
+    ...(filters.status && { status: filters.status }),
+    page: filters.page.toString(),
+    size: '10',
+    sort: 'submittedAt,desc'
+  });
+
+  const response = await fetch(
+    `/api/v1/students/me/requests?${params}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  return response.json();
+};
+```
+
+---
+
+### 2. Get Request Details (Student)
+
+**When to Call:** When student clicks on a request to view details
+
+**Request:**
+```http
+GET /api/v1/students/me/requests/{id}
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 42,
+    "requestType": "ABSENCE",
+    "status": "PENDING",
+    "student": {
+      "id": 123,
+      "studentCode": "STU2024001",
+      "fullName": "John Doe"
+    },
+    "currentClass": {
+      "id": 101,
+      "code": "CHN-A1-01",
+      "name": "Chinese A1 - Morning Class",
+      "branch": {
+        "id": 1,
+        "name": "Central Branch"
+      }
+    },
+    "targetSession": {
+      "id": 1012,
+      "date": "2025-11-10",
+      "courseSessionNumber": 12,
+      "courseSessionTitle": "Grammar",
+      "timeSlot": {
+        "startTime": "08:00:00",
+        "endTime": "10:00:00"
+      },
+      "teacher": {
+        "id": 456,
+        "fullName": "Mr. Nguyen Van A"
+      }
+    },
+    "requestReason": "I have a medical appointment at the hospital.",
+    "note": "I will review materials and catch up.",
+    "submittedAt": "2025-11-07T14:30:00+07:00",
+    "submittedBy": {
+      "id": 123,
+      "fullName": "John Doe",
+      "email": "john.doe@example.com"
+    },
+    "decidedAt": null,
+    "decidedBy": null,
+    "rejectionReason": null
+  }
+}
+```
+
+---
+
+### 3. Cancel Request (Student)
+
+**When to Call:** When student wants to cancel a pending request
+
+**Request:**
+```http
+PUT /api/v1/students/me/requests/{id}/cancel
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Request cancelled successfully",
+  "data": {
+    "id": 42,
+    "status": "CANCELLED"
+  }
+}
+```
+
+**Business Rules:**
+- Only `PENDING` requests can be cancelled
+- Cannot cancel after decision made (`APPROVED`/`REJECTED`)
+
+---
+
+### 4. Get Pending Requests for Review (Academic Affairs)
+
+**When to Call:** When AA staff opens "Requests Management" page
+
+**Purpose:** List all pending requests that need review at AA's center(s)
+
+**Request:**
+```http
+GET /api/v1/student-requests/pending?branchId={branchId}&requestType={type}&studentName={name}&classCode={code}&sessionDateFrom={from}&sessionDateTo={to}&page={page}&size={size}&sort={sort}
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `branchId` (optional): Filter by branch (AA can see requests from their assigned branches)
+- `requestType` (optional): Filter by type - `ABSENCE`, `MAKEUP`, `TRANSFER`
+- `studentName` (optional): Search by student name
+- `classCode` (optional): Search by class code
+- `sessionDateFrom` (optional): Filter sessions from date (format: `YYYY-MM-DD`)
+- `sessionDateTo` (optional): Filter sessions to date
+- `page` (optional): Page number (default: 0)
+- `size` (optional): Page size (default: 20)
+- `sort` (optional): Sort criteria (default: `submittedAt,asc` - oldest first)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": 42,
+        "requestType": "ABSENCE",
+        "status": "PENDING",
+        "student": {
+          "id": 123,
+          "studentCode": "STU2024001",
+          "fullName": "John Doe",
+          "email": "john.doe@example.com",
+          "phone": "0123456789"
+        },
+        "currentClass": {
+          "id": 101,
+          "code": "CHN-A1-01",
+          "name": "Chinese A1 - Morning Class",
+          "branch": {
+            "id": 1,
+            "name": "Central Branch"
+          }
+        },
+        "targetSession": {
+          "id": 1012,
+          "date": "2025-11-10",
+          "courseSessionNumber": 12,
+          "courseSessionTitle": "Grammar",
+          "timeSlot": {
+            "startTime": "08:00:00",
+            "endTime": "10:00:00"
+          },
+          "teacher": {
+            "id": 456,
+            "fullName": "Mr. Nguyen Van A"
+          }
+        },
+        "requestReason": "I have a medical appointment.",
+        "note": "Will review materials.",
+        "submittedAt": "2025-11-07T14:30:00+07:00",
+        "submittedBy": {
+          "id": 123,
+          "fullName": "John Doe"
+        },
+        "daysUntilSession": 3,
+        "studentAbsenceRate": 15.5
+      }
+    ],
+    "pageable": {
+      "pageNumber": 0,
+      "pageSize": 20
+    },
+    "totalElements": 45,
+    "totalPages": 3,
+    "summary": {
+      "totalPending": 45,
+      "needsUrgentReview": 12,
+      "absenceRequests": 30,
+      "makeupRequests": 10,
+      "transferRequests": 5
+    }
+  }
+}
+```
+
+**Notes:**
+- `daysUntilSession`: Number of days until the session (for urgency)
+- `studentAbsenceRate`: Student's current absence rate in percentage
+- `needsUrgentReview`: Requests with sessions happening in next 2 days
+
+**Frontend Usage:**
+```typescript
+// Load pending requests for AA review
+const loadPendingRequests = async (filters: AARequestFilters) => {
+  const params = new URLSearchParams({
+    ...(filters.branchId && { branchId: filters.branchId.toString() }),
+    ...(filters.type && { requestType: filters.type }),
+    ...(filters.studentName && { studentName: filters.studentName }),
+    ...(filters.classCode && { classCode: filters.classCode }),
+    page: filters.page.toString(),
+    size: '20',
+    sort: 'submittedAt,asc'
+  });
+
+  const response = await fetch(
+    `/api/v1/student-requests/pending?${params}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  return response.json();
+};
+```
+
+---
+
+### 5. Get All Requests History (Academic Affairs)
+
+**When to Call:** When AA staff wants to view all requests history (approved/rejected/cancelled)
+
+**Request:**
+```http
+GET /api/v1/student-requests?branchId={branchId}&status={status}&requestType={type}&studentName={name}&classCode={code}&decidedBy={userId}&sessionDateFrom={from}&sessionDateTo={to}&submittedDateFrom={from}&submittedDateTo={to}&page={page}&size={size}&sort={sort}
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `branchId` (optional): Filter by branch
+- `status` (optional): Filter by status - `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`
+- `requestType` (optional): Filter by type
+- `studentName` (optional): Search by student name
+- `classCode` (optional): Search by class code
+- `decidedBy` (optional): Filter by who decided (AA user ID)
+- `sessionDateFrom` / `sessionDateTo` (optional): Filter by session date range
+- `submittedDateFrom` / `submittedDateTo` (optional): Filter by submission date range
+- `page`, `size`, `sort`: Pagination
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": 38,
+        "requestType": "ABSENCE",
+        "status": "APPROVED",
+        "student": {
+          "id": 123,
+          "studentCode": "STU2024001",
+          "fullName": "John Doe"
+        },
+        "currentClass": {
+          "id": 101,
+          "code": "CHN-A1-01",
+          "name": "Chinese A1 - Morning Class"
+        },
+        "targetSession": {
+          "id": 1008,
+          "date": "2025-11-05",
+          "courseSessionNumber": 11,
+          "courseSessionTitle": "Listening"
+        },
+        "requestReason": "Family emergency.",
+        "submittedAt": "2025-11-03T10:00:00+07:00",
+        "submittedBy": {
+          "id": 123,
+          "fullName": "John Doe"
+        },
+        "decidedAt": "2025-11-03T15:30:00+07:00",
+        "decidedBy": {
+          "id": 789,
+          "fullName": "AA Staff Nguyen"
+        },
+        "note": "Approved due to valid reason."
+      }
+    ],
+    "pageable": {
+      "pageNumber": 0,
+      "pageSize": 20
+    },
+    "totalElements": 250
+  }
+}
+```
+
+---
+
+### 6. Get Request Details (Academic Affairs)
+
+**When to Call:** When AA staff clicks on a request to view full details before deciding
+
+**Request:**
+```http
+GET /api/v1/student-requests/{id}
+Authorization: Bearer {access_token}
+```
+
+**Response:** Same structure as Student's "Get Request Details" but with additional AA-specific data:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 42,
+    "requestType": "ABSENCE",
+    "status": "PENDING",
+    "student": {
+      "id": 123,
+      "studentCode": "STU2024001",
+      "fullName": "John Doe",
+      "email": "john.doe@example.com",
+      "phone": "0123456789"
+    },
+    "currentClass": {
+      "id": 101,
+      "code": "CHN-A1-01",
+      "name": "Chinese A1 - Morning Class",
+      "branch": {
+        "id": 1,
+        "name": "Central Branch"
+      },
+      "teacher": {
+        "id": 456,
+        "fullName": "Mr. Nguyen Van A",
+        "email": "teacher.a@example.com"
+      }
+    },
+    "targetSession": {
+      "id": 1012,
+      "date": "2025-11-10",
+      "dayOfWeek": "MONDAY",
+      "courseSessionNumber": 12,
+      "courseSessionTitle": "Grammar",
+      "timeSlot": {
+        "startTime": "08:00:00",
+        "endTime": "10:00:00"
+      },
+      "status": "PLANNED"
+    },
+    "requestReason": "I have a medical appointment at the hospital.",
+    "note": "I will review materials and catch up.",
+    "submittedAt": "2025-11-07T14:30:00+07:00",
+    "submittedBy": {
+      "id": 123,
+      "fullName": "John Doe",
+      "email": "john.doe@example.com"
+    },
+    "decidedAt": null,
+    "decidedBy": null,
+    "rejectionReason": null,
+    "additionalInfo": {
+      "daysUntilSession": 3,
+      "studentAbsenceStats": {
+        "totalAbsences": 4,
+        "totalSessions": 20,
+        "absenceRate": 20.0,
+        "excusedAbsences": 2,
+        "unexcusedAbsences": 2
+      },
+      "previousRequests": {
+        "totalRequests": 3,
+        "approvedRequests": 2,
+        "rejectedRequests": 0,
+        "cancelledRequests": 1
+      }
+    }
+  }
+}
+```
+
+**Notes:**
+- `additionalInfo` provides context for AA to make informed decisions
+- Includes student's absence statistics and request history
+
+---
+
+### 7. Get Available Sessions for Date
 
 **When to Call:** When student selects a date in Step 1
 
@@ -309,7 +802,7 @@ const handleDateSelect = async (date: Date) => {
 
 ---
 
-### 2. Submit Absence Request
+### 8. Submit Absence Request
 
 **When to Call:** When student clicks [Submit] in Step 3
 
@@ -404,7 +897,9 @@ const handleSubmit = async (formData: AbsenceFormData) => {
 
 ---
 
-### 3. Approve Request (Academic Affairs Only)
+### 9. Approve Request (Academic Affairs Only)
+
+**When to Call:** When AA staff approves a request
 
 **Request:**
 ```http
@@ -435,7 +930,15 @@ Content-Type: application/json
 }
 ```
 
-### 4. Reject Request
+**Side Effects:**
+- Updates `student_session.attendance_status = 'ABSENT'`
+- Sends email notification to student
+
+---
+
+### 10. Reject Request (Academic Affairs Only)
+
+**When to Call:** When AA staff rejects a request
 
 **Request:**
 ```http
@@ -447,6 +950,28 @@ Content-Type: application/json
   "rejectionReason": "Insufficient lead time. Submit 24 hours in advance."
 }
 ```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Absence request rejected",
+  "data": {
+    "id": 42,
+    "status": "REJECTED",
+    "rejectionReason": "Insufficient lead time. Submit 24 hours in advance.",
+    "decidedBy": {
+      "id": 789,
+      "email": "aa.staff@example.com",
+      "fullName": "AA Staff Nguyen"
+    },
+    "decidedAt": "2025-11-07T15:45:00+07:00"
+  }
+}
+```
+
+**Side Effects:**
+- Sends email notification to student with rejection reason
 
 ---
 

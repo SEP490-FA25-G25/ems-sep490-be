@@ -15,7 +15,12 @@
       "Bash(mvn clean compile:*)",
       "Bash(./mvnw:*)",
       "Bash(curl:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(mvn spring-boot:run:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(docker exec:*)",
+      "Bash(STUDENT_TOKEN=\"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJzdHVkZW50LjAwMDFAZ21haWwuY29tIiwidXNlcklkIjoxMDEsImVtYWlsIjoic3R1ZGVudC4wMDAxQGdtYWlsLmNvbSIsInJvbGVzIjoiUk9MRV9TVFVERU5UIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc2MjY5MDA5NCwiZXhwIjoxNzYyNjkwOTk0fQ.RTfGq6rOyWoQqrqtZdbQL389-n8vcKZiVmnyEm9VwFySuGXENsvDd1hTLv2H_Cjh0Ry2XuN2sjTe-SBDOYyr-A\")",
+      "Bash(AA_TOKEN=\"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJzdGFmZi5odW9uZy5obkB0bXMtZWR1LnZuIiwidXNlcklkIjo2LCJlbWFpbCI6InN0YWZmLmh1b25nLmhuQHRtcy1lZHUudm4iLCJyb2xlcyI6IlJPTEVfQUNBREVNSUNfQUZGQUlSIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc2MjY5MDE4NSwiZXhwIjoxNzYyNjkxMDg1fQ.sxjgpMywHBWXvpypW_TEQL_KckpcPq2_atT19FuQMeA7Lpqw-ptY5a9YOGAjxpLUm5kqKgkg-jUNzbKvZkWWwg\")"
     ],
     "deny": [],
     "ask": []

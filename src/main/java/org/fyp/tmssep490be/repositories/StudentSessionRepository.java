@@ -63,4 +63,13 @@ public interface StudentSessionRepository extends JpaRepository<StudentSession, 
      * Check if student is enrolled in a specific session
      */
     boolean existsByStudentIdAndSessionId(Long studentId, Long sessionId);
+
+    /**
+     * Find all student sessions for a specific class (used for absence rate calculation)
+     */
+    @Query("SELECT ss FROM StudentSession ss " +
+           "JOIN ss.session s " +
+           "WHERE ss.student.id = :studentId " +
+           "AND s.classEntity.id = :classId")
+    List<StudentSession> findByStudentIdAndClassEntityId(@Param("studentId") Long studentId, @Param("classId") Long classId);
 }

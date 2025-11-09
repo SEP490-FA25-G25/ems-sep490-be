@@ -107,4 +107,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ResponseObject.error(e.getMessage()));
     }
+
+    // Student Request Business Rule Exceptions
+
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<ResponseObject<Void>> handleBusinessRuleException(BusinessRuleException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ResponseObject.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateRequestException.class)
+    public ResponseEntity<ResponseObject<Void>> handleDuplicateRequestException(DuplicateRequestException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ResponseObject.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ResponseObject<Void>> handleResourceNotFoundException(ResourceNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ResponseObject.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(UnsupportedOperationException.class)
+    public ResponseEntity<ResponseObject<Void>> handleUnsupportedOperationException(UnsupportedOperationException e) {
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(ResponseObject.error(e.getMessage()));
+    }
 }
