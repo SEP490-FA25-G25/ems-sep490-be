@@ -9,12 +9,12 @@ import java.util.List;
 
 public interface StudentRequestService {
 
-    // Student operations
-    Page<StudentRequestResponseDTO> getMyRequests(Long studentId, RequestFilterDTO filter);
-    StudentRequestDetailDTO getRequestById(Long requestId, Long studentId);
-    StudentRequestResponseDTO submitAbsenceRequest(Long studentId, AbsenceRequestDTO dto);
-    StudentRequestResponseDTO cancelRequest(Long requestId, Long studentId);
-    List<SessionAvailabilityDTO> getAvailableSessionsForDate(Long studentId, LocalDate date, StudentRequestType requestType);
+    // Student operations (userId is user_account.id, will be mapped to student.id internally)
+    Page<StudentRequestResponseDTO> getMyRequests(Long userId, RequestFilterDTO filter);
+    StudentRequestDetailDTO getRequestById(Long requestId, Long userId);
+    StudentRequestResponseDTO submitAbsenceRequest(Long userId, AbsenceRequestDTO dto);
+    StudentRequestResponseDTO cancelRequest(Long requestId, Long userId);
+    List<SessionAvailabilityDTO> getAvailableSessionsForDate(Long userId, LocalDate date, StudentRequestType requestType);
 
     // Academic Affairs operations
     Page<AARequestResponseDTO> getPendingRequests(AARequestFilterDTO filter);

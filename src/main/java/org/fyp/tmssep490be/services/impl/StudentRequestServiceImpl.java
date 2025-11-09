@@ -45,7 +45,11 @@ public class StudentRequestServiceImpl implements StudentRequestService {
     private static final int REASON_MIN_LENGTH = 10;
 
     @Override
-    public Page<StudentRequestResponseDTO> getMyRequests(Long studentId, RequestFilterDTO filter) {
+    public Page<StudentRequestResponseDTO> getMyRequests(Long userId, RequestFilterDTO filter) {
+        // Lookup actual student ID from user_account ID
+        Student student = studentRepository.findByUserAccountId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found for user ID: " + userId));
+
         List<RequestStatus> statuses = filter.getStatus() != null ?
                 List.of(RequestStatus.valueOf(filter.getStatus())) :
                 List.of(RequestStatus.values());
@@ -55,17 +59,21 @@ public class StudentRequestServiceImpl implements StudentRequestService {
         Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
 
         Page<StudentRequest> requests = studentRequestRepository.findByStudentIdAndStatusIn(
-                studentId, statuses, pageable);
+                student.getId(), statuses, pageable);
 
         return requests.map(this::mapToStudentResponseDTO);
     }
 
     @Override
-    public StudentRequestDetailDTO getRequestById(Long requestId, Long studentId) {
+    public StudentRequestDetailDTO getRequestById(Long requestId, Long userId) {
+        // Lookup actual student ID from user_account ID
+        Student student = studentRepository.findByUserAccountId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found for user ID: " + userId));
+
         StudentRequest request = studentRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request not found with id: " + requestId));
 
-        if (!request.getStudent().getId().equals(studentId)) {
+        if (!request.getStudent().getId().equals(student.getId())) {
             throw new BusinessRuleException("ACCESS_DENIED", "You can only view your own requests");
         }
 
@@ -74,8 +82,14 @@ public class StudentRequestServiceImpl implements StudentRequestService {
 
     @Override
     @Transactional
-    public StudentRequestResponseDTO submitAbsenceRequest(Long studentId, AbsenceRequestDTO dto) {
-        log.info("Submitting absence request for student {} and session {}", studentId, dto.getTargetSessionId());
+    public StudentRequestResponseDTO submitAbsenceRequest(Long userId, AbsenceRequestDTO dto) {
+        log.info("Submitting absence request for user {} and session {}", userId, dto.getTargetSessionId());
+
+        // 0. Lookup actual student ID from user_account ID
+        Student student = studentRepository.findByUserAccountId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found for user ID: " + userId));
+
+        log.info("Resolved user ID {} to student ID {}", userId, student.getId());
 
         // 1. Validate session exists and is future
         Session session = sessionRepository.findById(dto.getTargetSessionId())
@@ -91,14 +105,14 @@ public class StudentRequestServiceImpl implements StudentRequestService {
 
         // 2. Validate student enrollment
         Enrollment enrollment = enrollmentRepository
-                .findByStudentIdAndClassIdAndStatus(studentId, dto.getCurrentClassId(), EnrollmentStatus.ENROLLED);
+                .findByStudentIdAndClassIdAndStatus(student.getId(), dto.getCurrentClassId(), EnrollmentStatus.ENROLLED);
 
         if (enrollment == null) {
             throw new BusinessRuleException("NOT_ENROLLED", "You are not enrolled in this class");
         }
 
         // 3. Check duplicate request
-        if (hasDuplicateRequest(studentId, dto.getTargetSessionId(), StudentRequestType.ABSENCE)) {
+        if (hasDuplicateRequest(student.getId(), dto.getTargetSessionId(), StudentRequestType.ABSENCE)) {
             throw new DuplicateRequestException("Duplicate absence request for this session");
         }
 
@@ -109,17 +123,15 @@ public class StudentRequestServiceImpl implements StudentRequestService {
         }
 
         // 5. Check absence threshold (warning only)
-        double absenceRate = calculateAbsenceRate(studentId, dto.getCurrentClassId());
+        double absenceRate = calculateAbsenceRate(student.getId(), dto.getCurrentClassId());
         if (absenceRate > ABSENCE_THRESHOLD_PERCENT) {
             log.warn("Student absence rate {}% exceeds threshold", absenceRate);
         }
 
         // 6. Get entities
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
         ClassEntity classEntity = classRepository.findById(dto.getCurrentClassId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
-        UserAccount submittedBy = userAccountRepository.findById(studentId)
+        UserAccount submittedBy = userAccountRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // 7. Create request
@@ -145,11 +157,15 @@ public class StudentRequestServiceImpl implements StudentRequestService {
 
     @Override
     @Transactional
-    public StudentRequestResponseDTO cancelRequest(Long requestId, Long studentId) {
+    public StudentRequestResponseDTO cancelRequest(Long requestId, Long userId) {
+        // Lookup actual student ID from user_account ID
+        Student student = studentRepository.findByUserAccountId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found for user ID: " + userId));
+
         StudentRequest request = studentRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
 
-        if (!request.getStudent().getId().equals(studentId)) {
+        if (!request.getStudent().getId().equals(student.getId())) {
             throw new BusinessRuleException("ACCESS_DENIED", "You can only cancel your own requests");
         }
 
@@ -160,14 +176,18 @@ public class StudentRequestServiceImpl implements StudentRequestService {
         request.setStatus(RequestStatus.CANCELLED);
         request = studentRequestRepository.save(request);
 
-        log.info("Request {} cancelled by student {}", requestId, studentId);
+        log.info("Request {} cancelled by student {} (user {})", requestId, student.getId(), userId);
         return mapToStudentResponseDTO(request);
     }
 
     @Override
-    public List<SessionAvailabilityDTO> getAvailableSessionsForDate(Long studentId, LocalDate date, StudentRequestType requestType) {
+    public List<SessionAvailabilityDTO> getAvailableSessionsForDate(Long userId, LocalDate date, StudentRequestType requestType) {
+        // Lookup actual student ID from user_account ID
+        Student student = studentRepository.findByUserAccountId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found for user ID: " + userId));
+
         // Find all sessions for the student's classes on the given date
-        List<Session> sessions = sessionRepository.findSessionsForStudentByDate(studentId, date);
+        List<Session> sessions = sessionRepository.findSessionsForStudentByDate(student.getId(), date);
 
         return sessions.stream()
                 .collect(Collectors.groupingBy(session -> session.getClassEntity()))
@@ -198,13 +218,12 @@ public class StudentRequestServiceImpl implements StudentRequestService {
     public Page<AARequestResponseDTO> getPendingRequests(AARequestFilterDTO filter) {
         Sort sort = Sort.by(Sort.Direction.fromString(filter.getSort().split(",")[1]),
                 filter.getSort().split(",")[0]);
-        Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
 
-        // Get all pending requests first
-        Page<StudentRequest> requests = studentRequestRepository.findPendingRequestsForAA(RequestStatus.PENDING, pageable);
+        // Fetch all pending requests without pagination for filtering
+        List<StudentRequest> allRequests = studentRequestRepository.findByStatus(RequestStatus.PENDING, sort);
 
-        // Apply additional filtering in service layer (simplified approach for MVP)
-        List<StudentRequest> filteredRequests = requests.getContent().stream()
+        // Apply filtering
+        List<StudentRequest> filteredRequests = allRequests.stream()
                 .filter(request -> {
                     // Filter by request type
                     if (filter.getRequestType() != null) {
@@ -260,11 +279,17 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 })
                 .collect(Collectors.toList());
 
-        // Create a new page with filtered results
+        // Calculate pagination manually
+        int start = Math.min(filter.getPage() * filter.getSize(), filteredRequests.size());
+        int end = Math.min(start + filter.getSize(), filteredRequests.size());
+        List<StudentRequest> paginatedRequests = filteredRequests.subList(start, end);
+
+        // Create properly paginated result
+        Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
         return new org.springframework.data.domain.PageImpl<>(
-                filteredRequests.stream().map(this::mapToAAResponseDTO).collect(Collectors.toList()),
+                paginatedRequests.stream().map(this::mapToAAResponseDTO).collect(Collectors.toList()),
                 pageable,
-                filteredRequests.size()
+                filteredRequests.size() // Correct total count
         );
     }
 
@@ -272,21 +297,20 @@ public class StudentRequestServiceImpl implements StudentRequestService {
     public Page<AARequestResponseDTO> getAllRequests(AARequestFilterDTO filter) {
         Sort sort = Sort.by(Sort.Direction.fromString(filter.getSort().split(",")[1]),
                 filter.getSort().split(",")[0]);
-        Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
 
-        // Get all requests or filter by status first
-        Page<StudentRequest> requests;
+        // Fetch all requests without pagination for proper filtering
+        List<StudentRequest> allRequests;
         RequestStatus status = filter.getStatus() != null ?
                 RequestStatus.valueOf(filter.getStatus()) : null;
 
         if (status != null) {
-            requests = studentRequestRepository.findByStatus(status, pageable);
+            allRequests = studentRequestRepository.findByStatus(status, sort);
         } else {
-            requests = studentRequestRepository.findAll(pageable);
+            allRequests = studentRequestRepository.findAll(sort);
         }
 
-        // Apply additional filtering in service layer (simplified approach for MVP)
-        List<StudentRequest> filteredRequests = requests.getContent().stream()
+        // Apply additional filtering in service layer
+        List<StudentRequest> filteredRequests = allRequests.stream()
                 .filter(request -> {
                     // Filter by request type
                     if (filter.getRequestType() != null) {
@@ -364,11 +388,17 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 })
                 .collect(Collectors.toList());
 
-        // Create a new page with filtered results
+        // Calculate pagination manually
+        int start = Math.min(filter.getPage() * filter.getSize(), filteredRequests.size());
+        int end = Math.min(start + filter.getSize(), filteredRequests.size());
+        List<StudentRequest> paginatedRequests = filteredRequests.subList(start, end);
+
+        // Create properly paginated result with correct total count
+        Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
         return new org.springframework.data.domain.PageImpl<>(
-                filteredRequests.stream().map(this::mapToAAResponseDTO).collect(Collectors.toList()),
+                paginatedRequests.stream().map(this::mapToAAResponseDTO).collect(Collectors.toList()),
                 pageable,
-                filteredRequests.size()
+                filteredRequests.size() // Correct total count
         );
     }
 
@@ -509,6 +539,9 @@ public class StudentRequestServiceImpl implements StudentRequestService {
 
     // Helper methods for mapping entities to DTOs
     private StudentRequestResponseDTO mapToStudentResponseDTO(StudentRequest request) {
+        // When rejected, the note contains the rejection reason. When approved, it contains approval note.
+        String rejectionReason = request.getStatus() == RequestStatus.REJECTED ? request.getNote() : null;
+
         return StudentRequestResponseDTO.builder()
                 .id(request.getId())
                 .requestType(request.getRequestType().toString())
@@ -521,11 +554,13 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .submittedBy(mapToUserSummaryDTO(request.getSubmittedBy()))
                 .decidedAt(request.getDecidedAt())
                 .decidedBy(mapToUserSummaryDTO(request.getDecidedBy()))
-                .rejectionReason(request.getNote()) // Using note field for rejection reason
+                .rejectionReason(rejectionReason)
                 .build();
     }
 
     private AARequestResponseDTO mapToAAResponseDTO(StudentRequest request) {
+        String rejectionReason = request.getStatus() == RequestStatus.REJECTED ? request.getNote() : null;
+
         return AARequestResponseDTO.builder()
                 .id(request.getId())
                 .requestType(request.getRequestType().toString())
@@ -539,7 +574,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .submittedBy(mapToAAUserSummaryDTO(request.getSubmittedBy()))
                 .decidedAt(request.getDecidedAt())
                 .decidedBy(mapToAAUserSummaryDTO(request.getDecidedBy()))
-                .rejectionReason(request.getNote())
+                .rejectionReason(rejectionReason)
                 .daysUntilSession(request.getTargetSession() != null ?
                         ChronoUnit.DAYS.between(LocalDate.now(), request.getTargetSession().getDate()) : null)
                 .studentAbsenceRate(request.getCurrentClass() != null ?
@@ -548,6 +583,8 @@ public class StudentRequestServiceImpl implements StudentRequestService {
     }
 
     private StudentRequestDetailDTO mapToDetailDTO(StudentRequest request) {
+        String rejectionReason = request.getStatus() == RequestStatus.REJECTED ? request.getNote() : null;
+
         return StudentRequestDetailDTO.builder()
                 .id(request.getId())
                 .requestType(request.getRequestType().toString())
@@ -561,7 +598,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .submittedBy(mapToDetailUserSummaryDTO(request.getSubmittedBy()))
                 .decidedAt(request.getDecidedAt())
                 .decidedBy(mapToDetailUserSummaryDTO(request.getDecidedBy()))
-                .rejectionReason(request.getNote())
+                .rejectionReason(rejectionReason)
                 .build();
     }
 

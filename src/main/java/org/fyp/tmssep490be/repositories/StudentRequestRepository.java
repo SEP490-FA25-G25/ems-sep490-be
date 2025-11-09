@@ -30,6 +30,9 @@ public interface StudentRequestRepository extends JpaRepository<StudentRequest, 
     // Find all requests by status
     Page<StudentRequest> findByStatus(RequestStatus status, Pageable pageable);
 
+    // Find all requests by status with sort only (for in-memory filtering)
+    List<StudentRequest> findByStatus(RequestStatus status, org.springframework.data.domain.Sort sort);
+
     // Find request by student and ID (for student access control)
     boolean existsByIdAndStudentId(Long requestId, Long studentId);
 

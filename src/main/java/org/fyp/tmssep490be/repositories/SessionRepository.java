@@ -33,14 +33,16 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
 
     /**
      * Find sessions for a specific student on a given date
+     * Using native query for better performance and clarity
      */
-    @Query("SELECT s FROM Session s " +
-           "JOIN s.classEntity c " +
-           "JOIN Enrollment e ON e.classId = c.id " +
-           "WHERE e.studentId = :studentId " +
+    @Query(value = "SELECT s.* FROM session s " +
+           "JOIN class c ON s.class_id = c.id " +
+           "JOIN enrollment e ON e.class_id = c.id " +
+           "WHERE e.student_id = :studentId " +
            "AND s.date = :date " +
            "AND s.status = 'PLANNED' " +
-           "AND e.status = 'ENROLLED'")
+           "AND e.status = 'ENROLLED'",
+           nativeQuery = true)
     List<Session> findSessionsForStudentByDate(@Param("studentId") Long studentId, @Param("date") LocalDate date);
 
     /**
