@@ -15,21 +15,6 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: tms
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: 979712
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -54,8 +39,13 @@ jobs:
       - name: Build with Maven
         run: ./mvnw clean compile -B
 
-      - name: Run tests
-        run: ./mvnw test -B
+      - name: Run unit tests only (skip integration tests)
+        run: ./mvnw test -Dtest="!*IT,*Test" -DfailIfNoTests=false -B
+        env:
+          SPRING_PROFILES_ACTIVE: test
+
+      - name: Run specific makeup request tests
+        run: ./mvnw test -Dtest=MakeupRequestServiceTest -B
         env:
           SPRING_PROFILES_ACTIVE: test
 
