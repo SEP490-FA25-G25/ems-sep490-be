@@ -140,9 +140,7 @@ public enum ErrorCode {
     TEACHER_ALREADY_ASSIGNED_TO_BRANCH(3005, "Teacher is already assigned to this branch"),
     TEACHER_NOT_ASSIGNED_TO_BRANCH(3006, "Teacher is not assigned to this branch"),
     TEACHER_SCHEDULE_NOT_FOUND(3007, "Teacher schedule not found"),
-    TEACHER_SCHEDULE_CONFLICT(3008, "Teacher has a schedule conflict at the specified time"),
-    TEACHING_SLOT_NOT_FOUND(3009, "Teaching slot not found"),
-    TEACHER_WORKLOAD_EXCEEDED(3010, "Teacher workload exceeds maximum capacity"),
+    TEACHER_WORKLOAD_EXCEEDED(3008, "Teacher workload exceeds maximum capacity"),
 
     // Teacher Request errors (5000-5099)
     TEACHER_REQUEST_NOT_FOUND(5000, "Teacher request not found"),
@@ -152,9 +150,8 @@ public enum ErrorCode {
     SESSION_NOT_IN_TIME_WINDOW(5004, "Session must be within 7 days from today"),
     RESOURCE_NOT_AVAILABLE(5005, "Resource is not available at the specified time"),
     INVALID_RESOURCE_FOR_MODALITY(5006, "Invalid resource for modality change"),
-    RESOURCE_CAPACITY_INSUFFICIENT(5007, "Resource capacity is insufficient"),
-    TEACHER_REQUEST_NOT_WAITING_CONFIRM(5008, "Request is not in waiting_confirm status"),
-    REPLACEMENT_TEACHER_CONFLICT(5009, "Replacement teacher has a schedule conflict"),
+    TEACHER_REQUEST_NOT_WAITING_CONFIRM(5007, "Request is not in waiting_confirm status"),
+    REPLACEMENT_TEACHER_CONFLICT(5008, "Replacement teacher has a schedule conflict"),
 
     // Student Request errors (4100-4199)
     STUDENT_REQUEST_NOT_FOUND(4100, "Student request not found"),

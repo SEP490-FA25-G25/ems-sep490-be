@@ -153,13 +153,11 @@ class TeacherRequestModalityIT {
         // For testing, we'll create minimal student sessions
 
         // Create pending teacher request (modality change)
-        // Teacher bắt buộc phải chọn resource khi tạo request
         TeacherRequest req = TeacherRequest.builder()
                 .teacher(teacher)
                 .session(session)
                 .requestType(TeacherRequestType.MODALITY_CHANGE)
                 .status(RequestStatus.PENDING)
-                .newResource(zoom) // Teacher đã chọn resource
                 .build();
         req = teacherRequestRepository.save(req);
 
@@ -212,22 +210,11 @@ class TeacherRequestModalityIT {
         sessionResourceRepository.save(busy);
 
         // Create pending teacher request
-        // Teacher bắt buộc phải chọn resource khi tạo request
-        // Tạo một resource khác để teacher chọn (không conflict)
-        Resource teacherResource = new Resource();
-        teacherResource.setBranch(classEntity.getBranch());
-        teacherResource.setCode("Z3-" + uniqueSuffix);
-        teacherResource.setName("Zoom-3");
-        teacherResource.setResourceType(ResourceType.VIRTUAL);
-        teacherResource.setCapacity(50);
-        teacherResource = resourceRepository.save(teacherResource);
-        
         TeacherRequest req = TeacherRequest.builder()
                 .teacher(teacher)
                 .session(session)
                 .requestType(TeacherRequestType.MODALITY_CHANGE)
                 .status(RequestStatus.PENDING)
-                .newResource(teacherResource) // Teacher đã chọn resource (không conflict)
                 .build();
         req = teacherRequestRepository.save(req);
 

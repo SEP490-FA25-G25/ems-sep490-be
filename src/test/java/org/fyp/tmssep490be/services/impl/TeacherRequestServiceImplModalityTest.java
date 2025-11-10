@@ -111,10 +111,15 @@ class TeacherRequestServiceImplModalityTest {
         when(sessionResourceRepository.existsByResourceIdAndDateAndTimeSlotAndStatusIn(eq(resourceId), any(), eq(timeSlot.getId()), anyList(), eq(sessionId)))
                 .thenReturn(false);
         when(studentSessionRepository.countBySessionId(sessionId)).thenReturn(10L); // 10 students in session
+        java.util.concurrent.atomic.AtomicReference<TeacherRequest> savedRequest = new java.util.concurrent.atomic.AtomicReference<>();
         when(teacherRequestRepository.save(any(TeacherRequest.class))).thenAnswer(invocation -> {
             TeacherRequest tr = invocation.getArgument(0);
             tr.setId(999L);
+            savedRequest.set(tr);
             return tr;
+        });
+        when(teacherRequestRepository.findByIdWithTeacherAndSession(999L)).thenAnswer(invocation -> {
+            return Optional.ofNullable(savedRequest.get());
         });
 
         TeacherRequestCreateDTO dto = TeacherRequestCreateDTO.builder()
@@ -133,8 +138,8 @@ class TeacherRequestServiceImplModalityTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("createRequest - without newResourceId - throws INVALID_INPUT (teacher bắt buộc phải chọn resource)")
-    void createRequest_modality_withoutResource_throws() {
+    @org.junit.jupiter.api.DisplayName("createRequest - without newResourceId - success (teacher không chọn, staff sẽ chọn khi approve)")
+    void createRequest_modality_withoutResource_success() {
         Long userId = 10L;
         Long teacherId = 20L;
         Long sessionId = 30L;
@@ -152,18 +157,31 @@ class TeacherRequestServiceImplModalityTest {
                 .thenReturn(false);
         UserAccount ua = new UserAccount(); ua.setId(userId);
         when(userAccountRepository.findById(userId)).thenReturn(Optional.of(ua));
+        java.util.concurrent.atomic.AtomicReference<TeacherRequest> savedRequest = new java.util.concurrent.atomic.AtomicReference<>();
+        when(teacherRequestRepository.save(any(TeacherRequest.class))).thenAnswer(invocation -> {
+            TeacherRequest tr = invocation.getArgument(0);
+            tr.setId(999L);
+            savedRequest.set(tr);
+            return tr;
+        });
+        when(teacherRequestRepository.findByIdWithTeacherAndSession(999L)).thenAnswer(invocation -> {
+            return Optional.ofNullable(savedRequest.get());
+        });
 
         TeacherRequestCreateDTO dto = TeacherRequestCreateDTO.builder()
                 .sessionId(sessionId)
                 .requestType(TeacherRequestType.MODALITY_CHANGE)
                 .reason("Need to switch")
-                // newResourceId = null - teacher bắt buộc phải chọn resource
+                // newResourceId = null - teacher không chọn, staff sẽ chọn khi approve
                 .build();
 
-        assertThatThrownBy(() -> service.createRequest(dto, userId))
-                .isInstanceOf(CustomException.class)
-                .extracting("errorCode")
-                .isEqualTo(ErrorCode.INVALID_INPUT);
+        TeacherRequestResponseDTO resp = service.createRequest(dto, userId);
+
+        assertThat(resp.getId()).isEqualTo(999L);
+        assertThat(resp.getRequestType()).isEqualTo(TeacherRequestType.MODALITY_CHANGE);
+        assertThat(resp.getStatus()).isEqualTo(RequestStatus.PENDING);
+        assertThat(resp.getNewResourceId()).isNull(); // Teacher không chọn resource
+        verify(teacherRequestRepository).save(any(TeacherRequest.class));
     }
 
     @Test

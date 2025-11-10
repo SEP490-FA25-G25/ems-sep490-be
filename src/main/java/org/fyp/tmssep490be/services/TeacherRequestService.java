@@ -1,6 +1,7 @@
 package org.fyp.tmssep490be.services;
 
 import org.fyp.tmssep490be.dtos.teacherrequest.*;
+import org.fyp.tmssep490be.entities.enums.RequestStatus;
 
 import java.util.List;
 
@@ -20,6 +21,19 @@ public interface TeacherRequestService {
      * @return List of teacher requests
      */
     List<TeacherRequestListDTO> getMyRequests(Long userId);
+
+    /**
+     * Get pending teacher requests for Academic Affairs staff review
+     * @return Pending requests newest first
+     */
+    List<TeacherRequestListDTO> getPendingRequestsForStaff();
+
+    /**
+     * Get teacher requests for Academic Affairs staff with optional status filter
+     * @param status Filter by request status (null = all)
+     * @return Requests newest first
+     */
+    List<TeacherRequestListDTO> getRequestsForStaff(RequestStatus status);
     
     /**
      * Get teacher request by ID (for detail view)
@@ -49,6 +63,13 @@ public interface TeacherRequestService {
     TeacherRequestResponseDTO rejectRequest(Long requestId, String reason, Long userId);
 
     /**
+     * Get teacher request detail for Academic Affairs staff
+     * @param requestId Request ID
+     * @return Teacher request details
+     */
+    TeacherRequestResponseDTO getRequestForStaff(Long requestId);
+
+    /**
      * Suggest valid time slots for rescheduling a session on a given date
      */
     List<RescheduleSlotSuggestionDTO> suggestSlots(Long sessionId, java.time.LocalDate date, Long userId);
@@ -59,29 +80,35 @@ public interface TeacherRequestService {
     List<RescheduleResourceSuggestionDTO> suggestResources(Long sessionId, java.time.LocalDate date, Long timeSlotId, Long userId);
 
     /**
-     * Suggest teachers who can replace a session (SWAP)
+     * Get teacher's future sessions (7 days from today or specific date)
+     * @param userId Current authenticated user ID
+     * @param date Optional date filter (if null, returns next 7 days)
+     * @return List of teacher sessions
      */
-    List<org.fyp.tmssep490be.dtos.teacherrequest.SwapCandidateDTO> suggestSwapCandidates(Long sessionId, Long userId);
+    List<TeacherSessionDTO> getMySessions(Long userId, java.time.LocalDate date);
 
     /**
-     * Confirm swap request (Replacement Teacher)
-     * Updates teaching slots and sets request status to APPROVED
+     * Suggest swap candidate teachers for a session
+     * @param sessionId Session ID to find replacement for
+     * @param userId Current authenticated user ID
+     * @return List of candidate teachers sorted by priority
+     */
+    List<SwapCandidateDTO> suggestSwapCandidates(Long sessionId, Long userId);
+
+    /**
+     * Confirm swap request (Replacement Teacher only)
+     * @param requestId Request ID
+     * @param userId Current authenticated replacement teacher user ID
+     * @return Confirmed teacher request
      */
     TeacherRequestResponseDTO confirmSwap(Long requestId, Long userId);
 
     /**
-     * Decline swap request (Replacement Teacher)
-     * Resets request to PENDING and clears replacement teacher
+     * Decline swap request (Replacement Teacher only)
+     * @param requestId Request ID
+     * @param reason Decline reason
+     * @param userId Current authenticated replacement teacher user ID
+     * @return Declined teacher request
      */
     TeacherRequestResponseDTO declineSwap(Long requestId, String reason, Long userId);
-
-    /**
-     * Get teacher's future sessions for request creation
-     * Returns sessions in the next 7 days with status PLANNED
-     * @param userId Current authenticated user ID
-     * @param date Optional date filter. If provided, returns sessions for that specific date only.
-     *             If null, returns sessions for the next 7 days
-     * @return List of teacher's future sessions
-     */
-    List<org.fyp.tmssep490be.dtos.teacherrequest.TeacherSessionDTO> getMyFutureSessions(Long userId, java.time.LocalDate date);
 }

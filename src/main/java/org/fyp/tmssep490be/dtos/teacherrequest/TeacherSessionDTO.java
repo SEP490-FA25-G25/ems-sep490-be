@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
- * DTO for listing teacher's future sessions (for request creation)
+ * DTO for teacher's future sessions (for request creation)
  */
 @Data
 @Builder
@@ -21,12 +21,11 @@ public class TeacherSessionDTO {
     private LocalTime startTime;
     private LocalTime endTime;
     private String className;
+    private String classCode;
     private String courseName;
     private String topic;
-    private Long daysFromNow;
+    private Integer daysFromNow; // Số ngày từ hôm nay
     private String requestStatus; // "Có thể tạo request" hoặc "Đang chờ xử lý"
-    private boolean hasPendingRequest; // true nếu đã có request pending/waiting_confirm/approved
+    private Boolean hasPendingRequest; // true nếu đã có request pending/waiting_confirm/approved
 }
-
-
 

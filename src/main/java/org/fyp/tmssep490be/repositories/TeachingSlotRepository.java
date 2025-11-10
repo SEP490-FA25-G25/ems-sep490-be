@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -25,46 +26,45 @@ public interface TeachingSlotRepository extends JpaRepository<TeachingSlot, Teac
             List<TeachingSlotStatus> statuses
     );
 
-    /**
-     * Find teaching slots by teacher ID, date range, and session status
-     */
-    @Query("SELECT ts FROM TeachingSlot ts " +
-           "JOIN FETCH ts.session s " +
-           "JOIN FETCH s.timeSlotTemplate " +
-           "JOIN FETCH s.classEntity c " +
-           "JOIN FETCH c.course " +
-           "LEFT JOIN FETCH s.courseSession " +
-           "WHERE ts.teacher.id = :teacherId " +
-           "AND ts.status IN :statuses " +
-           "AND s.status = :sessionStatus " +
-           "AND s.date >= :startDate " +
-           "AND s.date <= :endDate " +
-           "ORDER BY s.date ASC, s.timeSlotTemplate.startTime ASC")
-    List<TeachingSlot> findByTeacherIdAndDateRange(
+    @Query("""
+            SELECT ts FROM TeachingSlot ts
+            JOIN FETCH ts.session s
+            JOIN FETCH s.timeSlotTemplate tst
+            JOIN FETCH s.classEntity c
+            JOIN FETCH c.course course
+            LEFT JOIN FETCH s.courseSession cs
+            WHERE ts.teacher.id = :teacherId
+              AND ts.status IN ('SCHEDULED', 'SUBSTITUTED')
+              AND s.date = :date
+              AND s.status <> 'CANCELLED'
+            ORDER BY tst.startTime ASC
+            """)
+    List<TeachingSlot> findByTeacherIdAndDate(
             @Param("teacherId") Long teacherId,
-            @Param("statuses") List<TeachingSlotStatus> statuses,
-            @Param("sessionStatus") org.fyp.tmssep490be.entities.enums.SessionStatus sessionStatus,
-            @Param("startDate") java.time.LocalDate startDate,
-            @Param("endDate") java.time.LocalDate endDate
+            @Param("date") LocalDate date
     );
 
     /**
-     * Find all teaching slots for a teacher on a specific date
-     * Includes all sessions (even those not started yet)
+     * Find teacher's future sessions within date range
+     * Returns sessions with status PLANNED, within 7 days from today (or specific date range)
      */
-    @Query("SELECT ts FROM TeachingSlot ts " +
-           "JOIN FETCH ts.session s " +
-           "JOIN FETCH s.timeSlotTemplate tst " +
-           "JOIN FETCH s.classEntity c " +
-           "JOIN FETCH c.course co " +
-           "LEFT JOIN FETCH s.courseSession cs " +
-           "WHERE ts.teacher.id = :teacherId " +
-           "AND ts.status IN ('SCHEDULED', 'SUBSTITUTED') " +
-           "AND s.date = :date " +
-           "AND s.status != 'CANCELLED' " +
-           "ORDER BY tst.startTime ASC")
-    List<TeachingSlot> findByTeacherIdAndDate(
+    @Query("""
+            SELECT ts FROM TeachingSlot ts
+            JOIN FETCH ts.session s
+            JOIN FETCH s.timeSlotTemplate tst
+            JOIN FETCH s.classEntity c
+            JOIN FETCH c.course course
+            LEFT JOIN FETCH s.courseSession cs
+            WHERE ts.teacher.id = :teacherId
+              AND ts.status IN ('SCHEDULED', 'SUBSTITUTED')
+              AND s.status = 'PLANNED'
+              AND s.date >= :fromDate
+              AND s.date <= :toDate
+            ORDER BY s.date ASC, tst.startTime ASC
+            """)
+    List<TeachingSlot> findByTeacherIdAndDateRange(
             @Param("teacherId") Long teacherId,
-            @Param("date") java.time.LocalDate date
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
     );
 }

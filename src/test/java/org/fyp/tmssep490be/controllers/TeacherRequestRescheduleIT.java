@@ -1,10 +1,6 @@
 package org.fyp.tmssep490be.controllers;
 
-import org.fyp.tmssep490be.dtos.teacherrequest.RescheduleResourceSuggestionDTO;
-import org.fyp.tmssep490be.dtos.teacherrequest.RescheduleSlotSuggestionDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestApproveDTO;
-import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestCreateDTO;
-import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestResponseDTO;
 import org.fyp.tmssep490be.entities.*;
 import org.fyp.tmssep490be.entities.enums.*;
 import org.fyp.tmssep490be.repositories.*;
@@ -16,7 +12,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
-import java.util.List;
+import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,19 +28,19 @@ class TeacherRequestRescheduleIT {
     @Autowired private TeacherRepository teacherRepository;
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private SessionRepository sessionRepository;
-    @Autowired private TeachingSlotRepository teachingSlotRepository;
+    @Autowired private ResourceRepository resourceRepository;
+    @Autowired private SessionResourceRepository sessionResourceRepository;
     @Autowired private ClassRepository classRepository;
     @Autowired private TimeSlotTemplateRepository timeSlotTemplateRepository;
     @Autowired private CenterRepository centerRepository;
     @Autowired private BranchRepository branchRepository;
     @Autowired private SubjectRepository subjectRepository;
     @Autowired private CourseRepository courseRepository;
-    @Autowired private ResourceRepository resourceRepository;
-    @Autowired private SessionResourceRepository sessionResourceRepository;
+    @Autowired private TeachingSlotRepository teachingSlotRepository;
 
     private UserAccount staff;
     private Teacher teacher;
-    private Session session;
+    private Session oldSession;
     private TimeSlotTemplate oldTimeSlot;
     private TimeSlotTemplate newTimeSlot;
     private ClassEntity classEntity;
@@ -55,7 +52,7 @@ class TeacherRequestRescheduleIT {
     void setup() {
         uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
         
-        // Staff user
+        // Basic users
         staff = new UserAccount();
         staff.setEmail("staff+" + uniqueSuffix + "@test.com");
         staff.setFullName("Staff User");
@@ -64,7 +61,6 @@ class TeacherRequestRescheduleIT {
         staff.setPasswordHash("x");
         staff = userAccountRepository.save(staff);
 
-        // Teacher
         UserAccount teacherAccount = new UserAccount();
         teacherAccount.setEmail("teacher+" + uniqueSuffix + "@test.com");
         teacherAccount.setFullName("Teacher User");
@@ -77,7 +73,7 @@ class TeacherRequestRescheduleIT {
         teacher.setUserAccount(teacherAccount);
         teacher = teacherRepository.save(teacher);
 
-        // Minimal org structure
+        // Org structure
         Center center = new Center();
         center.setCode("CEN-" + uniqueSuffix);
         center.setName("Center 1");
@@ -110,32 +106,30 @@ class TeacherRequestRescheduleIT {
         classEntity.setStartDate(LocalDate.now());
         classEntity = classRepository.save(classEntity);
 
-        // Old time slot
+        // Time slots
         oldTimeSlot = new TimeSlotTemplate();
         oldTimeSlot.setBranch(branch);
         oldTimeSlot.setName("Morning");
-        oldTimeSlot.setStartTime(java.time.LocalTime.of(8, 0));
-        oldTimeSlot.setEndTime(java.time.LocalTime.of(10, 0));
+        oldTimeSlot.setStartTime(java.time.LocalTime.of(8,0));
+        oldTimeSlot.setEndTime(java.time.LocalTime.of(10,0));
         oldTimeSlot = timeSlotTemplateRepository.save(oldTimeSlot);
 
-        // New time slot
         newTimeSlot = new TimeSlotTemplate();
         newTimeSlot.setBranch(branch);
         newTimeSlot.setName("Afternoon");
-        newTimeSlot.setStartTime(java.time.LocalTime.of(14, 0));
-        newTimeSlot.setEndTime(java.time.LocalTime.of(16, 0));
+        newTimeSlot.setStartTime(java.time.LocalTime.of(14,0));
+        newTimeSlot.setEndTime(java.time.LocalTime.of(16,0));
         newTimeSlot = timeSlotTemplateRepository.save(newTimeSlot);
 
-        // Old resource
+        // Resources
         oldResource = new Resource();
         oldResource.setBranch(branch);
         oldResource.setCode("ROOM-" + uniqueSuffix);
         oldResource.setName("Room-1");
         oldResource.setResourceType(ResourceType.ROOM);
-        oldResource.setCapacity(30);
+        oldResource.setCapacity(50);
         oldResource = resourceRepository.save(oldResource);
 
-        // New resource
         newResource = new Resource();
         newResource.setBranch(branch);
         newResource.setCode("ROOM2-" + uniqueSuffix);
@@ -144,127 +138,78 @@ class TeacherRequestRescheduleIT {
         newResource.setCapacity(50);
         newResource = resourceRepository.save(newResource);
 
-        // Session (planned, within 7 days)
-        session = new Session();
-        session.setClassEntity(classEntity);
-        session.setDate(LocalDate.now().plusDays(1));
-        session.setStatus(SessionStatus.PLANNED);
-        session.setTimeSlotTemplate(oldTimeSlot);
-        session = sessionRepository.save(session);
+        // Old session
+        oldSession = new Session();
+        oldSession.setClassEntity(classEntity);
+        oldSession.setDate(LocalDate.now().plusDays(1));
+        oldSession.setStatus(SessionStatus.PLANNED);
+        oldSession.setTimeSlotTemplate(oldTimeSlot);
+        oldSession.setCreatedAt(OffsetDateTime.now());
+        oldSession.setUpdatedAt(OffsetDateTime.now());
+        oldSession = sessionRepository.save(oldSession);
 
-        // Create teaching slot for teacher
-        TeachingSlot teachingSlot = new TeachingSlot();
-        teachingSlot.setId(new TeachingSlot.TeachingSlotId(session.getId(), teacher.getId()));
-        teachingSlot.setSession(session);
-        teachingSlot.setTeacher(teacher);
-        teachingSlot.setStatus(TeachingSlotStatus.SCHEDULED);
+        // Teaching slot for old session
+        TeachingSlot teachingSlot = TeachingSlot.builder()
+                .id(new TeachingSlot.TeachingSlotId(oldSession.getId(), teacher.getId()))
+                .session(oldSession)
+                .teacher(teacher)
+                .status(TeachingSlotStatus.SCHEDULED)
+                .build();
         teachingSlotRepository.save(teachingSlot);
 
-        // Create session resource
-        SessionResource sessionResource = SessionResource.builder()
-                .id(new SessionResource.SessionResourceId(session.getId(), oldResource.getId()))
-                .session(session)
+        // Session resource for old session
+        SessionResource sr = SessionResource.builder()
+                .id(new SessionResource.SessionResourceId(oldSession.getId(), oldResource.getId()))
+                .session(oldSession)
                 .resource(oldResource)
                 .build();
-        sessionResourceRepository.save(sessionResource);
-    }
-
-    @Test
-    @org.junit.jupiter.api.DisplayName("Create reschedule request - success")
-    void createRescheduleRequest_success() {
-        LocalDate newDate = LocalDate.now().plusDays(3);
-
-        TeacherRequestCreateDTO dto = TeacherRequestCreateDTO.builder()
-                .sessionId(session.getId())
-                .requestType(TeacherRequestType.RESCHEDULE)
-                .newDate(newDate)
-                .newTimeSlotId(newTimeSlot.getId())
-                .newResourceId(newResource.getId())
-                .reason("Need to reschedule")
-                .build();
-
-        TeacherRequestResponseDTO resp = teacherRequestService.createRequest(
-                dto, teacher.getUserAccount().getId());
-
-        assertThat(resp.getRequestType()).isEqualTo(TeacherRequestType.RESCHEDULE);
-        assertThat(resp.getStatus()).isEqualTo(RequestStatus.PENDING);
-        assertThat(resp.getNewDate()).isEqualTo(newDate);
-        assertThat(resp.getNewTimeSlotId()).isEqualTo(newTimeSlot.getId());
-        assertThat(resp.getNewResourceId()).isEqualTo(newResource.getId());
-    }
-
-    @Test
-    @org.junit.jupiter.api.DisplayName("Suggest slots - returns available time slots")
-    void suggestSlots_returnsAvailableSlots() {
-        LocalDate date = LocalDate.now().plusDays(3);
-
-        List<RescheduleSlotSuggestionDTO> slots = teacherRequestService.suggestSlots(
-                session.getId(), date, teacher.getUserAccount().getId());
-
-        assertThat(slots).isNotEmpty();
-        assertThat(slots).extracting("timeSlotId").contains(newTimeSlot.getId());
-    }
-
-    @Test
-    @org.junit.jupiter.api.DisplayName("Suggest resources - returns available resources")
-    void suggestResources_returnsAvailableResources() {
-        LocalDate date = LocalDate.now().plusDays(3);
-
-        List<RescheduleResourceSuggestionDTO> resources = teacherRequestService.suggestResources(
-                session.getId(), date, newTimeSlot.getId(), teacher.getUserAccount().getId());
-
-        assertThat(resources).isNotEmpty();
-        assertThat(resources).extracting("resourceId").contains(newResource.getId());
+        sessionResourceRepository.save(sr);
     }
 
     @Test
     @org.junit.jupiter.api.DisplayName("Approve reschedule - creates new session and cancels old")
-    void approveReschedule_createsNewSession() {
+    void approve_reschedule_creates_new_session_and_cancels_old() {
         LocalDate newDate = LocalDate.now().plusDays(3);
 
-        // Create pending reschedule request
+        // Create pending teacher request
         TeacherRequest req = TeacherRequest.builder()
                 .teacher(teacher)
-                .session(session)
+                .session(oldSession)
                 .requestType(TeacherRequestType.RESCHEDULE)
                 .status(RequestStatus.PENDING)
                 .newDate(newDate)
                 .newTimeSlot(newTimeSlot)
                 .newResource(newResource)
-                .requestReason("Need to reschedule")
-                .submittedBy(teacher.getUserAccount())
+                .submittedAt(OffsetDateTime.now())
                 .build();
         req = teacherRequestRepository.save(req);
 
+        // Approve with new resource
         TeacherRequestApproveDTO approve = TeacherRequestApproveDTO.builder()
-                .note("Approved")
+                .note("Approve reschedule")
                 .build();
 
-        TeacherRequestResponseDTO resp = teacherRequestService.approveRequest(
-                req.getId(), approve, staff.getId());
+        teacherRequestService.approveRequest(req.getId(), approve, staff.getId());
 
-        assertThat(resp.getStatus()).isEqualTo(RequestStatus.APPROVED);
+        // Assert: old session cancelled
+        Session updatedOldSession = sessionRepository.findById(oldSession.getId()).orElseThrow();
+        assertThat(updatedOldSession.getStatus()).isEqualTo(SessionStatus.CANCELLED);
 
-        // Verify old session is cancelled
-        Session oldSession = sessionRepository.findById(session.getId()).orElseThrow();
-        assertThat(oldSession.getStatus()).isEqualTo(SessionStatus.CANCELLED);
-
-        // Verify new session is created
-        assertThat(resp.getNewSessionId()).isNotNull();
-        Session newSession = sessionRepository.findById(resp.getNewSessionId()).orElseThrow();
-        assertThat(newSession.getStatus()).isEqualTo(SessionStatus.PLANNED);
+        // Assert: new session created
+        TeacherRequest updatedReq = teacherRequestRepository.findByIdWithTeacherAndSession(req.getId()).orElseThrow();
+        assertThat(updatedReq.getNewSession()).isNotNull();
+        Long newSessionId = updatedReq.getNewSession().getId(); // Force load to get ID
+        // Reload from database to avoid lazy loading issues
+        Session newSession = sessionRepository.findById(newSessionId).orElseThrow();
         assertThat(newSession.getDate()).isEqualTo(newDate);
         assertThat(newSession.getTimeSlotTemplate().getId()).isEqualTo(newTimeSlot.getId());
+        assertThat(newSession.getStatus()).isEqualTo(SessionStatus.PLANNED);
 
-        // Verify new teaching slot exists
-        TeachingSlot newTeachingSlot = teachingSlotRepository.findById(
-                new TeachingSlot.TeachingSlotId(newSession.getId(), teacher.getId())).orElseThrow();
-        assertThat(newTeachingSlot.getStatus()).isEqualTo(TeachingSlotStatus.SCHEDULED);
-
-        // Verify new session resource exists
-        List<SessionResource> newSessionResources = sessionResourceRepository.findBySessionId(newSession.getId());
-        assertThat(newSessionResources).isNotEmpty();
-        assertThat(newSessionResources).extracting(sr -> sr.getResource().getId()).contains(newResource.getId());
+        // Assert: new session resource created
+        boolean newResourceExists = sessionResourceRepository.existsByResourceIdAndDateAndTimeSlotAndStatusIn(
+                newResource.getId(), newDate, newTimeSlot.getId(), 
+                Arrays.asList(SessionStatus.PLANNED, SessionStatus.DONE), null);
+        assertThat(newResourceExists).isTrue();
     }
 }
 

@@ -8,8 +8,8 @@ import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestListDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestResponseDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.RescheduleSlotSuggestionDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.RescheduleResourceSuggestionDTO;
-import org.fyp.tmssep490be.dtos.teacherrequest.SwapCandidateDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.TeacherSessionDTO;
+import org.fyp.tmssep490be.dtos.teacherrequest.SwapCandidateDTO;
 import org.fyp.tmssep490be.entities.*;
 import org.fyp.tmssep490be.entities.enums.*;
 import org.fyp.tmssep490be.exceptions.CustomException;
@@ -21,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,7 +40,6 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
     private final TimeSlotTemplateRepository timeSlotTemplateRepository;
     private final StudentSessionRepository studentSessionRepository;
     private final TeacherSkillRepository teacherSkillRepository;
-    private final TeacherAvailabilityRepository teacherAvailabilityRepository;
 
     @Override
     @Transactional
@@ -92,21 +92,6 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
 
             // Validate newDate is within time window (7 days from today)
             validateTimeWindow(createDTO.getNewDate());
-        } else if (createDTO.getRequestType() == TeacherRequestType.SWAP) {
-            // For SWAP: replacementTeacherId is optional (teacher can suggest or leave to staff)
-            // If provided, validate replacement teacher exists and is valid
-            if (createDTO.getReplacementTeacherId() != null) {
-                Teacher replacementTeacher = teacherRepository.findById(createDTO.getReplacementTeacherId())
-                        .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
-                
-                // Validate replacement teacher is not the same as original teacher
-                if (replacementTeacher.getId().equals(teacher.getId())) {
-                    throw new CustomException(ErrorCode.INVALID_INPUT);
-                }
-                
-                // Validate replacement teacher has no conflict at session time
-                validateTeacherSwapConflict(replacementTeacher.getId(), session);
-            }
         }
 
         // 6. Check for duplicate request
@@ -138,6 +123,11 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         if (createDTO.getReplacementTeacherId() != null) {
             replacementTeacher = teacherRepository.findById(createDTO.getReplacementTeacherId())
                     .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
+            
+            // Validate replacement teacher is not the same as original teacher
+            if (replacementTeacher.getId().equals(teacher.getId())) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
         }
 
         TeacherRequest request = TeacherRequest.builder()
@@ -157,6 +147,10 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         request = teacherRequestRepository.save(request);
         log.info("Created teacher request with ID: {}", request.getId());
 
+        // Reload request with all relationships for response
+        request = teacherRequestRepository.findByIdWithTeacherAndSession(request.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_REQUEST_NOT_FOUND));
+
         return mapToResponseDTO(request);
     }
 
@@ -168,20 +162,31 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         Teacher teacher = teacherRepository.findByUserAccountId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
 
-        // Get requests created by this teacher
-        List<TeacherRequest> myCreatedRequests = teacherRequestRepository
-                .findByTeacherIdOrderBySubmittedAtDesc(teacher.getId());
+        // Get all requests: both created by teacher and where teacher is replacement teacher
+        List<TeacherRequest> requests = teacherRequestRepository
+                .findByTeacherIdOrReplacementTeacherIdOrderBySubmittedAtDesc(teacher.getId());
 
-        // Get requests where this teacher is the replacement teacher (waiting for confirmation)
-        List<TeacherRequest> myReplacementRequests = teacherRequestRepository
-                .findByReplacementTeacherIdOrderBySubmittedAtDesc(teacher.getId());
+        return requests.stream()
+                .map(this::mapToListDTO)
+                .collect(Collectors.toList());
+    }
 
-        // Combine and deduplicate (in case teacher created a request and is also replacement)
-        Set<TeacherRequest> allRequests = new LinkedHashSet<>(myCreatedRequests);
-        allRequests.addAll(myReplacementRequests);
+    @Override
+    @Transactional(readOnly = true)
+    public List<TeacherRequestListDTO> getPendingRequestsForStaff() {
+        log.info("Getting pending teacher requests for staff");
+        return getRequestsForStaff(RequestStatus.PENDING);
+    }
 
-        return allRequests.stream()
-                .sorted(Comparator.comparing(TeacherRequest::getSubmittedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+    @Override
+    @Transactional(readOnly = true)
+    public List<TeacherRequestListDTO> getRequestsForStaff(RequestStatus status) {
+        log.info("Getting teacher requests for staff with status {}", status);
+        List<TeacherRequest> requests = status != null
+                ? teacherRequestRepository.findByStatusOrderBySubmittedAtDesc(status)
+                : teacherRequestRepository.findAllByOrderBySubmittedAtDesc();
+
+        return requests.stream()
                 .map(this::mapToListDTO)
                 .collect(Collectors.toList());
     }
@@ -193,19 +198,60 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
 
         TeacherRequest request = teacherRequestRepository.findByIdWithTeacherAndSession(requestId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_REQUEST_NOT_FOUND));
+        
+        // Force load relationships to avoid lazy loading issues
+        if (request.getNewResource() != null) {
+            request.getNewResource().getName(); // Force load
+        }
+        if (request.getNewTimeSlot() != null) {
+            request.getNewTimeSlot().getName(); // Force load
+        }
+        
+        // Debug log
+        log.debug("Request {} loaded: type={}, newResource={}, newTimeSlot={}, newDate={}", 
+                requestId, request.getRequestType(),
+                request.getNewResource() != null ? request.getNewResource().getId() : "null",
+                request.getNewTimeSlot() != null ? request.getNewTimeSlot().getId() : "null",
+                request.getNewDate());
+
+        UserAccount currentUser = userAccountRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (isAcademicAffair(currentUser)) {
+            return mapToResponseDTO(request);
+        }
 
         // Check authorization: 
-        // - Teacher can see their own requests (created by them)
-        // - Replacement teacher can see requests where they are the replacement teacher
+        // - Teacher can see requests they created
+        // - Replacement teacher can see requests where they are selected as replacement
         Teacher teacher = teacherRepository.findByUserAccountId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
 
         boolean isRequestOwner = request.getTeacher().getId().equals(teacher.getId());
         boolean isReplacementTeacher = request.getReplacementTeacher() != null && 
-                request.getReplacementTeacher().getId().equals(teacher.getId());
+                                       request.getReplacementTeacher().getId().equals(teacher.getId());
 
         if (!isRequestOwner && !isReplacementTeacher) {
             throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        return mapToResponseDTO(request);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TeacherRequestResponseDTO getRequestForStaff(Long requestId) {
+        log.info("Getting request {} for staff", requestId);
+
+        TeacherRequest request = teacherRequestRepository.findByIdWithTeacherAndSession(requestId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_REQUEST_NOT_FOUND));
+        
+        // Force load relationships to avoid lazy loading issues
+        if (request.getNewResource() != null) {
+            request.getNewResource().getName(); // Force load
+        }
+        if (request.getNewTimeSlot() != null) {
+            request.getNewTimeSlot().getName(); // Force load
         }
 
         return mapToResponseDTO(request);
@@ -237,11 +283,12 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
             request.setStatus(RequestStatus.APPROVED);
         } else if (request.getRequestType() == TeacherRequestType.SWAP) {
             approveSwap(request, approveDTO, userAccount);
-            // SWAP sets status to WAITING_CONFIRM (not APPROVED)
+            // SWAP status = WAITING_CONFIRM (chờ replacement teacher confirm)
             request.setStatus(RequestStatus.WAITING_CONFIRM);
         } else {
             throw new CustomException(ErrorCode.INVALID_REQUEST);
         }
+
         request.setDecidedBy(userAccount);
         request.setDecidedAt(OffsetDateTime.now());
         request.setNote(approveDTO.getNote());
@@ -320,25 +367,21 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         validateTeacherOwnsSession(sessionId, teacher.getId());
         validateTimeWindow(date);
 
+        // Validate timeSlotId exists
+        if (!timeSlotTemplateRepository.existsById(timeSlotId)) {
+            throw new CustomException(ErrorCode.TIMESLOT_NOT_FOUND);
+        }
+
         ClassEntity classEntity = session.getClassEntity();
 
         return resourceRepository.findAll().stream()
                 .filter(r -> r.getBranch().getId().equals(classEntity.getBranch().getId()))
                 .filter(r -> {
-                    // For RESCHEDULE, resource type must match class modality (not change it)
-                    // OFFLINE class → ROOM resource
-                    // ONLINE class → VIRTUAL resource
-                    // HYBRID class → can use both
-                    Modality classModality = classEntity.getModality();
-                    ResourceType resourceType = r.getResourceType();
-                    
-                    if (classModality == Modality.OFFLINE) {
-                        return resourceType == ResourceType.ROOM;
-                    } else if (classModality == Modality.ONLINE) {
-                        return resourceType == ResourceType.VIRTUAL;
-                    } else {
-                        // HYBRID can use both
+                    try {
+                        validateResourceTypeForModality(r, classEntity);
                         return true;
+                    } catch (CustomException ex) {
+                        return false;
                     }
                 })
                 .filter(r -> {
@@ -474,6 +517,7 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         validateResourceAvailability(newResourceId, newDate, newTimeSlotId, null);
 
         // Create new session
+        OffsetDateTime now = OffsetDateTime.now();
         Session newSession = Session.builder()
                 .classEntity(oldSession.getClassEntity())
                 .courseSession(oldSession.getCourseSession())
@@ -482,6 +526,8 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                 .type(oldSession.getType())
                 .status(SessionStatus.PLANNED)
                 .teacherNote(null)
+                .createdAt(now)
+                .updatedAt(now)
                 .build();
         newSession = sessionRepository.save(newSession);
 
@@ -509,7 +555,13 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                 .collect(Collectors.toList());
 
         for (StudentSession oldSs : oldStudentSessions) {
+            // Create StudentSessionId with studentId and sessionId
+            StudentSession.StudentSessionId newSsId = new StudentSession.StudentSessionId();
+            newSsId.setStudentId(oldSs.getStudent().getId());
+            newSsId.setSessionId(newSession.getId());
+            
             StudentSession newSs = StudentSession.builder()
+                    .id(newSsId)
                     .student(oldSs.getStudent())
                     .session(newSession)
                     .isMakeup(false)
@@ -537,6 +589,50 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
 
         log.info("Reschedule approved: Old session {} cancelled, new session {} created", 
                 oldSession.getId(), newSession.getId());
+    }
+
+    /**
+     * Approve SWAP request
+     * - Staff can override replacement teacher
+     * - Status = WAITING_CONFIRM (chờ replacement teacher confirm)
+     */
+    private void approveSwap(TeacherRequest request, TeacherRequestApproveDTO approveDTO, UserAccount decidedBy) {
+        Session session = sessionRepository.findById(request.getSession().getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+        Teacher replacementTeacher;
+
+        // Staff có thể override replacement teacher
+        // Priority: approveDTO.replacementTeacherId (staff override) > request.replacementTeacher (teacher chọn)
+        if (approveDTO.getReplacementTeacherId() != null) {
+            // Staff override replacement teacher
+            replacementTeacher = teacherRepository.findById(approveDTO.getReplacementTeacherId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
+        } else if (request.getReplacementTeacher() != null) {
+            // Dùng replacement teacher mà teacher đã chọn
+            replacementTeacher = request.getReplacementTeacher();
+        } else {
+            // Cả hai đều null -> không thể approve
+            // Với SWAP, phải có ít nhất một replacement teacher (từ teacher hoặc staff)
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        // Validate replacement teacher is not the same as original teacher
+        if (replacementTeacher.getId().equals(request.getTeacher().getId())) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        // Validate replacement teacher has no conflict at session date/time
+        validateTeacherConflict(replacementTeacher.getId(), 
+                session.getDate(), 
+                session.getTimeSlotTemplate().getId(), 
+                null);
+
+        // Set replacement teacher
+        request.setReplacementTeacher(replacementTeacher);
+
+        log.info("Swap approved: Replacement teacher {} will replace teacher {} for session {}", 
+                replacementTeacher.getId(), request.getTeacher().getId(), session.getId());
     }
 
     /**
@@ -647,54 +743,6 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
     }
 
     /**
-     * Validate replacement teacher has no conflict at session time
-     */
-    private void validateTeacherSwapConflict(Long replacementTeacherId, Session session) {
-        boolean hasConflict = teachingSlotRepository.findAll().stream()
-                .anyMatch(ts -> ts.getId().getTeacherId().equals(replacementTeacherId)
-                        && ts.getSession().getDate().equals(session.getDate())
-                        && ts.getSession().getTimeSlotTemplate().getId().equals(session.getTimeSlotTemplate().getId())
-                        && (ts.getSession().getStatus() == SessionStatus.PLANNED || 
-                            ts.getSession().getStatus() == SessionStatus.DONE));
-
-        if (hasConflict) {
-            throw new CustomException(ErrorCode.TEACHER_SCHEDULE_CONFLICT);
-        }
-    }
-
-    /**
-     * Approve SWAP request (Staff)
-     * Sets replacement teacher (can override teacher's choice) and status to WAITING_CONFIRM
-     */
-    private void approveSwap(TeacherRequest request, TeacherRequestApproveDTO approveDTO, UserAccount decidedBy) {
-        // Determine replacement teacher: Staff override > Teacher suggestion
-        Long replacementTeacherId = approveDTO.getReplacementTeacherId() != null ? 
-                approveDTO.getReplacementTeacherId() : 
-                (request.getReplacementTeacher() != null ? request.getReplacementTeacher().getId() : null);
-
-        if (replacementTeacherId == null) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
-
-        Teacher replacementTeacher = teacherRepository.findById(replacementTeacherId)
-                .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
-
-        // Validate replacement teacher is not the same as original teacher
-        if (replacementTeacher.getId().equals(request.getTeacher().getId())) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
-
-        // Validate replacement teacher has no conflict
-        validateTeacherSwapConflict(replacementTeacherId, request.getSession());
-
-        // Set replacement teacher
-        request.setReplacementTeacher(replacementTeacher);
-
-        log.info("Swap request approved: Replacement teacher {} set for session {}", 
-                replacementTeacherId, request.getSession().getId());
-    }
-
-    /**
      * Validate resource capacity >= số học viên trong session
      * Đếm tất cả học viên có trong session (bao gồm cả học viên học bù)
      */
@@ -709,97 +757,319 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         // Nếu capacity = null (unlimited) hoặc >= studentCount thì OK
     }
 
+    /**
+     * Map TeacherRequest entity to ResponseDTO
+     */
+    private TeacherRequestResponseDTO mapToResponseDTO(TeacherRequest request) {
+        Session session = request.getSession();
+        ClassEntity classEntity = session != null ? session.getClassEntity() : null;
+        Teacher teacher = request.getTeacher();
+        UserAccount teacherAccount = teacher != null ? teacher.getUserAccount() : null;
+        Teacher replacementTeacher = request.getReplacementTeacher();
+        UserAccount replacementTeacherAccount = replacementTeacher != null ? replacementTeacher.getUserAccount() : null;
+        
+        // Debug log
+        log.debug("Mapping request {}: type={}, replacementTeacher={}, newResource={}, newTimeSlot={}, newDate={}", 
+                request.getId(), request.getRequestType(), 
+                replacementTeacher != null ? replacementTeacher.getId() : "null",
+                request.getNewResource() != null ? request.getNewResource().getId() : "null",
+                request.getNewTimeSlot() != null ? request.getNewTimeSlot().getId() : "null",
+                request.getNewDate());
+
+        TeacherRequestResponseDTO.TeacherRequestResponseDTOBuilder builder = TeacherRequestResponseDTO.builder()
+                .id(request.getId())
+                .requestType(request.getRequestType())
+                .status(request.getStatus())
+                .sessionId(session != null ? session.getId() : null)
+                .classCode(classEntity != null ? classEntity.getCode() : null)
+                .sessionDate(session != null ? session.getDate() : null)
+                .teacherId(teacher != null ? teacher.getId() : null)
+                .teacherName(teacherAccount != null ? teacherAccount.getFullName() : null)
+                .teacherEmail(teacherAccount != null ? teacherAccount.getEmail() : null)
+                .requestReason(request.getRequestReason())
+                .note(request.getNote())
+                .submittedAt(request.getSubmittedAt())
+                .decidedAt(request.getDecidedAt());
+
+        // Chỉ populate các fields liên quan đến request type
+        switch (request.getRequestType()) {
+            case MODALITY_CHANGE:
+                // Chỉ cần newResourceId và newResourceName
+                Resource modalityResource = request.getNewResource();
+                builder.newResourceId(modalityResource != null ? modalityResource.getId() : null)
+                        .newResourceName(modalityResource != null ? modalityResource.getName() : null)
+                        .newDate(null)
+                        .newTimeSlotId(null)
+                        .newTimeSlotName(null)
+                        .replacementTeacherId(null)
+                        .replacementTeacherName(null)
+                        .replacementTeacherEmail(null)
+                        .newSessionId(null);
+                break;
+            case RESCHEDULE:
+                // Cần newDate, newTimeSlotId, newTimeSlotName, newResourceId, newResourceName, newSessionId
+                TimeSlotTemplate rescheduleTimeSlot = request.getNewTimeSlot();
+                Resource rescheduleResource = request.getNewResource();
+                builder.newDate(request.getNewDate())
+                        .newTimeSlotId(rescheduleTimeSlot != null ? rescheduleTimeSlot.getId() : null)
+                        .newTimeSlotName(rescheduleTimeSlot != null ? rescheduleTimeSlot.getName() : null)
+                        .newResourceId(rescheduleResource != null ? rescheduleResource.getId() : null)
+                        .newResourceName(rescheduleResource != null ? rescheduleResource.getName() : null)
+                        .newSessionId(request.getNewSession() != null ? request.getNewSession().getId() : null)
+                        .replacementTeacherId(null)
+                        .replacementTeacherName(null)
+                        .replacementTeacherEmail(null);
+                break;
+            case SWAP:
+                // Cần replacementTeacherId, replacementTeacherName, replacementTeacherEmail
+                builder.replacementTeacherId(replacementTeacher != null ? replacementTeacher.getId() : null)
+                        .replacementTeacherName(replacementTeacherAccount != null ? replacementTeacherAccount.getFullName() : null)
+                        .replacementTeacherEmail(replacementTeacherAccount != null ? replacementTeacherAccount.getEmail() : null)
+                        .newDate(null)
+                        .newTimeSlotId(null)
+                        .newTimeSlotName(null)
+                        .newResourceId(null)
+                        .newResourceName(null)
+                        .newSessionId(null);
+                break;
+            default:
+                // Fallback: set tất cả null
+                builder.newDate(null)
+                        .newTimeSlotId(null)
+                        .newTimeSlotName(null)
+                        .newResourceId(null)
+                        .newResourceName(null)
+                        .replacementTeacherId(null)
+                        .replacementTeacherName(null)
+                        .replacementTeacherEmail(null)
+                        .newSessionId(null);
+                break;
+        }
+
+        return builder.build();
+    }
+
+    /**
+     * Map TeacherRequest entity to ListDTO
+     */
+    private TeacherRequestListDTO mapToListDTO(TeacherRequest request) {
+        Session session = request.getSession();
+        ClassEntity classEntity = session != null ? session.getClassEntity() : null;
+        Teacher teacher = request.getTeacher();
+        UserAccount teacherAccount = teacher != null ? teacher.getUserAccount() : null;
+
+        return TeacherRequestListDTO.builder()
+                .id(request.getId())
+                .requestType(request.getRequestType())
+                .status(request.getStatus())
+                .sessionId(session != null ? session.getId() : null)
+                .sessionDate(session != null ? session.getDate() : null)
+                .className(classEntity != null ? classEntity.getName() : null)
+                .classCode(classEntity != null ? classEntity.getCode() : null)
+                .teacherId(teacher != null ? teacher.getId() : null)
+                .teacherName(teacherAccount != null ? teacherAccount.getFullName() : null)
+                .teacherEmail(teacherAccount != null ? teacherAccount.getEmail() : null)
+                .requestReason(request.getRequestReason()) // Lý do tạo request - frontend có thể truncate nếu cần
+                .submittedAt(request.getSubmittedAt())
+                .decidedAt(request.getDecidedAt())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TeacherSessionDTO> getMySessions(Long userId, LocalDate date) {
+        log.info("Getting sessions for user {} with date filter {}", userId, date);
+
+        // 1. Get teacher from user account
+        Teacher teacher = teacherRepository.findByUserAccountId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
+
+        // 2. Calculate date range
+        LocalDate today = LocalDate.now();
+        LocalDate fromDate;
+        LocalDate toDate;
+
+        if (date != null) {
+            // Filter by specific date
+            if (date.isBefore(today)) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
+            fromDate = date;
+            toDate = date;
+        } else {
+            // Default: next 7 days
+            fromDate = today;
+            toDate = today.plusDays(7);
+        }
+
+        // 3. Query teaching slots
+        List<TeachingSlot> teachingSlots = teachingSlotRepository.findByTeacherIdAndDateRange(
+                teacher.getId(), fromDate, toDate);
+
+        // 4. Get all pending/waiting requests for these sessions to check hasPendingRequest
+        // Only check PENDING and WAITING_CONFIRM - APPROVED requests are already processed
+        List<Long> sessionIds = teachingSlots.stream()
+                .map(ts -> ts.getSession().getId())
+                .collect(Collectors.toList());
+
+        List<TeacherRequest> pendingRequests = sessionIds.isEmpty() 
+                ? List.of()
+                : teacherRequestRepository.findBySessionIdInAndStatusIn(
+                        sessionIds,
+                        Arrays.asList(RequestStatus.PENDING, RequestStatus.WAITING_CONFIRM));
+
+        // Create a set of session IDs that have pending/waiting requests
+        java.util.Set<Long> sessionsWithPendingRequests = pendingRequests.stream()
+                .map(tr -> tr.getSession().getId())
+                .collect(Collectors.toSet());
+
+        // 5. Map to DTO
+        return teachingSlots.stream()
+                .map(ts -> {
+                    Session session = ts.getSession();
+                    ClassEntity classEntity = session.getClassEntity();
+                    TimeSlotTemplate timeSlot = session.getTimeSlotTemplate();
+                    CourseSession courseSession = session.getCourseSession();
+
+                    boolean hasPending = sessionsWithPendingRequests.contains(session.getId());
+                    long daysFromNow = java.time.temporal.ChronoUnit.DAYS.between(today, session.getDate());
+
+                    return TeacherSessionDTO.builder()
+                            .sessionId(session.getId())
+                            .date(session.getDate())
+                            .startTime(timeSlot != null ? timeSlot.getStartTime() : null)
+                            .endTime(timeSlot != null ? timeSlot.getEndTime() : null)
+                            .className(classEntity != null ? classEntity.getName() : null)
+                            .classCode(classEntity != null ? classEntity.getCode() : null)
+                            .courseName(classEntity != null && classEntity.getCourse() != null 
+                                    ? classEntity.getCourse().getName() : null)
+                            .topic(courseSession != null ? courseSession.getTopic() : null)
+                            .daysFromNow((int) daysFromNow)
+                            .requestStatus(hasPending ? "Đang chờ xử lý" : "Có thể tạo request")
+                            .hasPendingRequest(hasPending)
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<SwapCandidateDTO> suggestSwapCandidates(Long sessionId, Long userId) {
-        Teacher teacher = teacherRepository.findByUserAccountId(userId)
+        log.info("Suggesting swap candidates for session {} by user {}", sessionId, userId);
+
+        // 1. Get teacher from user account
+        Teacher currentTeacher = teacherRepository.findByUserAccountId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
-        
+
+        // 2. Get session and validate
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-        
-        validateTeacherOwnsSession(sessionId, teacher.getId());
+
+        validateTeacherOwnsSession(sessionId, currentTeacher.getId());
         validateTimeWindow(session.getDate());
 
-        // Get session skill requirements
-        Skill[] requiredSkills = session.getCourseSession() != null && 
-                session.getCourseSession().getSkillSet() != null ?
-                session.getCourseSession().getSkillSet() : new Skill[]{Skill.GENERAL};
-
-        // Get all teachers except the original teacher
-        List<Teacher> allTeachers = teacherRepository.findAll().stream()
-                .filter(t -> !t.getId().equals(teacher.getId()))
+        // 3. Get declined teachers for this session (teachers who have declined swap requests for this session)
+        List<TeacherRequest> swapRequestsForSession = teacherRequestRepository.findAll().stream()
+                .filter(tr -> tr.getSession() != null && tr.getSession().getId().equals(sessionId))
+                .filter(tr -> tr.getRequestType() == TeacherRequestType.SWAP)
+                .filter(tr -> tr.getNote() != null && tr.getNote().contains("DECLINED_BY_TEACHER_ID_"))
                 .collect(Collectors.toList());
 
-        return allTeachers.stream()
-                .map(t -> {
-                    // Get teacher skills
-                    List<TeacherSkill> teacherSkills = teacherSkillRepository.findAll().stream()
-                            .filter(ts -> ts.getTeacher().getId().equals(t.getId()))
-                            .collect(Collectors.toList());
-
-                    // Calculate skill priority
-                    int skillPriority = 1;
-                    boolean hasExactMatch = teacherSkills.stream()
-                            .anyMatch(ts -> Arrays.asList(requiredSkills).contains(ts.getId().getSkill()));
-                    boolean hasGeneral = teacherSkills.stream()
-                            .anyMatch(ts -> ts.getId().getSkill() == Skill.GENERAL);
-
-                    if (hasExactMatch) {
-                        skillPriority = 3;
-                    } else if (hasGeneral) {
-                        skillPriority = 2;
-                    }
-
-                    // Calculate availability priority
-                    int availabilityPriority = 1;
-                    if (t.getContractType() != null && t.getContractType().equals("full-time")) {
-                        availabilityPriority = 2;
-                    } else {
-                        // Check if part-time teacher has availability for this day/time
-                        int dayOfWeek = session.getDate().getDayOfWeek().getValue() % 7; // 0=Sunday, 1=Monday, etc.
-                        boolean hasAvailability = teacherAvailabilityRepository.findAll().stream()
-                                .anyMatch(ta -> ta.getTeacher().getId().equals(t.getId())
-                                        && ta.getId().getDayOfWeek() == dayOfWeek
-                                        && ta.getTimeSlotTemplate().getId().equals(session.getTimeSlotTemplate().getId()));
-                        if (hasAvailability) {
-                            availabilityPriority = 2;
+        java.util.Set<Long> declinedTeacherIds = new java.util.HashSet<>();
+        for (TeacherRequest tr : swapRequestsForSession) {
+            String note = tr.getNote();
+            if (note != null && note.contains("DECLINED_BY_TEACHER_ID_")) {
+                // Parse teacher ID from note: "DECLINED_BY_TEACHER_ID_{teacherId}: {reason}"
+                try {
+                    String prefix = "DECLINED_BY_TEACHER_ID_";
+                    int startIndex = note.indexOf(prefix) + prefix.length();
+                    int endIndex = note.indexOf(":", startIndex);
+                    if (endIndex == -1) {
+                        // If no colon found, try to find end of number
+                        endIndex = startIndex;
+                        while (endIndex < note.length() && Character.isDigit(note.charAt(endIndex))) {
+                            endIndex++;
                         }
                     }
-
-                    // Check for conflict
-                    boolean hasConflict = teachingSlotRepository.findAll().stream()
-                            .anyMatch(ts -> ts.getId().getTeacherId().equals(t.getId())
-                                    && ts.getSession().getDate().equals(session.getDate())
-                                    && ts.getSession().getTimeSlotTemplate().getId().equals(session.getTimeSlotTemplate().getId())
-                                    && (ts.getSession().getStatus() == SessionStatus.PLANNED || 
-                                        ts.getSession().getStatus() == SessionStatus.DONE));
-
-                    // Only include if no conflict and has matching skill
-                    if (hasConflict || (skillPriority == 1 && !hasGeneral)) {
-                        return null;
+                    if (endIndex > startIndex) {
+                        String teacherIdStr = note.substring(startIndex, endIndex).trim();
+                        Long teacherId = Long.parseLong(teacherIdStr);
+                        declinedTeacherIds.add(teacherId);
                     }
+                } catch (Exception e) {
+                    log.warn("Failed to parse declined teacher ID from note: {}", note, e);
+                }
+            }
+        }
 
-                    UserAccount userAccount = t.getUserAccount();
+        // 4. Get all teachers except current teacher and declined teachers
+        List<Teacher> allTeachers = teacherRepository.findAll().stream()
+                .filter(t -> !t.getId().equals(currentTeacher.getId()))
+                .filter(t -> !declinedTeacherIds.contains(t.getId()))
+                .collect(Collectors.toList());
+
+        // 5. Get all teacher skills for quick lookup
+        // TODO: In future, can improve to match specific subject/course skills based on session's class
+        List<TeacherSkill> allTeacherSkills = teacherSkillRepository.findAll();
+        java.util.Map<Long, List<TeacherSkill>> teacherSkillsMap = allTeacherSkills.stream()
+                .collect(Collectors.groupingBy(ts -> ts.getTeacher().getId()));
+
+        // 6. Map to candidates with priority calculation
+        List<SwapCandidateDTO> candidates = allTeachers.stream()
+                .map(teacher -> {
+                    UserAccount teacherAccount = teacher.getUserAccount();
+                    boolean hasConflict = hasTeacherConflict(teacher.getId(), session.getDate(), 
+                            session.getTimeSlotTemplate().getId(), null);
+
+                    // Simple skill priority: teacher has skills = 1, no skills = 0
+                    // In future, can improve to match specific subject/course skills
+                    int skillPriority = teacherSkillsMap.containsKey(teacher.getId()) ? 1 : 0;
+                    
+                    // Availability priority: no conflict = 1, has conflict = 0
+                    int availabilityPriority = hasConflict ? 0 : 1;
+
                     return SwapCandidateDTO.builder()
-                            .teacherId(t.getId())
-                            .fullName(userAccount != null ? userAccount.getFullName() : null)
-                            .email(userAccount != null ? userAccount.getEmail() : null)
+                            .teacherId(teacher.getId())
+                            .fullName(teacherAccount != null ? teacherAccount.getFullName() : null)
+                            .email(teacherAccount != null ? teacherAccount.getEmail() : null)
                             .skillPriority(skillPriority)
                             .availabilityPriority(availabilityPriority)
-                            .hasConflict(false)
+                            .hasConflict(hasConflict)
                             .build();
                 })
-                .filter(c -> c != null)
                 .sorted((a, b) -> {
-                    // Sort by skill priority DESC, then availability priority DESC, then name
+                    // Sort by: skillPriority DESC, availabilityPriority DESC, name ASC
                     int skillCompare = Integer.compare(b.getSkillPriority(), a.getSkillPriority());
                     if (skillCompare != 0) return skillCompare;
+                    
                     int availCompare = Integer.compare(b.getAvailabilityPriority(), a.getAvailabilityPriority());
                     if (availCompare != 0) return availCompare;
-                    return a.getFullName().compareTo(b.getFullName());
+                    
+                    String nameA = a.getFullName() != null ? a.getFullName() : "";
+                    String nameB = b.getFullName() != null ? b.getFullName() : "";
+                    return nameA.compareToIgnoreCase(nameB);
                 })
                 .collect(Collectors.toList());
+
+        return candidates;
+    }
+
+    /**
+     * Check if teacher has conflict at specific date and time slot
+     */
+    private boolean hasTeacherConflict(Long teacherId, LocalDate date, Long timeSlotTemplateId, Long excludeSessionId) {
+        List<TeachingSlot> slots = teachingSlotRepository.findAll().stream()
+                .filter(ts -> ts.getId().getTeacherId().equals(teacherId))
+                .filter(ts -> ts.getSession().getDate().equals(date))
+                .filter(ts -> ts.getSession().getTimeSlotTemplate().getId().equals(timeSlotTemplateId))
+                .filter(ts -> excludeSessionId == null || !ts.getSession().getId().equals(excludeSessionId))
+                .filter(ts -> ts.getSession().getStatus() == SessionStatus.PLANNED || 
+                               ts.getSession().getStatus() == SessionStatus.DONE)
+                .filter(ts -> ts.getStatus() == TeachingSlotStatus.SCHEDULED || 
+                             ts.getStatus() == TeachingSlotStatus.SUBSTITUTED)
+                .collect(Collectors.toList());
+
+        return !slots.isEmpty();
     }
 
     @Override
@@ -820,40 +1090,44 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
             throw new CustomException(ErrorCode.INVALID_REQUEST);
         }
 
-        // Validate replacement teacher is the current user
+        // Validate user is the replacement teacher
         Teacher replacementTeacher = teacherRepository.findByUserAccountId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
 
         if (request.getReplacementTeacher() == null || 
-                !request.getReplacementTeacher().getId().equals(replacementTeacher.getId())) {
+            !request.getReplacementTeacher().getId().equals(replacementTeacher.getId())) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
         Session session = request.getSession();
         Teacher originalTeacher = request.getTeacher();
 
-        // Re-validate no conflict (race condition check)
-        validateTeacherSwapConflict(replacementTeacher.getId(), session);
-
-        // Update original teacher's teaching slot to ON_LEAVE
+        // Update teaching slots
+        // Original teacher slot → ON_LEAVE
         TeachingSlot.TeachingSlotId originalSlotId = new TeachingSlot.TeachingSlotId(
                 session.getId(), originalTeacher.getId());
         TeachingSlot originalSlot = teachingSlotRepository.findById(originalSlotId)
-                .orElseThrow(() -> new CustomException(ErrorCode.TEACHING_SLOT_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_SCHEDULE_NOT_FOUND));
         originalSlot.setStatus(TeachingSlotStatus.ON_LEAVE);
         teachingSlotRepository.save(originalSlot);
 
-        // Create or update replacement teacher's teaching slot
+        // Replacement teacher slot → SUBSTITUTED
         TeachingSlot.TeachingSlotId replacementSlotId = new TeachingSlot.TeachingSlotId(
                 session.getId(), replacementTeacher.getId());
-        TeachingSlot replacementSlot = teachingSlotRepository.findById(replacementSlotId)
-                .orElse(TeachingSlot.builder()
-                        .id(replacementSlotId)
-                        .session(session)
-                        .teacher(replacementTeacher)
-                        .status(TeachingSlotStatus.SUBSTITUTED)
-                        .build());
-        replacementSlot.setStatus(TeachingSlotStatus.SUBSTITUTED);
+        TeachingSlot replacementSlot = teachingSlotRepository.findById(replacementSlotId).orElse(null);
+        
+        if (replacementSlot == null) {
+            // Create new slot if doesn't exist
+            replacementSlot = TeachingSlot.builder()
+                    .id(replacementSlotId)
+                    .session(session)
+                    .teacher(replacementTeacher)
+                    .status(TeachingSlotStatus.SUBSTITUTED)
+                    .build();
+        } else {
+            // Update existing slot
+            replacementSlot.setStatus(TeachingSlotStatus.SUBSTITUTED);
+        }
         teachingSlotRepository.save(replacementSlot);
 
         // Update request status
@@ -861,8 +1135,7 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         request.setDecidedAt(OffsetDateTime.now());
         request = teacherRequestRepository.save(request);
 
-        log.info("Swap request {} confirmed: Teaching slots updated", requestId);
-
+        log.info("Swap request {} confirmed successfully", requestId);
         return mapToResponseDTO(request);
     }
 
@@ -884,187 +1157,37 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
             throw new CustomException(ErrorCode.INVALID_REQUEST);
         }
 
-        // Validate replacement teacher is the current user
+        // Validate user is the replacement teacher
         Teacher replacementTeacher = teacherRepository.findByUserAccountId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
 
         if (request.getReplacementTeacher() == null || 
-                !request.getReplacementTeacher().getId().equals(replacementTeacher.getId())) {
+            !request.getReplacementTeacher().getId().equals(replacementTeacher.getId())) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        // Reset request to PENDING and clear replacement teacher
+        // Update request: status back to PENDING, clear replacement teacher
+        // Store declined teacher ID in note for tracking: "DECLINED_BY_TEACHER_ID_{teacherId}: {reason}"
+        String noteWithDeclinedTeacher = String.format("DECLINED_BY_TEACHER_ID_%d: %s", 
+                replacementTeacher.getId(), reason);
         request.setStatus(RequestStatus.PENDING);
         request.setReplacementTeacher(null);
-        request.setNote(reason != null ? reason : "Replacement teacher declined");
+        request.setNote(noteWithDeclinedTeacher);
+        request.setDecidedAt(OffsetDateTime.now());
         request = teacherRequestRepository.save(request);
 
-        log.info("Swap request {} declined: Reset to PENDING", requestId);
-
+        log.info("Swap request {} declined, status reset to PENDING", requestId);
         return mapToResponseDTO(request);
     }
 
     /**
-     * Map TeacherRequest entity to ResponseDTO
+     * Check if user has ACADEMIC_AFFAIR role
      */
-    private TeacherRequestResponseDTO mapToResponseDTO(TeacherRequest request) {
-        TeacherRequestResponseDTO.TeacherRequestResponseDTOBuilder builder = TeacherRequestResponseDTO.builder()
-                .id(request.getId())
-                .requestType(request.getRequestType())
-                .status(request.getStatus())
-                .sessionId(request.getSession() != null ? request.getSession().getId() : null)
-                .requestReason(request.getRequestReason())
-                .note(request.getNote())
-                .submittedAt(request.getSubmittedAt())
-                .decidedAt(request.getDecidedAt());
-
-        // Chỉ populate các fields liên quan đến request type
-        switch (request.getRequestType()) {
-            case MODALITY_CHANGE:
-                // Chỉ cần newResourceId
-                builder.newResourceId(request.getNewResource() != null ? 
-                        request.getNewResource().getId() : null)
-                        .newDate(null)
-                        .newTimeSlotId(null)
-                        .replacementTeacherId(null)
-                        .newSessionId(null);
-                break;
-            case RESCHEDULE:
-                // Cần newDate, newTimeSlotId, newResourceId, newSessionId
-                builder.newDate(request.getNewDate())
-                .newTimeSlotId(request.getNewTimeSlot() != null ? 
-                        request.getNewTimeSlot().getId() : null)
-                .newResourceId(request.getNewResource() != null ? 
-                        request.getNewResource().getId() : null)
-                .newSessionId(request.getNewSession() != null ? 
-                        request.getNewSession().getId() : null)
-                        .replacementTeacherId(null);
-                break;
-            case SWAP:
-                // Chỉ cần replacementTeacherId
-                builder.replacementTeacherId(request.getReplacementTeacher() != null ? 
-                        request.getReplacementTeacher().getId() : null)
-                        .newDate(null)
-                        .newTimeSlotId(null)
-                        .newResourceId(null)
-                        .newSessionId(null);
-                break;
-            default:
-                // Fallback: set tất cả null
-                builder.newDate(null)
-                        .newTimeSlotId(null)
-                        .newResourceId(null)
-                        .replacementTeacherId(null)
-                        .newSessionId(null);
-                break;
+    private boolean isAcademicAffair(UserAccount userAccount) {
+        if (userAccount == null || userAccount.getUserRoles() == null) {
+            return false;
         }
-
-        return builder.build();
-    }
-
-    /**
-     * Map TeacherRequest entity to ListDTO
-     */
-    private TeacherRequestListDTO mapToListDTO(TeacherRequest request) {
-        Session session = request.getSession();
-        ClassEntity classEntity = session != null ? session.getClassEntity() : null;
-
-        return TeacherRequestListDTO.builder()
-                .id(request.getId())
-                .requestType(request.getRequestType())
-                .status(request.getStatus())
-                .sessionId(session != null ? session.getId() : null)
-                .sessionDate(session != null ? session.getDate() : null)
-                .className(classEntity != null ? classEntity.getName() : null)
-                .classCode(classEntity != null ? classEntity.getCode() : null)
-                .requestReason(request.getRequestReason()) // Lý do tạo request - frontend có thể truncate nếu cần
-                .submittedAt(request.getSubmittedAt())
-                .decidedAt(request.getDecidedAt())
-                .build();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<TeacherSessionDTO> getMyFutureSessions(Long userId, LocalDate date) {
-        log.info("Getting future sessions for teacher user {}, filter date: {}", userId, date);
-
-        // 1. Get teacher from user account
-        Teacher teacher = teacherRepository.findByUserAccountId(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
-
-        // 2. Determine date range
-        LocalDate today = LocalDate.now();
-        LocalDate startDate;
-        LocalDate endDate;
-        
-        if (date != null) {
-            // Filter by specific date
-            if (date.isBefore(today)) {
-                throw new CustomException(ErrorCode.INVALID_INPUT);
-            }
-            startDate = date;
-            endDate = date;
-        } else {
-            // Default: next 7 days
-            startDate = today;
-            endDate = today.plusDays(7);
-        }
-
-        // 3. Query sessions: teacher's sessions in date range, status PLANNED
-        List<TeachingSlot> teachingSlots = teachingSlotRepository.findByTeacherIdAndDateRange(
-                teacher.getId(),
-                Arrays.asList(TeachingSlotStatus.SCHEDULED, TeachingSlotStatus.SUBSTITUTED),
-                SessionStatus.PLANNED,
-                startDate,
-                endDate
-        );
-
-        // 4. Check which sessions have pending requests
-        List<Long> sessionIdsWithPendingRequests = teacherRequestRepository
-                .findBySessionIdInAndStatusIn(
-                        teachingSlots.stream()
-                                .map(ts -> ts.getSession().getId())
-                                .collect(Collectors.toList()),
-                        Arrays.asList(RequestStatus.PENDING, RequestStatus.WAITING_CONFIRM, RequestStatus.APPROVED)
-                )
-                .stream()
-                .map(tr -> tr.getSession().getId())
-                .distinct()
-                .collect(Collectors.toList());
-
-        // 5. Map to DTO
-        return teachingSlots.stream()
-                .map(ts -> {
-                    Session session = ts.getSession();
-                    ClassEntity classEntity = session.getClassEntity();
-                    Course course = classEntity != null ? classEntity.getCourse() : null;
-                    CourseSession courseSession = session.getCourseSession();
-                    TimeSlotTemplate timeSlot = session.getTimeSlotTemplate();
-
-                    boolean hasPendingRequest = sessionIdsWithPendingRequests.contains(session.getId());
-                    long daysFromNow = java.time.temporal.ChronoUnit.DAYS.between(today, session.getDate());
-
-                    return TeacherSessionDTO.builder()
-                            .sessionId(session.getId())
-                            .date(session.getDate())
-                            .startTime(timeSlot != null ? timeSlot.getStartTime() : null)
-                            .endTime(timeSlot != null ? timeSlot.getEndTime() : null)
-                            .className(classEntity != null ? classEntity.getName() : null)
-                            .courseName(course != null ? course.getName() : null)
-                            .topic(courseSession != null ? courseSession.getTopic() : null)
-                            .daysFromNow(daysFromNow)
-                            .requestStatus(hasPendingRequest ? "Đang chờ xử lý" : "Có thể tạo request")
-                            .hasPendingRequest(hasPendingRequest)
-                            .build();
-                })
-                .sorted((a, b) -> {
-                    int dateCompare = a.getDate().compareTo(b.getDate());
-                    if (dateCompare != 0) return dateCompare;
-                    if (a.getStartTime() != null && b.getStartTime() != null) {
-                        return a.getStartTime().compareTo(b.getStartTime());
-                    }
-                    return 0;
-                })
-                .collect(Collectors.toList());
+        return userAccount.getUserRoles().stream()
+                .anyMatch(ur -> ur.getRole() != null && "ACADEMIC_AFFAIR".equals(ur.getRole().getCode()));
     }
 }
