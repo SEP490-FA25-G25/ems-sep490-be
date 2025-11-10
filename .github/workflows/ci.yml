@@ -1,0 +1,41 @@
+name: CI Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.m2/repository
+          ~/.m2/wrapper
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-m2-
+
+    - name: Grant execute permission for Maven wrapper
+      if: runner.os == 'Linux'
+      run: chmod +x ./mvnw
+
+    - name: Run Maven clean install
+      run: ./mvnw clean install -DskipTests
+
+    - name: Run specific makeup request tests
+      run: ./mvnw test -Dtest=MakeupRequestServiceTest
