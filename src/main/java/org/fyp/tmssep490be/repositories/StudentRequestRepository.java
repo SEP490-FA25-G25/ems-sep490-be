@@ -44,4 +44,28 @@ public interface StudentRequestRepository extends JpaRepository<StudentRequest, 
 
     // Find all requests by student (for previous requests calculation)
     List<StudentRequest> findByStudentId(Long studentId);
+
+    /**
+     * Check if student has existing makeup request for a target session
+     * (to prevent duplicate makeup requests for same session)
+     */
+    boolean existsByStudentIdAndTargetSessionIdAndRequestTypeAndMakeupSessionIdAndStatusIn(
+        Long studentId,
+        Long targetSessionId,
+        StudentRequestType requestType,
+        Long makeupSessionId,
+        List<RequestStatus> statuses
+    );
+
+    /**
+     * Check if makeup session already has a pending/approved request
+     * (to prevent conflicts when multiple students request same makeup session)
+     */
+    @Query("SELECT COUNT(sr) > 0 FROM StudentRequest sr " +
+           "WHERE sr.makeupSession.id = :makeupSessionId " +
+           "AND sr.status IN :statuses")
+    boolean existsPendingMakeupForSession(
+        @Param("makeupSessionId") Long makeupSessionId,
+        @Param("statuses") List<RequestStatus> statuses
+    );
 }

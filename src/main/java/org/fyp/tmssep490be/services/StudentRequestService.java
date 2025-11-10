@@ -13,8 +13,11 @@ public interface StudentRequestService {
     Page<StudentRequestResponseDTO> getMyRequests(Long userId, RequestFilterDTO filter);
     StudentRequestDetailDTO getRequestById(Long requestId, Long userId);
     StudentRequestResponseDTO submitAbsenceRequest(Long userId, AbsenceRequestDTO dto);
+    StudentRequestResponseDTO submitMakeupRequest(Long userId, MakeupRequestDTO dto);
     StudentRequestResponseDTO cancelRequest(Long requestId, Long userId);
     List<SessionAvailabilityDTO> getAvailableSessionsForDate(Long userId, LocalDate date, StudentRequestType requestType);
+    MissedSessionsResponseDTO getMissedSessions(Long userId, Integer weeksBack, Boolean excludeRequested);
+    MakeupOptionsResponseDTO getMakeupOptions(Long targetSessionId, Long userId);
 
     // Academic Affairs operations
     Page<AARequestResponseDTO> getPendingRequests(AARequestFilterDTO filter);
@@ -23,6 +26,11 @@ public interface StudentRequestService {
     StudentRequestResponseDTO approveRequest(Long requestId, Long decidedById, ApprovalDTO dto);
     StudentRequestResponseDTO rejectRequest(Long requestId, Long decidedById, RejectionDTO dto);
     RequestSummaryDTO getRequestSummary(AARequestFilterDTO filter);
+
+    // AA on-behalf operations
+    MissedSessionsResponseDTO getMissedSessionsForStudent(Long studentId, Integer weeksBack);
+    MakeupOptionsResponseDTO getMakeupOptionsForStudent(Long targetSessionId, Long studentId);
+    StudentRequestResponseDTO submitMakeupRequestOnBehalf(Long decidedById, MakeupRequestDTO dto);
 
     // Support methods
     boolean hasDuplicateRequest(Long studentId, Long sessionId, StudentRequestType requestType);

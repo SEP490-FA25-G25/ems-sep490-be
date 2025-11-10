@@ -39,10 +39,11 @@ public interface TeacherRequestRepository extends JpaRepository<TeacherRequest, 
     );
     
     /**
-     * Find request by ID with teacher and session loaded
+     * Find request by ID with teacher, replacement teacher, and session loaded
      */
     @Query("SELECT tr FROM TeacherRequest tr " +
            "LEFT JOIN FETCH tr.teacher t " +
+           "LEFT JOIN FETCH tr.replacementTeacher rt " +
            "LEFT JOIN FETCH tr.session s " +
            "WHERE tr.id = :id")
     Optional<TeacherRequest> findByIdWithTeacherAndSession(@Param("id") Long id);
@@ -54,4 +55,18 @@ public interface TeacherRequestRepository extends JpaRepository<TeacherRequest, 
             Long teacherId, 
             RequestStatus status
     );
+
+    /**
+     * Find requests by session IDs and statuses
+     */
+    List<TeacherRequest> findBySessionIdInAndStatusIn(
+            List<Long> sessionIds,
+            List<RequestStatus> statuses
+    );
+
+    /**
+     * Find requests where teacher is the replacement teacher
+     * Used for replacement teacher to see requests waiting for their confirmation
+     */
+    List<TeacherRequest> findByReplacementTeacherIdOrderBySubmittedAtDesc(Long replacementTeacherId);
 }

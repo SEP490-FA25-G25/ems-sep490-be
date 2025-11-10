@@ -6,6 +6,7 @@ import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestResponseDTO;
 import org.fyp.tmssep490be.entities.*;
 import org.fyp.tmssep490be.entities.enums.*;
 import org.fyp.tmssep490be.exceptions.CustomException;
+import org.fyp.tmssep490be.exceptions.ErrorCode;
 import org.fyp.tmssep490be.repositories.*;
 import org.fyp.tmssep490be.services.TeacherRequestService;
 import org.junit.jupiter.api.Test;
@@ -132,8 +133,8 @@ class TeacherRequestServiceImplModalityTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("createRequest - without newResourceId - success (teacher không chọn, staff sẽ chọn khi approve)")
-    void createRequest_modality_withoutResource_success() {
+    @org.junit.jupiter.api.DisplayName("createRequest - without newResourceId - throws INVALID_INPUT (teacher bắt buộc phải chọn resource)")
+    void createRequest_modality_withoutResource_throws() {
         Long userId = 10L;
         Long teacherId = 20L;
         Long sessionId = 30L;
@@ -151,26 +152,18 @@ class TeacherRequestServiceImplModalityTest {
                 .thenReturn(false);
         UserAccount ua = new UserAccount(); ua.setId(userId);
         when(userAccountRepository.findById(userId)).thenReturn(Optional.of(ua));
-        when(teacherRequestRepository.save(any(TeacherRequest.class))).thenAnswer(invocation -> {
-            TeacherRequest tr = invocation.getArgument(0);
-            tr.setId(999L);
-            return tr;
-        });
 
         TeacherRequestCreateDTO dto = TeacherRequestCreateDTO.builder()
                 .sessionId(sessionId)
                 .requestType(TeacherRequestType.MODALITY_CHANGE)
                 .reason("Need to switch")
-                // newResourceId = null - teacher không chọn, staff sẽ chọn khi approve
+                // newResourceId = null - teacher bắt buộc phải chọn resource
                 .build();
 
-        TeacherRequestResponseDTO resp = service.createRequest(dto, userId);
-
-        assertThat(resp.getId()).isEqualTo(999L);
-        assertThat(resp.getRequestType()).isEqualTo(TeacherRequestType.MODALITY_CHANGE);
-        assertThat(resp.getStatus()).isEqualTo(RequestStatus.PENDING);
-        assertThat(resp.getNewResourceId()).isNull(); // Teacher không chọn resource
-        verify(teacherRequestRepository).save(any(TeacherRequest.class));
+        assertThatThrownBy(() -> service.createRequest(dto, userId))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_INPUT);
     }
 
     @Test

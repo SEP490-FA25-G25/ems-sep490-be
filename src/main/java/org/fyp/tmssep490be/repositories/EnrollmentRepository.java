@@ -81,4 +81,9 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
      * Find specific enrollment for validation
      */
     Enrollment findByStudentIdAndClassIdAndStatus(Long studentId, Long classId, EnrollmentStatus status);
+
+    /**
+     * Find all enrollments for a class with specific status
+     */
+    List<Enrollment> findByClassIdAndStatus(Long classId, EnrollmentStatus status);
 }

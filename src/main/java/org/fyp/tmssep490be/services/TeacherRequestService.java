@@ -57,4 +57,31 @@ public interface TeacherRequestService {
      * Suggest valid resources for rescheduling with given date and time slot
      */
     List<RescheduleResourceSuggestionDTO> suggestResources(Long sessionId, java.time.LocalDate date, Long timeSlotId, Long userId);
+
+    /**
+     * Suggest teachers who can replace a session (SWAP)
+     */
+    List<org.fyp.tmssep490be.dtos.teacherrequest.SwapCandidateDTO> suggestSwapCandidates(Long sessionId, Long userId);
+
+    /**
+     * Confirm swap request (Replacement Teacher)
+     * Updates teaching slots and sets request status to APPROVED
+     */
+    TeacherRequestResponseDTO confirmSwap(Long requestId, Long userId);
+
+    /**
+     * Decline swap request (Replacement Teacher)
+     * Resets request to PENDING and clears replacement teacher
+     */
+    TeacherRequestResponseDTO declineSwap(Long requestId, String reason, Long userId);
+
+    /**
+     * Get teacher's future sessions for request creation
+     * Returns sessions in the next 7 days with status PLANNED
+     * @param userId Current authenticated user ID
+     * @param date Optional date filter. If provided, returns sessions for that specific date only.
+     *             If null, returns sessions for the next 7 days
+     * @return List of teacher's future sessions
+     */
+    List<org.fyp.tmssep490be.dtos.teacherrequest.TeacherSessionDTO> getMyFutureSessions(Long userId, java.time.LocalDate date);
 }

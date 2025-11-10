@@ -49,4 +49,41 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
      * Find session by date and class
      */
     List<Session> findByClassEntityIdAndDate(Long classId, LocalDate date);
+
+    /**
+     * Find all missed (absent) sessions for a student within a time window
+     * Used for makeup request - get sessions student can make up
+     */
+    @Query(value = """
+        SELECT s.* FROM session s
+        JOIN student_session ss ON ss.session_id = s.id
+        WHERE ss.student_id = :studentId
+          AND ss.attendance_status = 'ABSENT'
+          AND s.date >= :fromDate
+          AND s.date <= :toDate
+        ORDER BY s.date DESC
+        """, nativeQuery = true)
+    List<Session> findMissedSessionsForStudent(
+        @Param("studentId") Long studentId,
+        @Param("fromDate") LocalDate fromDate,
+        @Param("toDate") LocalDate toDate
+    );
+
+    /**
+     * Find available makeup sessions for a specific course session
+     * Returns sessions with same courseSessionId, in future, with available capacity
+     */
+    @Query(value = """
+        SELECT s.* FROM session s
+        JOIN class c ON s.class_id = c.id
+        WHERE s.course_session_id = :courseSessionId
+          AND s.date >= CURRENT_DATE
+          AND s.status = 'PLANNED'
+          AND s.id != :excludeSessionId
+        ORDER BY s.date ASC
+        """, nativeQuery = true)
+    List<Session> findMakeupSessionOptions(
+        @Param("courseSessionId") Long courseSessionId,
+        @Param("excludeSessionId") Long excludeSessionId
+    );
 }

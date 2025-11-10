@@ -108,4 +108,36 @@ public class StudentRequestController {
 
         return ResponseEntity.ok(ResponseObject.success("Retrieved available sessions successfully", sessions));
     }
+
+    // ==================== MAKEUP REQUEST ENDPOINTS ====================
+
+    @GetMapping("/missed-sessions")
+    @Operation(summary = "Get missed sessions for makeup", description = "Retrieve all absent sessions that can be made up (within 4 weeks)")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ResponseObject<MissedSessionsResponseDTO>> getMissedSessions(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Parameter(description = "Number of weeks to look back (default: 4)")
+            @RequestParam(required = false, defaultValue = "4") Integer weeksBack,
+            @Parameter(description = "Exclude sessions with existing makeup requests")
+            @RequestParam(required = false, defaultValue = "false") Boolean excludeRequested) {
+
+        Long userId = currentUser.getId();
+        MissedSessionsResponseDTO result = studentRequestService.getMissedSessions(userId, weeksBack, excludeRequested);
+
+        return ResponseEntity.ok(ResponseObject.success("Retrieved missed sessions successfully", result));
+    }
+
+    @GetMapping("/makeup-options")
+    @Operation(summary = "Get makeup session options", description = "Get available makeup sessions for a specific missed session with smart ranking")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ResponseObject<MakeupOptionsResponseDTO>> getMakeupOptions(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Parameter(description = "Target session ID (the session student missed)", required = true)
+            @RequestParam Long targetSessionId) {
+
+        Long userId = currentUser.getId();
+        MakeupOptionsResponseDTO result = studentRequestService.getMakeupOptions(targetSessionId, userId);
+
+        return ResponseEntity.ok(ResponseObject.success("Retrieved makeup options successfully", result));
+    }
 }

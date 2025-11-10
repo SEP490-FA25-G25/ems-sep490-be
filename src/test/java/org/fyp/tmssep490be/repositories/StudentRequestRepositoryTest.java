@@ -1,5 +1,6 @@
 package org.fyp.tmssep490be.repositories;
 
+import org.fyp.tmssep490be.config.AbstractRepositoryTest;
 import org.fyp.tmssep490be.entities.*;
 import org.fyp.tmssep490be.entities.enums.*;
 import org.fyp.tmssep490be.utils.TestDataBuilder;
@@ -12,7 +13,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -25,9 +25,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests database queries and entity relationships using TestEntityManager.
  */
 @DataJpaTest
-@ActiveProfiles("test")
 @DisplayName("Student Request Repository Tests")
-class StudentRequestRepositoryTest {
+class StudentRequestRepositoryTest extends AbstractRepositoryTest {
 
     @Autowired
     private TestEntityManager entityManager;

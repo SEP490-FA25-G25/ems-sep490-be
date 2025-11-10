@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
 import org.fyp.tmssep490be.dtos.teacherrequest.*;
+import org.fyp.tmssep490be.dtos.teacherrequest.SwapCandidateDTO;
 import org.fyp.tmssep490be.security.UserPrincipal;
 import org.fyp.tmssep490be.services.TeacherRequestService;
 import org.springframework.http.ResponseEntity;
@@ -121,6 +122,39 @@ public class TeacherRequestController {
     }
 
     /**
+     * Get teacher's future sessions for request creation
+     * GET /api/v1/teacher-requests/my-sessions?date=2025-11-10 (optional)
+     * NOTE: Must be placed BEFORE /{id} endpoint to avoid path matching conflict
+     */
+    @GetMapping("/my-sessions")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(
+            summary = "Get my future sessions",
+            description = "Get list of teacher's future sessions. " +
+                    "If date parameter is provided, returns sessions for that specific date. " +
+                    "Otherwise, returns sessions for the next 7 days."
+    )
+    public ResponseEntity<ResponseObject<List<org.fyp.tmssep490be.dtos.teacherrequest.TeacherSessionDTO>>> getMyFutureSessions(
+            @RequestParam(value = "date", required = false) java.time.LocalDate date,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("Get future sessions for user {}, filter date: {}", currentUser.getId(), date);
+
+        List<org.fyp.tmssep490be.dtos.teacherrequest.TeacherSessionDTO> sessions = 
+                teacherRequestService.getMyFutureSessions(currentUser.getId(), date);
+
+        String message = date != null 
+                ? String.format("Sessions for %s loaded successfully", date)
+                : "Sessions for next 7 days loaded successfully";
+
+        return ResponseEntity.ok(ResponseObject.<List<org.fyp.tmssep490be.dtos.teacherrequest.TeacherSessionDTO>>builder()
+                .success(true)
+                .message(message)
+                .data(sessions)
+                .build());
+    }
+
+    /**
      * Get teacher request by ID
      * GET /api/v1/teacher-requests/{id}
      */
@@ -194,6 +228,76 @@ public class TeacherRequestController {
         return ResponseEntity.ok(ResponseObject.<TeacherRequestResponseDTO>builder()
                 .success(true)
                 .message("Request rejected")
+                .data(response)
+                .build());
+    }
+
+    /**
+     * Suggest swap candidates (SWAP) for a session
+     */
+    @GetMapping("/{sessionId}/swap/candidates")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(summary = "Suggest swap candidates", description = "List teachers who can replace a session")
+    public ResponseEntity<ResponseObject<List<SwapCandidateDTO>>> suggestSwapCandidates(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        List<SwapCandidateDTO> items = teacherRequestService.suggestSwapCandidates(sessionId, currentUser.getId());
+        return ResponseEntity.ok(ResponseObject.<List<SwapCandidateDTO>>builder()
+                .success(true)
+                .message(items.isEmpty() ? "No suitable teachers found" : "OK")
+                .data(items)
+                .build());
+    }
+
+    /**
+     * Confirm swap request (Replacement Teacher)
+     * PATCH /api/v1/teacher-requests/{id}/confirm
+     */
+    @PatchMapping("/{id}/confirm")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(
+            summary = "Confirm swap request",
+            description = "Replacement teacher confirms they will teach the session"
+    )
+    public ResponseEntity<ResponseObject<TeacherRequestResponseDTO>> confirmSwap(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("Confirm swap request {} by user {}", id, currentUser.getId());
+
+        TeacherRequestResponseDTO response = teacherRequestService.confirmSwap(id, currentUser.getId());
+
+        return ResponseEntity.ok(ResponseObject.<TeacherRequestResponseDTO>builder()
+                .success(true)
+                .message("Swap request confirmed successfully")
+                .data(response)
+                .build());
+    }
+
+    /**
+     * Decline swap request (Replacement Teacher)
+     * PATCH /api/v1/teacher-requests/{id}/decline
+     */
+    @PatchMapping("/{id}/decline")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(
+            summary = "Decline swap request",
+            description = "Replacement teacher declines the swap request"
+    )
+    public ResponseEntity<ResponseObject<TeacherRequestResponseDTO>> declineSwap(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("Decline swap request {} by user {}", id, currentUser.getId());
+
+        String reason = body != null ? body.get("reason") : null;
+        TeacherRequestResponseDTO response = teacherRequestService.declineSwap(id, reason, currentUser.getId());
+
+        return ResponseEntity.ok(ResponseObject.<TeacherRequestResponseDTO>builder()
+                .success(true)
+                .message("Swap request declined")
                 .data(response)
                 .build());
     }
