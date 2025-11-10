@@ -9,10 +9,9 @@ import org.fyp.tmssep490be.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.ActiveProfiles;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
@@ -22,19 +21,17 @@ import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for StudentContextHelper utility class.
- * Uses modern Spring Boot 3.5.7 @SpringBootTest with @MockitoBean pattern.
+ * Uses pure unit testing with Mockito to avoid Spring context loading issues.
  * Tests helper methods for extracting student information from authenticated UserPrincipal.
  */
-@SpringBootTest
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 @DisplayName("StudentContextHelper Unit Tests")
 class StudentContextHelperTest {
 
-    @Autowired
-    private StudentContextHelper studentContextHelper;
-
-    @MockitoBean
+    @Mock
     private StudentRepository studentRepository;
+
+    private StudentContextHelper studentContextHelper;
 
     private Student testStudent;
     private UserAccount testUserAccount;
@@ -42,6 +39,9 @@ class StudentContextHelperTest {
 
     @BeforeEach
     void setUp() {
+        // Initialize StudentContextHelper with mock repository
+        studentContextHelper = new StudentContextHelper(studentRepository);
+
         // Create test data
         testUserAccount = UserAccount.builder()
                 .id(1L)

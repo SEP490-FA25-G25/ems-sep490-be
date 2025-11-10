@@ -60,24 +60,22 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
 
         // 5. Validate request type specific requirements
         if (createDTO.getRequestType() == TeacherRequestType.MODALITY_CHANGE) {
-            // newResourceId là bắt buộc - teacher phải chọn resource
-            if (createDTO.getNewResourceId() == null) {
-                throw new CustomException(ErrorCode.INVALID_INPUT);
+            // newResourceId là optional - teacher có thể không chọn, staff sẽ chọn khi approve
+            if (createDTO.getNewResourceId() != null) {
+                // Get new resource
+                Resource newResource = resourceRepository.findById(createDTO.getNewResourceId())
+                        .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+
+                // Validate resource availability at the session's date + time slot (exclude current session)
+                validateResourceAvailability(newResource.getId(), session.getDate(),
+                        session.getTimeSlotTemplate().getId(), session.getId());
+
+                // Validate resource type phù hợp với class modality
+                validateResourceTypeForModality(newResource, session.getClassEntity());
+
+                // Validate resource capacity >= số học viên trong session
+                validateResourceCapacity(newResource, session.getId());
             }
-
-            // Get new resource
-            Resource newResource = resourceRepository.findById(createDTO.getNewResourceId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
-
-            // Validate resource availability at the session's date + time slot (exclude current session)
-            validateResourceAvailability(newResource.getId(), session.getDate(), 
-                    session.getTimeSlotTemplate().getId(), session.getId());
-
-            // Validate resource type phù hợp với class modality
-            validateResourceTypeForModality(newResource, session.getClassEntity());
-
-            // Validate resource capacity >= số học viên trong session
-            validateResourceCapacity(newResource, session.getId());
         } else if (createDTO.getRequestType() == TeacherRequestType.RESCHEDULE) {
             // Validate required fields for RESCHEDULE
             if (createDTO.getNewDate() == null || createDTO.getNewTimeSlotId() == null || createDTO.getNewResourceId() == null) {
@@ -337,26 +335,24 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         
         Resource newResource;
 
-        // Teacher bắt buộc phải chọn resource khi tạo request
+        // Teacher có thể chọn hoặc không chọn resource khi tạo request
         // Staff có thể override resource từ teacher nếu cần
         // Priority: approveDTO.newResourceId (staff override) > request.newResource (teacher chọn)
-        if (request.getNewResource() == null) {
-            // Teacher bắt buộc phải chọn resource khi tạo request
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
-
         if (approveDTO.getNewResourceId() != null) {
             // Staff override resource từ teacher (có thể vì resource của teacher bị conflict)
             newResource = resourceRepository.findById(approveDTO.getNewResourceId())
                     .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
-        } else {
+        } else if (request.getNewResource() != null) {
             // Dùng resource mà teacher đã chọn
             newResource = request.getNewResource();
+        } else {
+            // Staff không chọn resource và teacher cũng không chọn -> không thể approve
+            throw new CustomException(ErrorCode.INVALID_INPUT);
         }
 
         // Validate resource availability at session date + time
         // Exclude current session when checking (we're replacing its resource)
-        validateResourceAvailability(newResource.getId(), session.getDate(), 
+        validateResourceAvailability(newResource.getId(), session.getDate(),
                 session.getTimeSlotTemplate().getId(), session.getId());
 
         // Validate resource type phù hợp với class modality
@@ -607,7 +603,7 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
 
         // Nếu resource có capacity (not null), phải >= số học viên trong session
         if (resource.getCapacity() != null && resource.getCapacity() < studentCount) {
-            throw new CustomException(ErrorCode.INVALID_REQUEST);
+            throw new CustomException(ErrorCode.RESOURCE_CAPACITY_INSUFFICIENT);
         }
         // Nếu capacity = null (unlimited) hoặc >= studentCount thì OK
     }

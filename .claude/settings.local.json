@@ -35,7 +35,8 @@
       "Bash(AA_TOKEN=\"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJzdGFmZi5odW9uZy5obkB0bXMtZWR1LnZuIiwidXNlcklkIjo2LCJlbWFpbCI6InN0YWZmLmh1b25nLmhuQHRtcy1lZHUudm4iLCJyb2xlcyI6IlJPTEVfQUNBREVNSUNfQUZGQUlSIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc2Mjc0Mjc1NiwiZXhwIjoxNzYyNzQzNjU2fQ.k_6WP9PhvWPHsDU_ippTvqC4lWwfB9IQPx2wKsmnzyBD9hnghFnidwdJJwHRROD7m2tJmoVaD7zsyNnaFsRNWw\")",
       "Bash(./mvnw.cmd test:*)",
       "Bash(\"C:\\Users\\tmtmt\\.jdks\\openjdk-21.0.1\\bin\\java.exe\":*)",
-      "Bash(java:*)"
+      "Bash(java:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []
