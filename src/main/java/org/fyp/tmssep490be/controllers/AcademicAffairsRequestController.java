@@ -245,4 +245,49 @@ public class AcademicAffairsRequestController {
             }
         }
     }
+
+    // ==================== MAKEUP REQUEST ON-BEHALF ENDPOINTS ====================
+
+    @GetMapping("/students/{studentId}/missed-sessions")
+    @Operation(summary = "Get missed sessions for student (AA)", description = "Get all missed sessions for a specific student (for AA to create makeup requests on behalf)")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    public ResponseEntity<ResponseObject<MissedSessionsResponseDTO>> getMissedSessionsForStudent(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Parameter(description = "Student ID", required = true)
+            @PathVariable Long studentId,
+            @Parameter(description = "Number of weeks to look back (default: 4)")
+            @RequestParam(required = false, defaultValue = "4") Integer weeksBack) {
+
+        MissedSessionsResponseDTO result = studentRequestService.getMissedSessionsForStudent(studentId, weeksBack);
+
+        return ResponseEntity.ok(ResponseObject.success("Retrieved missed sessions successfully", result));
+    }
+
+    @GetMapping("/makeup-options")
+    @Operation(summary = "Get makeup options for student (AA)", description = "Get available makeup sessions for a specific missed session (for AA to create makeup requests on behalf)")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    public ResponseEntity<ResponseObject<MakeupOptionsResponseDTO>> getMakeupOptionsForStudent(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Parameter(description = "Target session ID", required = true)
+            @RequestParam Long targetSessionId,
+            @Parameter(description = "Student ID", required = true)
+            @RequestParam Long studentId) {
+
+        MakeupOptionsResponseDTO result = studentRequestService.getMakeupOptionsForStudent(targetSessionId, studentId);
+
+        return ResponseEntity.ok(ResponseObject.success("Retrieved makeup options successfully", result));
+    }
+
+    @PostMapping("/on-behalf")
+    @Operation(summary = "Submit request on behalf of student", description = "Academic Affairs submits a makeup request on behalf of a student (auto-approved)")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    public ResponseEntity<ResponseObject<StudentRequestResponseDTO>> submitRequestOnBehalf(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Valid @RequestBody MakeupRequestDTO makeupRequest) {
+
+        Long decidedById = currentUser.getId();
+        StudentRequestResponseDTO response = studentRequestService.submitMakeupRequestOnBehalf(decidedById, makeupRequest);
+
+        return ResponseEntity.ok(ResponseObject.success("Makeup request created and auto-approved", response));
+    }
 }

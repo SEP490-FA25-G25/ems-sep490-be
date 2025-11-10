@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
 import org.fyp.tmssep490be.dtos.studentrequest.AbsenceRequestDTO;
+import org.fyp.tmssep490be.dtos.studentrequest.MakeupRequestDTO;
 import org.fyp.tmssep490be.dtos.studentrequest.StudentRequestResponseDTO;
 import org.fyp.tmssep490be.entities.enums.StudentRequestType;
 import org.fyp.tmssep490be.security.UserPrincipal;
@@ -51,8 +52,16 @@ public class StudentRequestSubmissionController {
                 break;
 
             case "MAKEUP":
-                // TODO: Implement makeup request submission
-                throw new UnsupportedOperationException("Makeup requests not yet implemented");
+                MakeupRequestDTO makeupRequest = MakeupRequestDTO.builder()
+                        .currentClassId(requestDTO.getCurrentClassId())
+                        .targetSessionId(requestDTO.getTargetSessionId())
+                        .makeupSessionId(requestDTO.getMakeupSessionId())
+                        .requestReason(requestDTO.getRequestReason())
+                        .note(requestDTO.getNote())
+                        .build();
+
+                response = studentRequestService.submitMakeupRequest(studentId, makeupRequest);
+                break;
 
             case "TRANSFER":
                 // TODO: Implement transfer request submission
@@ -70,6 +79,7 @@ public class StudentRequestSubmissionController {
         private String requestType; // ABSENCE, MAKEUP, TRANSFER
         private Long currentClassId;
         private Long targetSessionId;
+        private Long makeupSessionId; // For MAKEUP requests
         private String requestReason;
         private String note;
 
@@ -80,6 +90,8 @@ public class StudentRequestSubmissionController {
         public void setCurrentClassId(Long currentClassId) { this.currentClassId = currentClassId; }
         public Long getTargetSessionId() { return targetSessionId; }
         public void setTargetSessionId(Long targetSessionId) { this.targetSessionId = targetSessionId; }
+        public Long getMakeupSessionId() { return makeupSessionId; }
+        public void setMakeupSessionId(Long makeupSessionId) { this.makeupSessionId = makeupSessionId; }
         public String getRequestReason() { return requestReason; }
         public void setRequestReason(String requestReason) { this.requestReason = requestReason; }
         public String getNote() { return note; }
