@@ -1,5 +1,6 @@
 package org.fyp.tmssep490be.services.impl;
 
+import org.fyp.tmssep490be.dtos.teacherrequest.ModalityResourceSuggestionDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestApproveDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestCreateDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestResponseDTO;
@@ -61,11 +62,20 @@ class TeacherRequestServiceImplModalityTest {
         return s;
     }
 
+    private Branch mockBranch(Long id) {
+        Branch branch = new Branch();
+        branch.setId(id);
+        branch.setCode("BR-" + id);
+        branch.setName("Branch " + id);
+        return branch;
+    }
+
     private ClassEntity mockClass(Modality modality) {
         ClassEntity ce = new ClassEntity();
         ce.setId(111L);
         ce.setCode("C-001");
         ce.setModality(modality);
+        ce.setBranch(mockBranch(1L));
         return ce;
     }
 
@@ -83,6 +93,55 @@ class TeacherRequestServiceImplModalityTest {
         r.setResourceType(type);
         r.setCapacity(50); // Set capacity for testing
         return r;
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("suggestModalityResources - returns compatible resources including current one")
+    void suggestModalityResources_success() {
+        Long userId = 10L;
+        Long teacherId = 20L;
+        Long sessionId = 30L;
+
+        Teacher teacher = mockTeacher(teacherId, userId);
+        ClassEntity classEntity = mockClass(Modality.ONLINE); // needs ROOM resource
+        TimeSlotTemplate timeSlot = mockTimeSlot(5L);
+        Session session = mockSession(sessionId, classEntity, timeSlot, LocalDate.now().plusDays(2));
+
+        Branch branch = classEntity.getBranch();
+
+        Resource currentResource = mockResource(41L, ResourceType.ROOM);
+        currentResource.setBranch(branch);
+        Resource availableResource = mockResource(42L, ResourceType.ROOM);
+        availableResource.setBranch(branch);
+        Resource wrongTypeResource = mockResource(43L, ResourceType.VIRTUAL);
+        wrongTypeResource.setBranch(branch);
+        Resource otherBranchResource = mockResource(44L, ResourceType.ROOM);
+        otherBranchResource.setBranch(mockBranch(2L));
+
+        SessionResource currentSessionResource = SessionResource.builder()
+                .id(new SessionResource.SessionResourceId(sessionId, currentResource.getId()))
+                .session(session)
+                .resource(currentResource)
+                .build();
+
+        when(teacherRepository.findByUserAccountId(userId)).thenReturn(Optional.of(teacher));
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(teachingSlotRepository.existsByIdSessionIdAndIdTeacherIdAndStatusIn(eq(sessionId), eq(teacherId), anyList()))
+                .thenReturn(true);
+        when(sessionResourceRepository.findBySessionId(sessionId)).thenReturn(java.util.List.of(currentSessionResource));
+        when(resourceRepository.findAll()).thenReturn(java.util.List.of(currentResource, availableResource, wrongTypeResource, otherBranchResource));
+        when(sessionResourceRepository.existsByResourceIdAndDateAndTimeSlotAndStatusIn(anyLong(), any(), anyLong(), anyList(), eq(sessionId)))
+                .thenReturn(false);
+        when(studentSessionRepository.countBySessionId(sessionId)).thenReturn(10L);
+
+        java.util.List<ModalityResourceSuggestionDTO> suggestions = service.suggestModalityResources(sessionId, userId);
+
+        assertThat(suggestions)
+                .extracting(ModalityResourceSuggestionDTO::getResourceId)
+                .containsExactly(currentResource.getId(), availableResource.getId());
+        assertThat(suggestions.get(0).isCurrentResource()).isTrue();
+        assertThat(suggestions.get(1).isCurrentResource()).isFalse();
+        assertThat(suggestions).allMatch(dto -> dto.getBranchId().equals(branch.getId()));
     }
 
     @Test

@@ -2,14 +2,15 @@ package org.fyp.tmssep490be.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.fyp.tmssep490be.dtos.teacherrequest.ModalityResourceSuggestionDTO;
+import org.fyp.tmssep490be.dtos.teacherrequest.RescheduleResourceSuggestionDTO;
+import org.fyp.tmssep490be.dtos.teacherrequest.RescheduleSlotSuggestionDTO;
+import org.fyp.tmssep490be.dtos.teacherrequest.SwapCandidateDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestApproveDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestCreateDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestListDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.TeacherRequestResponseDTO;
-import org.fyp.tmssep490be.dtos.teacherrequest.RescheduleSlotSuggestionDTO;
-import org.fyp.tmssep490be.dtos.teacherrequest.RescheduleResourceSuggestionDTO;
 import org.fyp.tmssep490be.dtos.teacherrequest.TeacherSessionDTO;
-import org.fyp.tmssep490be.dtos.teacherrequest.SwapCandidateDTO;
 import org.fyp.tmssep490be.entities.*;
 import org.fyp.tmssep490be.entities.enums.*;
 import org.fyp.tmssep490be.exceptions.CustomException;
@@ -22,7 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -416,6 +421,80 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                         .capacity(r.getCapacity())
                         .branchId(r.getBranch().getId())
                         .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ModalityResourceSuggestionDTO> suggestModalityResources(Long sessionId, Long userId) {
+        log.info("Suggesting modality resources for session {} by user {}", sessionId, userId);
+
+        Teacher teacher = teacherRepository.findByUserAccountId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+        validateTeacherOwnsSession(sessionId, teacher.getId());
+        validateTimeWindow(session.getDate());
+
+        ClassEntity classEntity = session.getClassEntity();
+        if (classEntity == null) {
+            throw new CustomException(ErrorCode.CLASS_NOT_FOUND);
+        }
+
+        Branch branch = classEntity.getBranch();
+        if (branch == null) {
+            throw new CustomException(ErrorCode.BRANCH_NOT_FOUND);
+        }
+
+        TimeSlotTemplate timeSlotTemplate = session.getTimeSlotTemplate();
+        if (timeSlotTemplate == null) {
+            throw new CustomException(ErrorCode.TIMESLOT_NOT_FOUND);
+        }
+
+        Set<Long> currentResourceIds = sessionResourceRepository.findBySessionId(sessionId).stream()
+                .map(SessionResource::getResource)
+                .filter(Objects::nonNull)
+                .map(Resource::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        return resourceRepository.findAll().stream()
+                .filter(resource -> resource.getBranch() != null && branch.getId().equals(resource.getBranch().getId()))
+                .filter(resource -> {
+                    try {
+                        validateResourceTypeForModality(resource, classEntity);
+                        return true;
+                    } catch (CustomException ex) {
+                        return false;
+                    }
+                })
+                .filter(resource -> {
+                    try {
+                        validateResourceAvailability(resource.getId(), session.getDate(), timeSlotTemplate.getId(), session.getId());
+                        return true;
+                    } catch (CustomException ex) {
+                        return false;
+                    }
+                })
+                .filter(resource -> {
+                    try {
+                        validateResourceCapacity(resource, sessionId);
+                        return true;
+                    } catch (CustomException ex) {
+                        return false;
+                    }
+                })
+                .map(resource -> ModalityResourceSuggestionDTO.builder()
+                        .resourceId(resource.getId())
+                        .name(resource.getName())
+                        .resourceType(resource.getResourceType() != null ? resource.getResourceType().name() : null)
+                        .capacity(resource.getCapacity())
+                        .branchId(branch.getId())
+                        .currentResource(currentResourceIds.contains(resource.getId()))
+                        .build())
+                .sorted(Comparator.comparing(ModalityResourceSuggestionDTO::isCurrentResource).reversed()
+                        .thenComparing(dto -> dto.getName() != null ? dto.getName().toLowerCase() : ""))
                 .collect(Collectors.toList());
     }
 

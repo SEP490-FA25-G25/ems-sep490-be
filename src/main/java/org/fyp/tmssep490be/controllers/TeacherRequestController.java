@@ -141,6 +141,27 @@ public class TeacherRequestController {
     }
 
     /**
+     * Suggest resources for modality change (optional step when teacher selects session)
+     */
+    @GetMapping("/{sessionId}/modality/resources")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(
+            summary = "Suggest resources for modality change",
+            description = "List compatible resources for the session's existing schedule (date + time slot)."
+    )
+    public ResponseEntity<ResponseObject<List<ModalityResourceSuggestionDTO>>> suggestModalityResources(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        List<ModalityResourceSuggestionDTO> suggestions = teacherRequestService.suggestModalityResources(sessionId, currentUser.getId());
+        return ResponseEntity.ok(ResponseObject.<List<ModalityResourceSuggestionDTO>>builder()
+                .success(true)
+                .message(suggestions.isEmpty() ? "No compatible resources available" : "Modality resources loaded successfully")
+                .data(suggestions)
+                .build());
+    }
+
+    /**
      * Suggest swap candidate teachers (SWAP) for a session
      */
     @GetMapping("/{sessionId}/swap/candidates")

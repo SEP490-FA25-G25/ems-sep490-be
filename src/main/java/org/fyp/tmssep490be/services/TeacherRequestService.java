@@ -80,6 +80,11 @@ public interface TeacherRequestService {
     List<RescheduleResourceSuggestionDTO> suggestResources(Long sessionId, java.time.LocalDate date, Long timeSlotId, Long userId);
 
     /**
+     * Suggest compatible resources for modality change on the current session schedule
+     */
+    List<ModalityResourceSuggestionDTO> suggestModalityResources(Long sessionId, Long userId);
+
+    /**
      * Get teacher's future sessions (7 days from today or specific date)
      * @param userId Current authenticated user ID
      * @param date Optional date filter (if null, returns next 7 days)
