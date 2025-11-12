@@ -86,4 +86,7 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
         @Param("courseSessionId") Long courseSessionId,
         @Param("excludeSessionId") Long excludeSessionId
     );
+
+    @Query("SELECT s FROM Session s WHERE s.classEntity.id = :classId ORDER BY s.date ASC, s.timeSlotTemplate.startTime ASC")
+    List<Session> findAllByClassIdOrderByDateAndTime(@Param("classId") Long classId);
 }

@@ -26,6 +26,9 @@ public class TeacherRequestListDTO {
     private LocalDate sessionDate;
     private String className;
     private String classCode;
+    private Long teacherId;
+    private String teacherName;
+    private String teacherEmail;
     private String requestReason; // Lý do tạo request (có thể truncated ở frontend nếu cần)
     private OffsetDateTime submittedAt;
     private OffsetDateTime decidedAt;

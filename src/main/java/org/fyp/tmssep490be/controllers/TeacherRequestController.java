@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
 import org.fyp.tmssep490be.dtos.teacherrequest.*;
+import org.fyp.tmssep490be.entities.enums.RequestStatus;
 import org.fyp.tmssep490be.security.UserPrincipal;
 import org.fyp.tmssep490be.services.TeacherRequestService;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,7 @@ import java.util.List;
 public class TeacherRequestController {
 
     private final TeacherRequestService teacherRequestService;
+    private static final String ROLE_ACADEMIC_AFFAIR = "ROLE_ACADEMIC_AFFAIR";
 
     /**
      * Create a new teacher request
@@ -54,6 +56,48 @@ public class TeacherRequestController {
                 .success(true)
                 .message("Request created successfully")
                 .data(response)
+                .build());
+    }
+
+    /**
+     * Get pending teacher requests for Academic Affairs staff
+     * GET /api/v1/teacher-requests/staff/pending
+     */
+    @GetMapping("/staff/pending")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    @Operation(
+            summary = "Staff - Get pending teacher requests",
+            description = "List pending teacher requests waiting for Academic Affairs review"
+    )
+    public ResponseEntity<ResponseObject<List<TeacherRequestListDTO>>> getPendingRequestsForStaff() {
+        List<TeacherRequestListDTO> requests = teacherRequestService.getPendingRequestsForStaff();
+
+        return ResponseEntity.ok(ResponseObject.<List<TeacherRequestListDTO>>builder()
+                .success(true)
+                .message("Pending teacher requests loaded successfully")
+                .data(requests)
+                .build());
+    }
+
+    /**
+     * Get teacher requests for Academic Affairs staff with optional status filter
+     * GET /api/v1/teacher-requests/staff
+     */
+    @GetMapping("/staff")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    @Operation(
+            summary = "Staff - Get teacher requests",
+            description = "List teacher requests with optional status filter (PENDING/APPROVED/REJECTED)"
+    )
+    public ResponseEntity<ResponseObject<List<TeacherRequestListDTO>>> getRequestsForStaff(
+            @RequestParam(value = "status", required = false) RequestStatus status
+    ) {
+        List<TeacherRequestListDTO> requests = teacherRequestService.getRequestsForStaff(status);
+
+        return ResponseEntity.ok(ResponseObject.<List<TeacherRequestListDTO>>builder()
+                .success(true)
+                .message("Teacher requests loaded successfully")
+                .data(requests)
                 .build());
     }
 
@@ -97,6 +141,52 @@ public class TeacherRequestController {
     }
 
     /**
+     * Suggest resources for modality change (optional step when teacher selects session)
+     */
+    @GetMapping("/{sessionId}/modality/resources")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(
+            summary = "Suggest resources for modality change",
+            description = "List compatible resources for the session's existing schedule (date + time slot)."
+    )
+    public ResponseEntity<ResponseObject<List<ModalityResourceSuggestionDTO>>> suggestModalityResources(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        List<ModalityResourceSuggestionDTO> suggestions = teacherRequestService.suggestModalityResources(sessionId, currentUser.getId());
+        return ResponseEntity.ok(ResponseObject.<List<ModalityResourceSuggestionDTO>>builder()
+                .success(true)
+                .message(suggestions.isEmpty() ? "No compatible resources available" : "Modality resources loaded successfully")
+                .data(suggestions)
+                .build());
+    }
+
+    /**
+     * Suggest swap candidate teachers (SWAP) for a session
+     */
+    @GetMapping("/{sessionId}/swap/candidates")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(
+            summary = "Suggest swap candidates",
+            description = "List teachers who can replace the current teacher for the session. " +
+                    "Sorted by skill priority, availability priority, and name."
+    )
+    public ResponseEntity<ResponseObject<List<SwapCandidateDTO>>> suggestSwapCandidates(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("Suggest swap candidates for session {} by user {}", sessionId, currentUser.getId());
+
+        List<SwapCandidateDTO> candidates = teacherRequestService.suggestSwapCandidates(sessionId, currentUser.getId());
+
+        return ResponseEntity.ok(ResponseObject.<List<SwapCandidateDTO>>builder()
+                .success(true)
+                .message(candidates.isEmpty() ? "No suitable replacement teachers found" : "Swap candidates loaded successfully")
+                .data(candidates)
+                .build());
+    }
+
+    /**
      * Get all requests for current teacher
      * GET /api/v1/teacher-requests/me
      */
@@ -121,27 +211,28 @@ public class TeacherRequestController {
     }
 
     /**
-     * Get teacher request by ID
-     * GET /api/v1/teacher-requests/{id}
+     * Get my future sessions (7 days) or filter by specific date
+     * GET /api/v1/teacher-requests/my-sessions
      */
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('TEACHER') or hasRole('ACADEMIC_AFFAIR')")
+    @GetMapping("/my-sessions")
+    @PreAuthorize("hasRole('TEACHER')")
     @Operation(
-            summary = "Get request by ID",
-            description = "Get request details (Teacher sees own requests, Staff sees all)"
+            summary = "Get my future sessions",
+            description = "Get teacher's future sessions within 7 days (or filter by specific date). " +
+                    "Returns sessions with status PLANNED that teacher is assigned to teach."
     )
-    public ResponseEntity<ResponseObject<TeacherRequestResponseDTO>> getRequestById(
-            @PathVariable Long id,
+    public ResponseEntity<ResponseObject<List<TeacherSessionDTO>>> getMySessions(
+            @RequestParam(value = "date", required = false) java.time.LocalDate date,
             @AuthenticationPrincipal UserPrincipal currentUser
     ) {
-        log.info("Get request {} for user {}", id, currentUser.getId());
+        log.info("Get my sessions for user {} with date filter {}", currentUser.getId(), date);
 
-        TeacherRequestResponseDTO response = teacherRequestService.getRequestById(id, currentUser.getId());
+        List<TeacherSessionDTO> sessions = teacherRequestService.getMySessions(currentUser.getId(), date);
 
-        return ResponseEntity.ok(ResponseObject.<TeacherRequestResponseDTO>builder()
+        return ResponseEntity.ok(ResponseObject.<List<TeacherSessionDTO>>builder()
                 .success(true)
-                .message("Request loaded successfully")
-                .data(response)
+                .message("Sessions loaded successfully")
+                .data(sessions)
                 .build());
     }
 
@@ -157,10 +248,15 @@ public class TeacherRequestController {
     )
     public ResponseEntity<ResponseObject<TeacherRequestResponseDTO>> approveRequest(
             @PathVariable Long id,
-            @RequestBody @Valid TeacherRequestApproveDTO approveDTO,
+            @RequestBody(required = false) TeacherRequestApproveDTO approveDTO,
             @AuthenticationPrincipal UserPrincipal currentUser
     ) {
         log.info("Approve request {} by user {}", id, currentUser.getId());
+
+        // Handle null body - create empty DTO
+        if (approveDTO == null) {
+            approveDTO = TeacherRequestApproveDTO.builder().build();
+        }
 
         TeacherRequestResponseDTO response = teacherRequestService.approveRequest(id, approveDTO, currentUser.getId());
 
@@ -196,6 +292,99 @@ public class TeacherRequestController {
                 .message("Request rejected")
                 .data(response)
                 .build());
+    }
+
+    /**
+     * Confirm swap request (Replacement Teacher only)
+     * PATCH /api/v1/teacher-requests/{id}/confirm
+     */
+    @PatchMapping("/{id}/confirm")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(
+            summary = "Confirm swap request",
+            description = "Replacement teacher confirms to take over the session. " +
+                    "Updates teaching slots: original teacher → ON_LEAVE, replacement teacher → SUBSTITUTED. " +
+                    "Request status → APPROVED."
+    )
+    public ResponseEntity<ResponseObject<TeacherRequestResponseDTO>> confirmSwap(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("Confirm swap request {} by replacement teacher {}", id, currentUser.getId());
+
+        TeacherRequestResponseDTO response = teacherRequestService.confirmSwap(id, currentUser.getId());
+
+        return ResponseEntity.ok(ResponseObject.<TeacherRequestResponseDTO>builder()
+                .success(true)
+                .message("Swap request confirmed successfully")
+                .data(response)
+                .build());
+    }
+
+    /**
+     * Decline swap request (Replacement Teacher only)
+     * PATCH /api/v1/teacher-requests/{id}/decline
+     */
+    @PatchMapping("/{id}/decline")
+    @PreAuthorize("hasRole('TEACHER')")
+    @Operation(
+            summary = "Decline swap request",
+            description = "Replacement teacher declines to take over the session. " +
+                    "Request status → PENDING, replacementTeacherId → null. " +
+                    "Staff can approve again with a different replacement teacher."
+    )
+    public ResponseEntity<ResponseObject<TeacherRequestResponseDTO>> declineSwap(
+            @PathVariable Long id,
+            @RequestBody @Valid TeacherRequestRejectDTO declineDTO,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("Decline swap request {} by replacement teacher {}", id, currentUser.getId());
+
+        TeacherRequestResponseDTO response = teacherRequestService.declineSwap(
+                id, declineDTO.getReason(), currentUser.getId());
+
+        return ResponseEntity.ok(ResponseObject.<TeacherRequestResponseDTO>builder()
+                .success(true)
+                .message("Swap request declined")
+                .data(response)
+                .build());
+    }
+
+    /**
+     * Get teacher request by ID
+     * GET /api/v1/teacher-requests/{id}
+     * Note: Must be after specific routes like /approve, /reject, /confirm, /decline
+     */
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ACADEMIC_AFFAIR')")
+    @Operation(
+            summary = "Get request by ID",
+            description = "Get request details (Teacher sees own requests, Staff sees all)"
+    )
+    public ResponseEntity<ResponseObject<TeacherRequestResponseDTO>> getRequestById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("Get request {} for user {}", id, currentUser.getId());
+
+        boolean isAcademicStaff = isAcademicAffair(currentUser);
+        TeacherRequestResponseDTO response = isAcademicStaff
+                ? teacherRequestService.getRequestForStaff(id)
+                : teacherRequestService.getRequestById(id, currentUser.getId());
+
+        return ResponseEntity.ok(ResponseObject.<TeacherRequestResponseDTO>builder()
+                .success(true)
+                .message("Request loaded successfully")
+                .data(response)
+                .build());
+    }
+
+    private boolean isAcademicAffair(UserPrincipal currentUser) {
+        if (currentUser == null || currentUser.getAuthorities() == null) {
+            return false;
+        }
+        return currentUser.getAuthorities().stream()
+                .anyMatch(authority -> ROLE_ACADEMIC_AFFAIR.equals(authority.getAuthority()));
     }
 }
 
