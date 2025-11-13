@@ -1791,7 +1791,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
     }
 
     private boolean requiresAAApproval(ClassEntity currentClass, ClassEntity targetClass) {
-        // Tier 1: Same branch AND same learning mode = auto-approve (4-8 hours)
+        // Tier 1: Same branch AND same learning mode = auto-approve (student self-service)
         // Tier 2: Different branch OR different learning mode = requires AA approval
         
         // Add null safety checks - if branch info is missing, require AA approval
@@ -1801,8 +1801,31 @@ public class StudentRequestServiceImpl implements StudentRequestService {
             return true;
         }
         
-        return !currentClass.getBranch().getId().equals(targetClass.getBranch().getId()) ||
-               !currentClass.getModality().equals(targetClass.getModality());
+        // Check branch change
+        boolean sameBranch = currentClass.getBranch().getId().equals(targetClass.getBranch().getId());
+        
+        // Check modality compatibility (HYBRID = OFFLINE for transfer purposes)
+        boolean sameModality = isSameModalityForTransfer(currentClass.getModality(), targetClass.getModality());
+        
+        // Tier 1 (student self-service): same branch AND same modality
+        // Tier 2 (requires AA): different branch OR different modality
+        return !sameBranch || !sameModality;
+    }
+    
+    /**
+     * Check if two modalities are considered "same" for Tier 1 transfer purposes
+     * HYBRID = OFFLINE (both are location-based learning)
+     * ONLINE is distinct (remote learning)
+     */
+    private boolean isSameModalityForTransfer(Modality current, Modality target) {
+        // ONLINE is distinct - must match exactly
+        if (current == Modality.ONLINE || target == Modality.ONLINE) {
+            return current == target;
+        }
+        
+        // OFFLINE and HYBRID are treated as equivalent (both location-based)
+        return (current == Modality.OFFLINE || current == Modality.HYBRID) &&
+               (target == Modality.OFFLINE || target == Modality.HYBRID);
     }
 
     private int calculateUsedTransfers(Long studentId) {
@@ -1871,6 +1894,9 @@ public class StudentRequestServiceImpl implements StudentRequestService {
         String branchName = targetClass.getBranch() != null ? targetClass.getBranch().getName() : "Unknown Branch";
         String scheduleInfo = targetClass.getStartDate() + " to " + targetClass.getPlannedEndDate();
 
+        // Get upcoming sessions for effective date selection
+        List<TransferOptionDTO.UpcomingSessionInfo> upcomingSessions = getUpcomingSessionsForTransfer(targetClass.getId());
+
         return TransferOptionDTO.builder()
                 .classId(targetClass.getId())
                 .classCode(targetClass.getCode())
@@ -1889,6 +1915,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .contentGapAnalysis(contentGap)
                 .canTransfer(availableSlots > 0 && targetClass.getStatus() != null &&
                         List.of(ClassStatus.SCHEDULED, ClassStatus.ONGOING).contains(targetClass.getStatus()))
+                .upcomingSessions(upcomingSessions)
                 .build();
     }
 
@@ -2003,6 +2030,45 @@ public class StudentRequestServiceImpl implements StudentRequestService {
             case "MAJOR" -> String.format("Major gap: %d sessions behind. Consider alternative options.", gapCount);
             default -> "Content gap analysis unavailable.";
         };
+    }
+
+    /**
+     * Get upcoming sessions for transfer effective date selection
+     * Returns future PLANNED sessions (not CANCELLED or DONE)
+     *
+     * @param targetClassId Target class ID
+     * @return List of UpcomingSessionInfo for date picker
+     */
+    private List<TransferOptionDTO.UpcomingSessionInfo> getUpcomingSessionsForTransfer(Long targetClassId) {
+        // Get all future PLANNED sessions (date >= today)
+        List<Session> upcomingSessions = sessionRepository
+                .findByClassEntityIdAndDateGreaterThanEqualAndStatusOrderByDateAsc(
+                        targetClassId,
+                        LocalDate.now(),
+                        SessionStatus.PLANNED
+                );
+
+        // Map to UpcomingSessionInfo DTO
+        return upcomingSessions.stream()
+                .map(session -> {
+                    // Format time slot if available
+                    String timeSlot = "TBD";
+                    if (session.getTimeSlotTemplate() != null) {
+                        timeSlot = session.getTimeSlotTemplate().getStartTime() + " - " + 
+                                   session.getTimeSlotTemplate().getEndTime();
+                    }
+
+                    return TransferOptionDTO.UpcomingSessionInfo.builder()
+                            .sessionId(session.getId())
+                            .date(session.getDate())
+                            .courseSessionNumber(session.getCourseSession() != null ?
+                                    session.getCourseSession().getSequenceNo() : null)
+                            .courseSessionTitle(session.getCourseSession() != null ?
+                                    session.getCourseSession().getTopic() : "Session")
+                            .timeSlot(timeSlot)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     /**

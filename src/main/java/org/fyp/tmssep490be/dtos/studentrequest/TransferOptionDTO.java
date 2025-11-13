@@ -34,6 +34,7 @@ public class TransferOptionDTO {
     private ContentGapAnalysis contentGapAnalysis;
     private boolean canTransfer;
     private Changes changes;
+    private List<UpcomingSessionInfo> upcomingSessions; // Sessions available for effective date selection
 
     @Data
     @Builder
@@ -56,6 +57,22 @@ public class TransferOptionDTO {
         private Integer courseSessionNumber;
         private String courseSessionTitle;
         private LocalDate scheduledDate;
+    }
+
+    /**
+     * Upcoming session information for effective date selection
+     * Only includes future PLANNED sessions (not CANCELLED or DONE)
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UpcomingSessionInfo {
+        private Long sessionId;
+        private LocalDate date;
+        private Integer courseSessionNumber;
+        private String courseSessionTitle;
+        private String timeSlot; // e.g., "08:00 - 10:00"
     }
 
     /**

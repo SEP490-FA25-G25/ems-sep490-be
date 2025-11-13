@@ -109,7 +109,7 @@ public class ClassController {
             summary = "Get class details",
             description = "Retrieve comprehensive information about a specific class including enrollment summary and upcoming sessions"
     )
-    @PreAuthorize("hasRole('ROLE_ACADEMIC_AFFAIR')")
+    @PreAuthorize("hasRole('ROLE_ACADEMIC_AFFAIR') or hasRole('STUDENT')")
     public ResponseEntity<ResponseObject<ClassDetailDTO>> getClassDetail(
             @Parameter(description = "Class ID")
             @PathVariable Long classId,
