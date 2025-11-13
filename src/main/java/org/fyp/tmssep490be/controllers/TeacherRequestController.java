@@ -125,7 +125,7 @@ public class TeacherRequestController {
      * GET /api/v1/teacher-requests/{id}
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('TEACHER') or hasRole('ACADEMIC_AFFAIR')")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ROLE_ACADEMIC_AFFAIR')")
     @Operation(
             summary = "Get request by ID",
             description = "Get request details (Teacher sees own requests, Staff sees all)"
@@ -150,7 +150,7 @@ public class TeacherRequestController {
      * PATCH /api/v1/teacher-requests/{id}/approve
      */
     @PatchMapping("/{id}/approve")
-    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    @PreAuthorize("hasRole('ROLE_ACADEMIC_AFFAIR')")
     @Operation(
             summary = "Approve teacher request",
             description = "Approve a request. Staff can override Teacher's choices."
@@ -176,7 +176,7 @@ public class TeacherRequestController {
      * PATCH /api/v1/teacher-requests/{id}/reject
      */
     @PatchMapping("/{id}/reject")
-    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    @PreAuthorize("hasRole('ROLE_ACADEMIC_AFFAIR')")
     @Operation(
             summary = "Reject teacher request",
             description = "Reject a request with reason"

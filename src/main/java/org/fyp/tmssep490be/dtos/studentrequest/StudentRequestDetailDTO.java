@@ -26,9 +26,13 @@ public class StudentRequestDetailDTO {
 
     // Class information
     private ClassDetailDTO currentClass;
+    private ClassDetailDTO targetClass; // For TRANSFER requests only
 
     // Session information
-    private SessionDetailDTO targetSession;
+    private SessionDetailDTO targetSession; // For ABSENCE/MAKEUP requests
+
+    // Transfer-specific fields
+    private String effectiveDate; // For TRANSFER requests - date when transfer takes effect
 
     // Request details
     private String requestReason;
