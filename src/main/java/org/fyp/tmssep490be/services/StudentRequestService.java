@@ -22,6 +22,7 @@ public interface StudentRequestService {
     MakeupOptionsResponseDTO getMakeupOptions(Long targetSessionId, Long userId);
     TransferEligibilityDTO getTransferEligibility(Long userId);
     List<TransferOptionDTO> getTransferOptions(Long userId, Long currentClassId);
+    TransferOptionsResponseDTO getTransferOptionsFlexible(Long currentClassId, Long targetBranchId, String targetModality, Boolean scheduleOnly);
     List<StudentClassDTO> getMyClassesForStudent(Long studentId);
 
     // Academic Affairs operations

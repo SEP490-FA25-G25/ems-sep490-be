@@ -1,7 +1,7 @@
 # Transfer Request Implementation Guide
 
-**Version:** 2.0
-**Date:** 2025-11-10
+**Version:** 3.0
+**Date:** 2025-11-13
 **Request Type:** TRANSFER
 **Last Verified:** Against actual codebase implementation
 
@@ -11,9 +11,19 @@
 
 **Purpose:** Allow students to transfer between classes within the same course
 **Key Constraint:** **ONE transfer per student per course** (enforced via business logic)
+
 **Flow Support:**
 - **Tier 1 (Self-Service):** Student changes schedule only (same branch + same modality) → 4-8 hours approval
-- **Tier 2 (AA Direct):** AA creates transfer on-behalf for branch/modality changes → Immediate execution
+- **Tier 2 (AA Direct):** AA creates transfer on-behalf with flexible options:
+  - Schedule change (same branch + modality, different time slot)
+  - Branch change (different branch, same/different modality)
+  - Modality change (OFFLINE/HYBRID → ONLINE, or vice versa within same/different branch)
+  - **Note:** Course changes are handled via separate "Course Change Request" workflow
+
+**Modality Rules:**
+- **OFFLINE/HYBRID students**: Can transfer to ONLINE classes
+- **ONLINE students**: Can transfer to OFFLINE/HYBRID classes (must select branch first)
+- **HYBRID = OFFLINE**: Both treated as location-based learning (can access online materials)
 
 **Business Impact:** Student retention, satisfaction, operational flexibility
 
@@ -96,7 +106,13 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 | SessionStatus | `entities/enums/SessionStatus.java` | PLANNED, CANCELLED, DONE |
 | AttendanceStatus | `entities/enums/AttendanceStatus.java` | PLANNED, PRESENT, ABSENT |
 
-**Note:** ClassStatus uses `SCHEDULED` (not `PLANNED` as in older docs)
+**Notes:** 
+- ClassStatus uses `SCHEDULED` (not `PLANNED` as in older docs)
+- **Modality Transfer Rules**: 
+  - OFFLINE/HYBRID → ONLINE: Allowed (students can learn remotely)
+  - ONLINE → OFFLINE/HYBRID: Allowed (students can attend in-person)
+  - HYBRID = OFFLINE for transfer purposes (both are location-based)
+- **Online classes** belong to specific branches (for teacher assignment)
 
 ---
 
@@ -116,7 +132,7 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  Step 1: Check Eligibility                                      │
-│  ├─► API: GET /api/v1/students/me/transfer-eligibility         │
+│  ├─► API: GET /api/v1/students-request/transfer-eligibility    │
 │  ├─► Shows: Classes with transfer quota (used/limit)           │
 │  └─► Action: Click [Start Transfer] on eligible class          │
 │                                                                 │
@@ -126,7 +142,7 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 │  └─► If "Branch/Modality" → Show contact info (exit flow)      │
 │                                                                 │
 │  Step 3: Select Target Class (Tier 1 only)                     │
-│  ├─► API: GET /api/v1/student-requests/transfer-options        │
+│  ├─► API: GET /api/v1/students-request/transfer-options        │
 │  │         ?currentClassId=101                                  │
 │  ├─► Returns: Classes with same branch+modality                │
 │  ├─► Shows: Content gap analysis with severity badges          │
@@ -134,10 +150,9 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 │                                                                 │
 │  Step 4: Set Effective Date & Submit                           │
 │  ├─► UI: Date picker (must be class session date)              │
-│  ├─► UI: Reason textarea (min 20 chars)                        │
-│  └─► API: POST /api/v1/student-requests                        │
+│  ├─► UI: Reason textarea (min 10 chars)                        │
+│  └─► API: POST /api/v1/students-request/transfer-requests      │
 │       Body: {                                                   │
-│         "requestType": "TRANSFER",                              │
 │         "currentClassId": 101,                                  │
 │         "targetClassId": 103,                                   │
 │         "effectiveDate": "2025-11-15",                          │
@@ -156,9 +171,24 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 ### TIER 2: AA Direct Transfer (On-Behalf)
 
 **Conditions:**
-- Branch change OR modality change
+- Any combination of: Branch change, Modality change, Schedule change
 - Student contacts AA outside system (phone/email/in-person)
-- AA creates transfer directly
+- AA creates transfer directly with flexible options
+
+**Transfer Options Available to AA:**
+
+| Option | Description | Filters Applied |
+|--------|-------------|-----------------|
+| **A. Schedule Transfer** | Same branch, same modality, different time | `branch_id = current AND course_id = current AND modality = current AND time_slot_id != current` |
+| **B. Branch Transfer** | Different branch, any modality | `branch_id != current AND course_id = current AND modality = selected` |
+| **C. Modality Transfer** | Different modality, same/different branch | `course_id = current AND modality != current AND branch_id = selected` |
+| **D. Combined Transfer** | Any combination of A, B, C | Flexible filters based on AA selection |
+
+**Important Notes:**
+- All transfers must keep `course_id = current` (same course)
+- Course changes handled via separate "Course Change Request" workflow
+- AA must verify fee differences and ensure payment settled before approval
+- Online classes belong to specific branches (teacher assignment)
 
 #### Journey Flow
 
@@ -169,30 +199,120 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 │                                                                 │
 │  Prerequisite: Student contacted AA via phone/email/office      │
 │                                                                 │
-│  Step 1: AA Dashboard → Find Student                            │
-│  ├─► Navigate to student profile                               │
-│  └─► View current enrollments                                  │
-│                                                                 │
-│  Step 2: Create Transfer Request                               │
+│  Step 1: AA Dashboard → Create Request On-Behalf               │
 │  ├─► Click [Create Transfer On-Behalf]                         │
-│  ├─► API: GET /api/v1/classes?courseId=X&status=SCHEDULED      │
-│  │         (Get all available classes for the course)          │
-│  ├─► Select: Current class + Target class (any branch/modality)│
-│  ├─► Enter: Effective date + Reason                            │
-│  └─► API: POST /api/v1/student-requests/on-behalf              │
+│  ├─► Select request type: TRANSFER                             │
+│  └─► API: GET /api/v1/students?search={keyword}                │
+│                                                                 │
+│  Step 2: Select Student & Check Eligibility                    │
+│  ├─► Search and select student                                 │
+│  ├─► API: GET /api/v1/students?search={keyword}                │
+│  └─► API: GET /api/v1/academic-requests/students/{studentId}/transfer-eligibility│
+│       Returns: {                                                │
+│         "eligibleForTransfer": true,                            │
+│         "currentClasses": [                                     │
+│           {                                                     │
+│             "classId": 101,                                     │
+│             "classCode": "HN-FOUND-O1",                         │
+│             "courseName": "IELTS Foundation",                   │
+│             "branchName": "Ha Noi Branch",                      │
+│             "learningMode": "OFFLINE",                          │
+│             "canTransfer": true                                 │
+│           }                                                     │
+│         ],                                                      │
+│         "policyInfo": {                                         │
+│           "maxTransfersPerCourse": 1,                           │
+│           "usedTransfers": 0,                                   │
+│           "remainingTransfers": 1                               │
+│         }                                                       │
+│       }                                                         │
+│                                                                 │
+│  Step 3: Select Current Class & Choose Transfer Dimensions     │
+│  ├─► Select current class (source) from eligibility list       │
+│  ├─► UI shows current class info:                              │
+│  │    • Branch: Central Branch                                 │
+│  │    • Course: Chinese A1                                     │
+│  │    • Modality: OFFLINE                                      │
+│  │    • Schedule: Mon/Wed/Fri 08:00-10:00                     │
+│  │                                                             │
+│  ├─► UI: Transfer Options (can select multiple):               │
+│  │    [ ] Change Schedule (different time slot)                │
+│  │    [ ] Change Branch (select new branch)                    │
+│  │    [ ] Change Modality (select ONLINE/OFFLINE/HYBRID)       │
+│  │                                                             │
+│  └─► Based on selections, form expands:                        │
+│                                                                 │
+│      IF [Change Branch] selected:                              │
+│      ├─► API: GET /api/v1/branches?excludeId={current}         │
+│      └─► Dropdown: Select target branch                        │
+│                                                                 │
+│      IF [Change Modality] selected:                            │
+│      ├─► Dropdown: Select target modality                      │
+│      │    • If current = OFFLINE/HYBRID → Can select ONLINE    │
+│      │    • If current = ONLINE → Can select OFFLINE/HYBRID    │
+│      └─► If selecting OFFLINE/HYBRID → Must select branch      │
+│                                                                 │
+│  Step 4: Get Available Target Classes                          │
+│  ├─► API: GET /api/v1/academic-requests/transfer-options       │
+│  │    Query params based on selections:                        │
+│  │    ?currentClassId=101                                      │
+│  │    &targetBranchId=2 (if branch change)                     │
+│  │    &targetModality=ONLINE (if modality change)              │
+│  │    &scheduleOnly=true (if only schedule change)             │
+│  │                                                             │
+│  │    Filter Logic:                                            │
+│  │    • course_id = current_course (ALWAYS)                    │
+│  │    • branch_id = selected OR current                        │
+│  │    • modality = selected OR current                         │
+│  │    • time_slot_id != current (if schedule change)           │
+│  │    • status IN (SCHEDULED, ONGOING)                         │
+│  │    • has available capacity                                 │
+│  │                                                             │
+│  ├─► Response shows:                                           │
+│  │    • Class list with schedule, capacity, content gap        │
+│  │    • Fee difference warning (if any)                        │
+│  │    • Content gap analysis with severity                     │
+│  └─► Select target class                                       │
+│                                                                 │
+│  Step 5: Set Effective Date & Submit                           │
+│  ├─► Date picker: Must be session date in target class         │
+│  ├─► Reason textarea: Min 10 chars                             │
+│  ├─► Note: AA internal notes (optional)                        │
+│  └─► API: POST /api/v1/academic-requests/transfer/on-behalf    │
 │       Body: {                                                   │
 │         "studentId": 123,                                       │
-│         "requestType": "TRANSFER",                              │
 │         "currentClassId": 101,                                  │
 │         "targetClassId": 301,                                   │
 │         "effectiveDate": "2025-11-20",                          │
-│         "requestReason": "Student relocating to North area"     │
+│         "requestReason": "Student relocating to North area..."  │
+│       }                                                         │
+│       Response: {                                               │
+│         "success": true,                                        │
+│         "message": "Transfer request created and auto-approved",│
+│         "data": {                                               │
+│           "id": 20,                                             │
+│           "requestType": "TRANSFER",                            │
+│           "status": "APPROVED",                                 │
+│           "currentClass": {                                     │
+│             "id": 101,                                          │
+│             "code": "HN-FOUND-O1",                              │
+│             "name": "HN Foundation 1"                           │
+│           },                                                    │
+│           "submittedBy": { "id": 6, "fullName": "AA Staff" },  │
+│           "decidedBy": { "id": 6, "fullName": "AA Staff" },    │
+│           "submittedAt": "2025-11-13T23:24:11+07:00",          │
+│           "decidedAt": "2025-11-13T23:24:11+07:00"             │
+│         }                                                       │
 │       }                                                         │
 │                                                                 │
-│  Step 3: Immediate Approval & Execution                        │
-│  ├─► Status: PENDING → APPROVED (auto or manual)               │
-│  ├─► API: PUT /api/v1/student-requests/{id}/approve            │
-│  └─► System auto-executes transfer (see Transaction below)     │
+│  Step 6: Success & Auto-Execution                              │
+│  ├─► Request APPROVED and executed immediately                 │
+│  ├─► System automatically:                                     │
+│  │    • Marks old enrollment as TRANSFERRED                    │
+│  │    • Creates new enrollment as ENROLLED                     │
+│  │    • Creates StudentSessions for future sessions            │
+│  │    • Sends notifications to student & teachers              │
+│  └─► Show success message with new class details               │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -201,9 +321,67 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 
 ## API Endpoints Specification
 
-### 1. Check Transfer Eligibility
+### 1. Check Transfer Eligibility (Student)
 
-**Endpoint:** `GET /api/v1/students/me/transfer-eligibility`
+**Endpoint:** `GET /api/v1/students-request/transfer-eligibility`
+**Auth:** Bearer token (student)
+**Purpose:** Show which classes student can transfer from and remaining quota
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "eligibleForTransfer": true,
+    "ineligibilityReason": null,
+    "currentEnrollments": [
+      {
+        "classId": 2,
+        "classCode": "HN-FOUND-O1",
+        "className": "HN Foundation 1 (Ongoing)",
+        "courseName": "IELTS Foundation (3.0-4.0)",
+        "branchName": "TMS Ha Noi Branch",
+        "learningMode": "OFFLINE",
+        "scheduleInfo": "2025-10-06 to 2025-11-28",
+        "enrollmentDate": "2025-10-01",
+        "canTransfer": true
+      }
+    ],
+    "policyInfo": {
+      "maxTransfersPerCourse": 1,
+      "usedTransfers": 0,
+      "remainingTransfers": 1,
+      "requiresAAApproval": false,
+      "policyDescription": "Maximum 1 transfer per course. Same branch & mode changes are auto-approved."
+    }
+  }
+}
+```
+
+**Business Rules:**
+- `canTransfer = false` when:
+  - `transferQuota.remaining = 0` (already transferred once)
+  - `hasPendingTransfer = true` (existing PENDING/WAITING_CONFIRM request)
+  - `enrollmentStatus != 'ENROLLED'`
+
+---
+
+### 1B. Check Transfer Eligibility (AA - For Student)
+
+**Endpoint:** `GET /api/v1/academic-requests/students/{studentId}/transfer-eligibility`
+**Auth:** Bearer token (AA staff)
+**Purpose:** AA checks if student is eligible for transfer
+
+**Response:** Same as endpoint 1 above
+
+**Notes:**
+- AA can check eligibility for any student
+- Uses same business logic as student endpoint
+- Maps `studentId` → `userId` automatically
+
+---
+
+### 2. Get Transfer Options (Tier 1 - Student)
 **Auth:** Bearer token (student)
 **Purpose:** Show which classes student can transfer from and remaining quota
 
@@ -245,9 +423,9 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 
 ---
 
-### 2. Get Transfer Options (Tier 1)
+### 2. Get Transfer Options (Tier 1 - Student)
 
-**Endpoint:** `GET /api/v1/student-requests/transfer-options?currentClassId=101`
+**Endpoint:** `GET /api/v1/students-request/transfer-options?currentClassId=101`
 **Auth:** Bearer token (student)
 **Purpose:** Get available target classes with same branch+modality and content gap analysis
 
@@ -255,54 +433,59 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 ```json
 {
   "success": true,
-  "data": {
-    "currentClass": {
-      "id": 101,
-      "code": "CHN-A1-01",
-      "name": "Morning Class",
-      "courseId": 10,
-      "branchId": 1,
+  "message": "Retrieved transfer options successfully",
+  "data": [
+    {
+      "classId": 102,
+      "classCode": "CHN-A1-02",
+      "className": "Afternoon Class",
+      "courseName": "Chinese A1",
       "branchName": "Central Branch",
-      "modality": "OFFLINE",
-      "currentSession": 12
-    },
-    "availableClasses": [
-      {
-        "classId": 102,
-        "classCode": "CHN-A1-02",
-        "className": "Afternoon Class",
-        "branchId": 1,
-        "branchName": "Central Branch",
-        "modality": "OFFLINE",
-        "scheduleDays": "Tue, Thu, Sat",
-        "scheduleTime": "14:00-16:00",
-        "currentSession": 14,
-        "maxCapacity": 20,
-        "enrolledCount": 16,
-        "availableSlots": 4,
-        "classStatus": "ONGOING",
-        "contentGap": {
-          "missedSessions": 2,
-          "gapSessions": [
-            {
-              "courseSessionNumber": 13,
-              "courseSessionTitle": "Listening Practice"
-            },
-            {
-              "courseSessionNumber": 14,
-              "courseSessionTitle": "Speaking Practice"
-            }
-          ],
-          "severity": "MINOR",
-          "recommendation": "You will miss 2 session(s). Review materials or request makeup."
-        }
+      "learningMode": "OFFLINE",
+      "scheduleInfo": "2025-10-07 to 2025-11-29",
+      "instructorName": "Teacher Name",
+      "currentEnrollment": 16,
+      "maxCapacity": 20,
+      "availableSlots": 4,
+      "startDate": "2025-10-07",
+      "endDate": "2025-11-29",
+      "status": "ONGOING",
+      "contentGapAnalysis": {
+        "gapLevel": "MINOR",
+        "missedSessions": 2,
+        "totalSessions": 16,
+        "gapSessions": [
+          {
+            "courseSessionNumber": 13,
+            "courseSessionTitle": "Listening Practice",
+            "scheduledDate": "2025-11-10"
+          },
+          {
+            "courseSessionNumber": 14,
+            "courseSessionTitle": "Speaking Practice",
+            "scheduledDate": "2025-11-12"
+          }
+        ],
+        "recommendedActions": [
+          "Review course materials for missed sessions",
+          "Consider requesting makeup sessions"
+        ],
+        "impactDescription": "Minor gap: 2 sessions behind. Review materials recommended."
+      },
+      "canTransfer": true,
+      "changes": {
+        "branch": "No change",
+        "modality": "No change",
+        "schedule": "Mon/Wed/Fri 08:00-10:00 → Tue/Thu/Sat 14:00-16:00"
       }
-    ]
-  }
+    }
+  ]
 }
 ```
 
-**Content Gap Severity:**
+**Note:** Returns direct array of `TransferOptionDTO` objects (no wrapper with currentClass)
+
+**Content Gap Levels:**
 - `NONE`: 0 sessions missed
 - `MINOR`: 1-2 sessions missed
 - `MODERATE`: 3-5 sessions missed
@@ -314,39 +497,157 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 - Same `modality`
 - `status IN ('SCHEDULED', 'ONGOING')`
 - Has available capacity
-- Different schedule (different `scheduleDays` or `scheduleTime`)
+- Different schedule (different time/days)
+
+---
+
+### 2B. Get Transfer Options (Tier 2 - AA)
+
+**Endpoint:** `GET /api/v1/academic-requests/transfer-options`
+**Auth:** Bearer token (AA staff)
+**Purpose:** Get available target classes based on flexible transfer criteria
+
+**Query Parameters:**
+```
+currentClassId=101          (required)
+targetBranchId=2           (optional - if changing branch)
+targetModality=ONLINE      (optional - if changing modality)
+scheduleOnly=true          (optional - if only schedule change)
+```
+
+**Filter Logic (Backend):**
+```java
+// Base filter (ALWAYS applied)
+WHERE course_id = current_class.course_id
+  AND id != current_class.id
+  AND status IN ('SCHEDULED', 'ONGOING')
+  AND (enrolled_count < max_capacity)
+
+// Additional filters based on parameters
+IF (scheduleOnly = true):
+  AND branch_id = current_class.branch_id
+  AND modality = current_class.modality
+  AND scheduleDays != current_class.scheduleDays
+
+ELSE IF (targetBranchId specified):
+  AND branch_id = targetBranchId
+  AND modality = (targetModality OR current_class.modality)
+
+ELSE IF (targetModality specified):
+  AND modality = targetModality
+  AND branch_id = (targetBranchId OR current_class.branch_id)
+
+// If no specific filters, return all classes in same course
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Retrieved transfer options successfully",
+  "data": {
+    "currentClass": {
+      "id": 2,
+      "code": "HN-FOUND-O1",
+      "name": "HN Foundation 1 (Ongoing)",
+      "branchName": "TMS Ha Noi Branch",
+      "modality": "OFFLINE",
+      "scheduleDays": "Mon, Wed, Fri - 2025-10-06 to 2025-11-28",
+      "scheduleTime": "Varies by session",
+      "currentSession": 12
+    },
+    "transferCriteria": {
+      "branchChange": false,
+      "modalityChange": true,
+      "scheduleChange": false
+    },
+    "availableClasses": [
+      {
+        "classId": 3,
+        "classCode": "HN-FOUND-O2",
+        "className": "HN Foundation 2 (Ongoing)",
+        "courseName": "IELTS Foundation (3.0-4.0)",
+        "branchName": "TMS Ha Noi Branch",
+        "learningMode": "ONLINE",
+        "scheduleInfo": "2025-10-07 to 2025-11-29",
+        "instructorName": "TBD",
+        "currentEnrollment": 13,
+        "maxCapacity": 25,
+        "availableSlots": 12,
+        "startDate": "2025-10-07",
+        "endDate": "2025-11-29",
+        "status": "ONGOING",
+        "contentGapAnalysis": {
+          "gapLevel": "MODERATE",
+          "missedSessions": 4,
+          "totalSessions": 16,
+          "gapSessions": [
+            {
+              "courseSessionNumber": 1,
+              "courseSessionTitle": "Listening: Following Instructions",
+              "scheduledDate": "2025-11-04"
+            },
+            {
+              "courseSessionNumber": 2,
+              "courseSessionTitle": "Speaking: Asking Questions",
+              "scheduledDate": "2025-11-06"
+            }
+          ],
+          "recommendedActions": [
+            "Review course materials carefully",
+            "Request makeup sessions for critical topics",
+            "Consult with instructor about catch-up plan"
+          ],
+          "impactDescription": "Moderate gap: 4 sessions behind. Catch-up required."
+        },
+        "canTransfer": true,
+        "changes": {
+          "branch": "No change",
+          "modality": "OFFLINE → ONLINE",
+          "schedule": "Mon, Wed, Fri - 2025-10-06 to 2025-11-28 → Tue, Thu, Sat - 2025-10-07 to 2025-11-29"
+        }
+      }
+    ]
+  }
+}
+```
+
+**Notes:**
+- Returns classes sorted by compatibility score (fewer changes = higher priority)
+- Content gap analysis included for all options
+- Changes summary helps AA explain implications to student
+- Fee differences handled externally (not in response)
 
 ---
 
 ### 3. Submit Transfer Request (Student - Tier 1)
 
-**Endpoint:** `POST /api/v1/student-requests`
+**Endpoint:** `POST /api/v1/students-request/transfer-requests`
 **Auth:** Bearer token (student)
 **Purpose:** Student submits transfer request for schedule change
 
 **Request Body:**
 ```json
 {
-  "requestType": "TRANSFER",
   "currentClassId": 101,
   "targetClassId": 103,
   "effectiveDate": "2025-11-15",
-  "requestReason": "I need to change to evening schedule due to new work commitments starting next week.",
+  "requestReason": "I need to change to evening schedule due to new work commitments.",
   "note": ""
 }
 ```
 
 **Validation Rules:**
-1. `requestReason` min 20 characters
+1. `requestReason` min 10 characters (NOT 20)
 2. `effectiveDate` must be:
-   - >= today
+   - >= today (future date)
    - A valid session date in target class
 3. Student must be ENROLLED in currentClass
 4. Transfer quota not exceeded (business logic check)
 5. No concurrent PENDING/WAITING_CONFIRM transfer requests
 6. Target class must have capacity
 7. Target class status must be SCHEDULED or ONGOING
-8. Same course, same branch, same modality (Tier 1)
+8. Same course, same branch, same modality (Tier 1 restriction)
 
 **Response:**
 ```json
@@ -355,12 +656,8 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
   "message": "Transfer request submitted successfully",
   "data": {
     "id": 44,
-    "student": {
-      "id": 123,
-      "studentCode": "STU2024001",
-      "fullName": "John Doe"
-    },
     "requestType": "TRANSFER",
+    "status": "PENDING",
     "currentClass": {
       "id": 101,
       "code": "CHN-A1-01",
@@ -371,16 +668,36 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
       "code": "CHN-A1-03",
       "name": "Evening Class"
     },
-    "effectiveDate": "2025-11-15",
-    "effectiveSession": {
-      "sessionId": 3010,
-      "courseSessionNumber": 13
+    "targetSession": {
+      "id": 3010,
+      "date": "2025-11-15",
+      "courseSessionNumber": 13,
+      "courseSessionTitle": "Grammar Practice",
+      "timeSlot": {
+        "startTime": "18:00",
+        "endTime": "20:00"
+      }
     },
-    "requestReason": "I need to change to evening schedule...",
-    "status": "PENDING",
-    "submittedAt": "2025-11-07T18:30:00+07:00"
+    "effectiveDate": "2025-11-15",
+    "requestReason": "I need to change to evening schedule due to new work commitments.",
+    "note": null,
+    "submittedAt": "2025-11-07T18:30:00+07:00",
+    "submittedBy": {
+      "id": 123,
+      "fullName": "John Doe",
+      "email": "john.doe@example.com"
+    },
+    "decidedAt": null,
+    "decidedBy": null,
+    "rejectionReason": null
   }
 }
+```
+
+**Important Notes:**
+- `targetClass`: The class student is transferring TO (only for TRANSFER requests)
+- `effectiveDate`: Date when transfer takes effect (only for TRANSFER requests)
+- `targetSession`: For TRANSFER = effective session (first session in new class), for ABSENCE/MAKEUP = the target session
 ```
 
 **Error Responses:**
@@ -392,72 +709,109 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 
 ---
 
-### 4. Create Transfer On-Behalf (AA - Tier 2)
+### 3B. Submit Transfer Request On-Behalf (AA - Tier 2)
 
-**Endpoint:** `POST /api/v1/student-requests/on-behalf`
+**Endpoint:** `POST /api/v1/academic-requests/transfer/on-behalf`
 **Auth:** Bearer token (AA staff)
-**Purpose:** AA creates transfer request for branch/modality changes after consultation
+**Purpose:** AA creates auto-approved transfer for branch/modality/schedule changes
 
 **Request Body:**
 ```json
 {
-  "studentId": 123,
-  "requestType": "TRANSFER",
-  "currentClassId": 101,
-  "targetClassId": 301,
-  "effectiveDate": "2025-11-20",
-  "requestReason": "Student relocating to North area. Discussed via phone on Nov 8. Student confirmed preference for offline class at North Branch."
+  "studentId": 7,
+  "currentClassId": 2,
+  "targetClassId": 3,
+  "effectiveDate": "2025-11-15",
+  "requestReason": "Student requested schedule change to evening class due to new work commitments. Consulted via phone on Nov 8."
 }
 ```
 
 **Validation Rules:**
-1. Same as student submission, but:
-   - No branch/modality restriction (can change both)
-   - AA can override some validations if needed
-2. Transfer quota check still applies
-3. Target class capacity check still applies
+1. Student must be ENROLLED in currentClass with status ACTIVE
+2. Target class must have capacity (enrolled < maxCapacity)
+3. Target class status must be SCHEDULED or ONGOING
+4. Same course required (course_id must match)
+5. Any combination of branch/modality/schedule changes allowed
+6. Transfer quota check applies (1 transfer per course max)
+7. effectiveDate must be >= today
+8. No concurrent PENDING/APPROVED/COMPLETED transfers
 
-**Response:**
+**Response (Auto-Approved):**
 ```json
 {
   "success": true,
-  "message": "Transfer request created on behalf of student",
+  "message": "Transfer request submitted and auto-approved successfully",
   "data": {
-    "id": 45,
+    "id": 20,
     "student": {
-      "id": 123,
-      "studentCode": "STU2024001",
-      "fullName": "John Doe"
+      "id": 7,
+      "studentCode": "STU20240007",
+      "fullName": "Bui Van Chien",
+      "email": "buivanchien@example.com",
+      "phoneNumber": "0909345678"
     },
     "requestType": "TRANSFER",
     "currentClass": {
-      "id": 101,
-      "code": "CHN-A1-01"
-    },
-    "targetClass": {
-      "id": 301,
-      "code": "CHN-A1-NORTH-01",
-      "branchName": "North Branch",
+      "id": 2,
+      "code": "HN-FOUND-O1",
+      "name": "HN Foundation 1 (Ongoing)",
+      "branchName": "TMS Ha Noi Branch",
       "modality": "OFFLINE"
     },
-    "effectiveDate": "2025-11-20",
-    "status": "PENDING",
-    "submittedAt": "2025-11-08T10:30:00+07:00",
+    "targetClass": {
+      "id": 3,
+      "code": "HN-FOUND-O2",
+      "name": "HN Foundation 2 (Ongoing)"
+    },
+    "targetSession": {
+      "id": 150,
+      "date": "2025-11-15",
+      "courseSessionNumber": 13,
+      "courseSessionTitle": "Listening: Note-taking",
+      "timeSlot": {
+        "startTime": "18:00",
+        "endTime": "20:00"
+      }
+    },
+    "effectiveDate": "2025-11-15",
+    "requestReason": "Student requested schedule change to evening class due to new work commitments. Consulted via phone on Nov 8.",
+    "status": "APPROVED",
+    "submittedAt": "2025-11-08T14:26:51.123456",
+    "approvedAt": "2025-11-08T14:26:51.123456",
     "submittedBy": {
-      "id": 890,
-      "fullName": "AA Staff Nguyen"
+      "id": 11,
+      "fullName": "Pham Thi Huong",
+      "email": "staff.huong.hn@tms-edu.vn"
+    },
+    "approvedBy": {
+      "id": 11,
+      "fullName": "Pham Thi Huong",
+      "email": "staff.huong.hn@tms-edu.vn"
     }
   }
 }
 ```
 
+**Key Differences from Student Request:**
+- **Auto-approved**: Status changes from PENDING → APPROVED instantly
+- **submittedBy** and **approvedBy** are the same AA staff
+- **Flexible changes**: Can change branch, modality, and schedule in single request
+- **No waiting**: Enrollment immediately updated (old class TRANSFERRED, new class ENROLLED)
+
+**Test Results (Verified):**
+- Request ID 20: Student 7, Class 2→3 (OFFLINE→ONLINE) ✅
+- Request ID 21: Student 8, Class 2→5 (HN→HCM branch) ✅
+- Request ID 22: Student 9, Class 2→4 (OFFLINE→HYBRID) ✅
+
 ---
 
-### 5. Approve Transfer Request (AA)
+### 4. Approve Transfer Request (AA)
 
 **Endpoint:** `PUT /api/v1/student-requests/{id}/approve`
 **Auth:** Bearer token (AA staff)
-**Purpose:** Approve transfer request and auto-execute transfer
+**Purpose:** Approve student-submitted transfer request (Tier 1 only)
+
+**Note:** This endpoint is ONLY for student-submitted requests (Tier 1). AA on-behalf transfers (Tier 2) are auto-approved.
 
 **Request Body:**
 ```json
@@ -505,39 +859,6 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 
 ---
 
-### 6. Get Available Classes (AA - For On-Behalf)
-
-**Endpoint:** `GET /api/v1/classes?courseId=10&status=SCHEDULED,ONGOING&hasCapacity=true`
-**Auth:** Bearer token (AA staff)
-**Purpose:** Get all available classes for a course (no branch/modality restriction)
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "classes": [
-      {
-        "id": 301,
-        "code": "CHN-A1-NORTH-01",
-        "name": "Chinese A1 - North Branch Morning",
-        "branchName": "North Branch",
-        "modality": "OFFLINE",
-        "scheduleDays": "Mon, Wed, Fri",
-        "scheduleTime": "08:00-10:00",
-        "currentSession": 11,
-        "maxCapacity": 20,
-        "enrolledCount": 15,
-        "availableSlots": 5,
-        "status": "ONGOING"
-      }
-    ]
-  }
-}
-```
-
----
-
 ## Business Rules
 
 | Rule ID | Description | Enforcement |
@@ -552,8 +873,13 @@ Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 | BR-TRF-008 | Content gap detection and warning | Warning only |
 | BR-TRF-009 | Transfer reason min 20 characters | Blocking |
 | BR-TRF-010 | Tier 1: Same branch AND same modality | Blocking (student UI) |
-| BR-TRF-011 | Tier 2: AA can change branch OR modality | Allowed (AA only) |
-| BR-TRF-012 | Preserve audit trail (status updates only) | Data Integrity |
+| BR-TRF-011 | Tier 2: AA can change branch, modality, schedule flexibly | Allowed (AA only) |
+| BR-TRF-012 | Course changes use separate workflow | Blocking |
+| BR-TRF-013 | Preserve audit trail (status updates only) | Data Integrity |
+| BR-TRF-014 | OFFLINE/HYBRID → ONLINE: Allowed without restrictions | Allowed |
+| BR-TRF-015 | ONLINE → OFFLINE/HYBRID: Requires branch selection | Blocking (must select branch) |
+| BR-TRF-016 | Fee differences must be settled before approval | Process Rule (AA verification) |
+| BR-TRF-017 | Online classes belong to specific branches | Data Model |
 
 ---
 
@@ -732,19 +1058,59 @@ public StudentRequestResponseDTO approveTransferRequest(Long requestId, Approval
         throw new BusinessRuleException("Target class became full");
     }
 
-    // 3. Update request status
+    // 3. Validate fee settlement (AA must confirm)
+    ClassEntity currentClass = request.getCurrentClass();
+    ClassEntity targetClass = request.getTargetClass();
+    
+    // Calculate fee difference (if applicable)
+    BigDecimal feeDifference = calculateFeeDifference(currentClass, targetClass);
+    if (feeDifference.compareTo(BigDecimal.ZERO) != 0 && !dto.getFeeSettled()) {
+        throw new BusinessRuleException(
+            "Fee difference of " + feeDifference + " VND must be settled before approval. " +
+            "Coordinate with Finance team and mark as settled.");
+    }
+
+    // 4. Update request status
     request.setStatus(RequestStatus.APPROVED);
     request.setDecidedBy(userRepository.getReferenceById(getCurrentUserId()));
     request.setDecidedAt(OffsetDateTime.now());
     request.setNote(dto.getNote());
     request = studentRequestRepository.save(request);
 
-    // 4. Execute transfer
+    // 5. Execute transfer
     executeTransfer(request);
 
     return mapper.toResponseDTO(request);
 }
 
+/**
+ * Calculate fee difference between classes
+ * Positive = student must pay more
+ * Negative = student gets refund
+ */
+private BigDecimal calculateFeeDifference(ClassEntity currentClass, ClassEntity targetClass) {
+    // Check branch fee difference
+    BigDecimal branchDiff = targetClass.getBranch().getFee()
+        .subtract(currentClass.getBranch().getFee());
+    
+    // Check modality fee difference (online usually cheaper)
+    BigDecimal modalityDiff = getModalityFee(targetClass.getModality())
+        .subtract(getModalityFee(currentClass.getModality()));
+    
+    return branchDiff.add(modalityDiff);
+}
+
+private BigDecimal getModalityFee(Modality modality) {
+    return switch (modality) {
+        case ONLINE -> BigDecimal.ZERO; // Base price
+        case OFFLINE, HYBRID -> new BigDecimal("500000"); // +500k VND for in-person
+    };
+}
+```
+
+### Execute Transfer Transaction
+
+```java
 @Transactional
 private void executeTransfer(StudentRequest request) {
     Long studentId = request.getStudent().getId();
@@ -1007,13 +1373,28 @@ Academic Affairs Team
 
 5. **Tier Detection:**
    - Tier 1: Student submits (same branch + modality only)
-   - Tier 2: AA creates on-behalf (any branch/modality)
+   - Tier 2: AA creates on-behalf (flexible: branch, modality, schedule changes)
 
 6. **No Soft Delete:** Enrollments and requests are never deleted. Status updates only.
 
 7. **Effective Date:** Must be a future class session date in target class. System creates StudentSessions for all future sessions starting from effective date.
 
 8. **Notification Timing:** Sent after successful transaction commit to avoid inconsistent state.
+
+9. **Fee Differences:** 
+   - AA must verify and confirm fee settlement with Finance before approval
+   - Branch differences + Modality differences (OFFLINE/HYBRID cost more than ONLINE)
+   - ApprovalDTO includes `feeSettled` boolean flag
+
+10. **Modality Rules:**
+    - HYBRID = OFFLINE for transfer purposes (both location-based)
+    - OFFLINE/HYBRID students can transfer to ONLINE freely
+    - ONLINE students must select branch when transferring to OFFLINE/HYBRID
+    - Online classes belong to specific branches (teacher assignment)
+
+11. **Course Changes:** Separate workflow. Transfer only supports same-course moves with branch/modality/schedule flexibility.
+
+12. **Transfer Options Endpoint:** Single flexible endpoint (`/api/v1/classes/transfer-options`) with query parameters for different filter combinations rather than separate endpoints per option.
 
 ---
 

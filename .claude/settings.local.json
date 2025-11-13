@@ -49,7 +49,10 @@
       "Bash(./mvnw.cmd spring-boot:run:*)",
       "Bash(cat:*)",
       "Bash(\"C:\\Users\\tmtmt\\.jdks\\openjdk-21.0.1\\bin\\java.exe\" -version)",
-      "Bash(mvnw.cmd clean compile:*)"
+      "Bash(mvnw.cmd clean compile:*)",
+      "Bash(STUDENT_ID=1:*)",
+      "Bash(__NEW_LINE__ curl -X GET \"http://localhost:8080/api/v1/academic-requests/students/$STUDENT_ID/transfer-eligibility\" )",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

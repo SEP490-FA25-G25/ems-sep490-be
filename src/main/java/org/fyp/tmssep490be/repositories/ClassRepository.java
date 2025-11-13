@@ -85,4 +85,24 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
            "JOIN FETCH c.branch " +
            "WHERE c.id = :classId")
     Optional<ClassEntity> findByIdWithCourse(@Param("classId") Long classId);
+
+    /**
+     * Find classes by flexible criteria for AA transfer options
+     * Supports filtering by course, branch, modality, and capacity
+     *
+     * Filter Logic:
+     * - Base: course_id = criteria.courseId AND id != criteria.excludeClassId AND status IN criteria.statuses
+     * - Optional: branch_id = criteria.branchId (if specified)
+     * - Optional: modality = criteria.modality (if specified)
+     * - Optional: has available capacity (if criteria.hasCapacity = true)
+     *
+     * Note: Schedule comparison is done at presentation layer since time slots vary per session
+     */
+    @Query("SELECT c FROM ClassEntity c " +
+           "WHERE c.course.id = :#{#criteria.courseId} " +
+           "AND c.id != :#{#criteria.excludeClassId} " +
+           "AND c.status IN :#{#criteria.statuses} " +
+           "AND (:#{#criteria.branchId} IS NULL OR c.branch.id = :#{#criteria.branchId}) " +
+           "AND (:#{#criteria.modality} IS NULL OR c.modality = :#{#criteria.modality})")
+    List<ClassEntity> findByFlexibleCriteria(@Param("criteria") org.fyp.tmssep490be.dtos.classes.ClassSearchCriteria criteria);
 }

@@ -33,6 +33,7 @@ public class TransferOptionDTO {
     private String status;
     private ContentGapAnalysis contentGapAnalysis;
     private boolean canTransfer;
+    private Changes changes;
 
     @Data
     @Builder
@@ -55,5 +56,19 @@ public class TransferOptionDTO {
         private Integer courseSessionNumber;
         private String courseSessionTitle;
         private LocalDate scheduledDate;
+    }
+
+    /**
+     * Summary of changes between current and target class
+     * Used by AA to explain transfer implications to student
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Changes {
+        private String branch;      // "Central → North" or "No change"
+        private String modality;    // "OFFLINE → ONLINE" or "No change"
+        private String schedule;    // "Mon/Wed/Fri 08:00 → Tue/Thu/Sat 18:00" or "No change"
     }
 }

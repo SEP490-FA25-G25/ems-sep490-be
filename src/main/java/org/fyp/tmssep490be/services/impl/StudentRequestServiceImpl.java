@@ -2,6 +2,7 @@ package org.fyp.tmssep490be.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.fyp.tmssep490be.dtos.classes.ClassSearchCriteria;
 import org.fyp.tmssep490be.dtos.studentrequest.*;
 import org.fyp.tmssep490be.entities.*;
 import org.fyp.tmssep490be.entities.enums.*;
@@ -552,12 +553,23 @@ public class StudentRequestServiceImpl implements StudentRequestService {
         // When rejected, the note contains the rejection reason. When approved, it contains approval note.
         String rejectionReason = request.getStatus() == RequestStatus.REJECTED ? request.getNote() : null;
 
+        // For TRANSFER requests, map effectiveSession to targetSession, and include targetClass + effectiveDate
+        Session sessionToMap = request.getRequestType() == StudentRequestType.TRANSFER
+                ? request.getEffectiveSession()
+                : request.getTargetSession();
+
+        String effectiveDateStr = request.getEffectiveDate() != null
+                ? request.getEffectiveDate().format(DateTimeFormatter.ISO_DATE)
+                : null;
+
         return StudentRequestResponseDTO.builder()
                 .id(request.getId())
                 .requestType(request.getRequestType().toString())
                 .status(request.getStatus().toString())
                 .currentClass(mapToClassSummaryDTO(request.getCurrentClass()))
-                .targetSession(mapToSessionSummaryDTO(request.getTargetSession()))
+                .targetClass(mapToClassSummaryDTO(request.getTargetClass())) // For TRANSFER only
+                .targetSession(mapToSessionSummaryDTO(sessionToMap))
+                .effectiveDate(effectiveDateStr) // For TRANSFER only
                 .requestReason(request.getRequestReason())
                 .note(request.getNote())
                 .submittedAt(request.getSubmittedAt())
@@ -571,13 +583,24 @@ public class StudentRequestServiceImpl implements StudentRequestService {
     private AARequestResponseDTO mapToAAResponseDTO(StudentRequest request) {
         String rejectionReason = request.getStatus() == RequestStatus.REJECTED ? request.getNote() : null;
 
+        // For TRANSFER requests, use effectiveSession instead of targetSession
+        Session sessionToMap = request.getRequestType() == StudentRequestType.TRANSFER
+                ? request.getEffectiveSession()
+                : request.getTargetSession();
+
+        String effectiveDateStr = request.getEffectiveDate() != null
+                ? request.getEffectiveDate().format(DateTimeFormatter.ISO_DATE)
+                : null;
+
         return AARequestResponseDTO.builder()
                 .id(request.getId())
                 .requestType(request.getRequestType().toString())
                 .status(request.getStatus().toString())
                 .student(mapToStudentSummaryDTO(request.getStudent()))
                 .currentClass(mapToAAClassSummaryDTO(request.getCurrentClass()))
-                .targetSession(mapToAASessionSummaryDTO(request.getTargetSession()))
+                .targetClass(mapToAAClassSummaryDTO(request.getTargetClass())) // For TRANSFER only
+                .targetSession(mapToAASessionSummaryDTO(sessionToMap))
+                .effectiveDate(effectiveDateStr) // For TRANSFER only
                 .requestReason(request.getRequestReason())
                 .note(request.getNote())
                 .submittedAt(request.getSubmittedAt())
@@ -585,8 +608,8 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .decidedAt(request.getDecidedAt())
                 .decidedBy(mapToAAUserSummaryDTO(request.getDecidedBy()))
                 .rejectionReason(rejectionReason)
-                .daysUntilSession(request.getTargetSession() != null ?
-                        ChronoUnit.DAYS.between(LocalDate.now(), request.getTargetSession().getDate()) : null)
+                .daysUntilSession(sessionToMap != null ?
+                        ChronoUnit.DAYS.between(LocalDate.now(), sessionToMap.getDate()) : null)
                 .studentAbsenceRate(request.getCurrentClass() != null ?
                         calculateAbsenceRate(request.getStudent().getId(), request.getCurrentClass().getId()) : null)
                 .build();
@@ -595,13 +618,24 @@ public class StudentRequestServiceImpl implements StudentRequestService {
     private StudentRequestDetailDTO mapToDetailDTO(StudentRequest request) {
         String rejectionReason = request.getStatus() == RequestStatus.REJECTED ? request.getNote() : null;
 
+        // For TRANSFER requests, use effectiveSession instead of targetSession
+        Session sessionToMap = request.getRequestType() == StudentRequestType.TRANSFER
+                ? request.getEffectiveSession()
+                : request.getTargetSession();
+
+        String effectiveDateStr = request.getEffectiveDate() != null
+                ? request.getEffectiveDate().format(DateTimeFormatter.ISO_DATE)
+                : null;
+
         return StudentRequestDetailDTO.builder()
                 .id(request.getId())
                 .requestType(request.getRequestType().toString())
                 .status(request.getStatus().toString())
                 .student(mapToDetailStudentSummaryDTO(request.getStudent()))
                 .currentClass(mapToDetailClassDTO(request.getCurrentClass()))
-                .targetSession(mapToDetailSessionDTO(request.getTargetSession()))
+                .targetClass(mapToDetailClassDTO(request.getTargetClass())) // For TRANSFER only
+                .targetSession(mapToDetailSessionDTO(sessionToMap))
+                .effectiveDate(effectiveDateStr) // For TRANSFER only
                 .requestReason(request.getRequestReason())
                 .note(request.getNote())
                 .submittedAt(request.getSubmittedAt())
@@ -1313,7 +1347,239 @@ public class StudentRequestServiceImpl implements StudentRequestService {
         return options;
     }
 
-    
+    /**
+     * Get flexible transfer options for AA (Academic Affairs)
+     * Supports filtering by branch, modality, and schedule changes
+     *
+     * @param currentClassId Current class ID (required)
+     * @param targetBranchId Target branch ID (optional - for branch change)
+     * @param targetModality Target modality (optional - for modality change)
+     * @param scheduleOnly Schedule-only change flag (optional - for schedule change within same branch/modality)
+     * @return TransferOptionsResponseDTO with current class info, criteria, and available classes
+     */
+    @Override
+    public TransferOptionsResponseDTO getTransferOptionsFlexible(
+            Long currentClassId, Long targetBranchId, String targetModality, Boolean scheduleOnly) {
+
+        // Load current class with all related entities
+        ClassEntity currentClass = classRepository.findByIdWithCourse(currentClassId)
+                .orElseThrow(() -> new ResourceNotFoundException("Current class not found with ID: " + currentClassId));
+
+        // Build flexible filter criteria
+        ClassSearchCriteria criteria = ClassSearchCriteria.builder()
+                .courseId(currentClass.getCourse().getId())
+                .excludeClassId(currentClassId)
+                .statuses(List.of(ClassStatus.SCHEDULED, ClassStatus.ONGOING))
+                .hasCapacity(true)
+                .build();
+
+        // Apply optional filters based on parameters
+        if (Boolean.TRUE.equals(scheduleOnly)) {
+            // Schedule-only: same branch + same modality
+            criteria.setBranchId(currentClass.getBranch().getId());
+            criteria.setModality(currentClass.getModality());
+            // Note: scheduleOnly filtering by excluding same schedule days is handled in query
+        } else {
+            // Flexible filtering
+            if (targetBranchId != null) {
+                criteria.setBranchId(targetBranchId);
+            }
+            if (targetModality != null) {
+                try {
+                    criteria.setModality(Modality.valueOf(targetModality));
+                } catch (IllegalArgumentException e) {
+                    throw new BusinessRuleException("INVALID_MODALITY",
+                        "Invalid modality: " + targetModality + ". Must be OFFLINE, ONLINE, or HYBRID");
+                }
+            }
+        }
+
+        // Fetch classes using flexible criteria
+        List<ClassEntity> targetClasses = classRepository.findByFlexibleCriteria(criteria);
+
+        // Filter by capacity and map to DTOs with changes summary
+        List<TransferOptionDTO> availableClasses = targetClasses.stream()
+                .filter(cls -> {
+                    Integer currentEnrollmentCount = classRepository.countEnrolledStudents(cls.getId());
+                    int currentEnrollment = currentEnrollmentCount != null ? currentEnrollmentCount : 0;
+                    return cls.getMaxCapacity() != null && currentEnrollment < cls.getMaxCapacity();
+                })
+                .map(cls -> mapToTransferOptionDTOWithChanges(cls, currentClass))
+                .sorted(this::compareByCompatibility)
+                .collect(Collectors.toList());
+
+        // Build current class info
+        TransferOptionsResponseDTO.CurrentClassInfo currentClassInfo = buildCurrentClassInfo(currentClass);
+
+        // Build transfer criteria summary
+        TransferOptionsResponseDTO.TransferCriteria transferCriteria =
+            TransferOptionsResponseDTO.TransferCriteria.builder()
+                .branchChange(targetBranchId != null && !targetBranchId.equals(currentClass.getBranch().getId()))
+                .modalityChange(targetModality != null && !targetModality.equals(currentClass.getModality().name()))
+                .scheduleChange(Boolean.TRUE.equals(scheduleOnly))
+                .build();
+
+        return TransferOptionsResponseDTO.builder()
+                .currentClass(currentClassInfo)
+                .transferCriteria(transferCriteria)
+                .availableClasses(availableClasses)
+                .build();
+    }
+
+    /**
+     * Map ClassEntity to TransferOptionDTO with changes summary
+     * Shows what will change: branch, modality, schedule
+     */
+    private TransferOptionDTO mapToTransferOptionDTOWithChanges(ClassEntity targetClass, ClassEntity currentClass) {
+        TransferOptionDTO dto = mapToTransferOptionDTO(targetClass, currentClass);
+
+        // Build changes summary
+        TransferOptionDTO.Changes changes = TransferOptionDTO.Changes.builder()
+                .branch(buildChangeText(currentClass.getBranch().getName(), targetClass.getBranch().getName()))
+                .modality(buildChangeText(currentClass.getModality().name(), targetClass.getModality().name()))
+                .schedule(buildScheduleChangeText(currentClass, targetClass))
+                .build();
+
+        dto.setChanges(changes);
+        return dto;
+    }
+
+    /**
+     * Build change text for branch/modality
+     * Returns "X → Y" if changed, "No change" if same
+     */
+    private String buildChangeText(String currentValue, String targetValue) {
+        if (currentValue == null || targetValue == null) {
+            return "Unknown";
+        }
+        return currentValue.equals(targetValue) ? "No change" : currentValue + " → " + targetValue;
+    }
+
+    /**
+     * Build schedule change text
+     * Shows time slot changes if available
+     */
+    private String buildScheduleChangeText(ClassEntity currentClass, ClassEntity targetClass) {
+        String currentSchedule = formatSchedule(currentClass);
+        String targetSchedule = formatSchedule(targetClass);
+
+        if (currentSchedule.equals(targetSchedule)) {
+            return "No change";
+        }
+        return currentSchedule + " → " + targetSchedule;
+    }
+
+    /**
+     * Format schedule info from class
+     * Uses date range and schedule days since time slots vary per session
+     */
+    private String formatSchedule(ClassEntity classEntity) {
+        StringBuilder schedule = new StringBuilder();
+
+        // Format schedule days (e.g., "Mon, Wed, Fri")
+        if (classEntity.getScheduleDays() != null && classEntity.getScheduleDays().length > 0) {
+            String days = Arrays.stream(classEntity.getScheduleDays())
+                    .map(this::dayOfWeekToString)
+                    .collect(Collectors.joining(", "));
+            schedule.append(days);
+        }
+
+        // Add date range
+        if (classEntity.getStartDate() != null) {
+            if (schedule.length() > 0) schedule.append(" - ");
+            schedule.append(classEntity.getStartDate());
+            if (classEntity.getPlannedEndDate() != null) {
+                schedule.append(" to ").append(classEntity.getPlannedEndDate());
+            }
+        }
+
+        return schedule.length() > 0 ? schedule.toString() : "Schedule TBD";
+    }
+
+    /**
+     * Convert day of week number to string
+     * 1=Monday, 2=Tuesday, ..., 7=Sunday
+     */
+    private String dayOfWeekToString(Short dayNum) {
+        return switch (dayNum) {
+            case 1 -> "Mon";
+            case 2 -> "Tue";
+            case 3 -> "Wed";
+            case 4 -> "Thu";
+            case 5 -> "Fri";
+            case 6 -> "Sat";
+            case 7 -> "Sun";
+            default -> String.valueOf(dayNum);
+        };
+    }
+
+    /**
+     * Compare classes by compatibility (fewer changes = higher priority)
+     */
+    private int compareByCompatibility(TransferOptionDTO a, TransferOptionDTO b) {
+        int changesA = countChanges(a.getChanges());
+        int changesB = countChanges(b.getChanges());
+
+        if (changesA != changesB) {
+            return Integer.compare(changesA, changesB);
+        }
+
+        // Secondary sort by content gap severity
+        String severityA = a.getContentGapAnalysis() != null ? a.getContentGapAnalysis().getGapLevel() : "NONE";
+        String severityB = b.getContentGapAnalysis() != null ? b.getContentGapAnalysis().getGapLevel() : "NONE";
+        return compareSeverity(severityA, severityB);
+    }
+
+    /**
+     * Count number of changes in Changes object
+     */
+    private int countChanges(TransferOptionDTO.Changes changes) {
+        if (changes == null) return 0;
+
+        int count = 0;
+        if (changes.getBranch() != null && !changes.getBranch().equals("No change")) count++;
+        if (changes.getModality() != null && !changes.getModality().equals("No change")) count++;
+        if (changes.getSchedule() != null && !changes.getSchedule().equals("No change")) count++;
+        return count;
+    }
+
+    /**
+     * Compare severity levels: NONE < MINOR < MODERATE < MAJOR
+     */
+    private int compareSeverity(String severityA, String severityB) {
+        Map<String, Integer> severityOrder = Map.of(
+            "NONE", 0, "MINOR", 1, "MODERATE", 2, "MAJOR", 3
+        );
+        return Integer.compare(
+            severityOrder.getOrDefault(severityA, 0),
+            severityOrder.getOrDefault(severityB, 0)
+        );
+    }
+
+    /**
+     * Build current class info for response
+     */
+    private TransferOptionsResponseDTO.CurrentClassInfo buildCurrentClassInfo(ClassEntity currentClass) {
+        // Get current session count (completed sessions)
+        List<Session> completedSessions = sessionRepository.findByClassIdAndStatusIn(
+            currentClass.getId(),
+            List.of(SessionStatus.DONE, SessionStatus.CANCELLED)
+        );
+        int currentSessionCount = completedSessions != null ? completedSessions.size() : 0;
+
+        return TransferOptionsResponseDTO.CurrentClassInfo.builder()
+                .id(currentClass.getId())
+                .code(currentClass.getCode())
+                .name(currentClass.getName())
+                .branchName(currentClass.getBranch().getName())
+                .modality(currentClass.getModality().name())
+                .scheduleDays(formatSchedule(currentClass))
+                .scheduleTime("Varies by session") // Time slots vary per session
+                .currentSession(currentSessionCount)
+                .build();
+    }
+
+
     @Override
     public boolean hasExceededTransferLimit(Long studentId, Long courseId) {
         long approvedTransfers = studentRequestRepository.countByStudentIdAndRequestTypeAndStatusAndTargetClassCourseId(
