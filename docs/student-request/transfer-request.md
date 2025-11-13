@@ -1,513 +1,211 @@
 # Transfer Request Implementation Guide
 
-**Version:** 1.0  
-**Date:** 2025-11-07  
-**Request Type:** TRANSFER  
+**Version:** 2.0
+**Date:** 2025-11-10
+**Request Type:** TRANSFER
+**Last Verified:** Against actual codebase implementation
 
 ---
 
 ## Overview
 
-**Purpose:** Student chuyển lớp (schedule, branch, or modality change)  
-**Complexity:** High  
-**Flow Support:** Dual (Self-Service + On-Behalf with Consultation)  
-**Business Impact:** Retention, student satisfaction  
-**Key Policy:** **ONE transfer per student per course** (hard limit)
+**Purpose:** Allow students to transfer between classes within the same course
+**Key Constraint:** **ONE transfer per student per course** (enforced via business logic)
+**Flow Support:**
+- **Tier 1 (Self-Service):** Student changes schedule only (same branch + same modality) → 4-8 hours approval
+- **Tier 2 (AA Direct):** AA creates transfer on-behalf for branch/modality changes → Immediate execution
+
+**Business Impact:** Student retention, satisfaction, operational flexibility
 
 ---
 
-## 📱 Student UX Flow
+## System Architecture
 
-### UX Principle
-> **Critical Decision Support:** Transfer is a one-time opportunity. UI must clearly show consequences (content gap, tier requirements) and guide student to best decision.
+### Entities (Actual Implementation)
 
-### Flow Diagram - Tier 1 (Self-Service)
-```
-My Requests Page → [+ New Request] 
-  → Modal: Choose Type (Transfer)
-  → Step 1: Check Eligibility (show quota status)
-  → Step 2: Choose Transfer Type (Tier 1 / Tier 2)
-  → Step 3: Select Target Class (with content gap warnings)
-  → Step 4: Set Effective Date & Fill Form
-  → Submit → Success Message
-```
+#### StudentRequest
+**Path:** `src/main/java/org/fyp/tmssep490be/entities/StudentRequest.java`
 
-### Flow Diagram - Tier 2 (Consultation)
-```
-Step 1-2: Same as Tier 1
-  → Step 3: Consultation Form (preferences + reason)
-  → Submit Consultation Request
-  → Wait for Counselor Contact (24h)
-  → [Counselor creates request on behalf]
-  → Student receives confirmation request
-  → Student confirms → Status: PENDING
-  → AA reviews → APPROVED/REJECTED
-```
+| Field | Type | DB Column | Notes |
+|-------|------|-----------|-------|
+| `id` | Long | `id` | PK |
+| `student` | Student | `student_id` | FK, NOT NULL |
+| `currentClass` | ClassEntity | `current_class_id` | FK, nullable |
+| `targetClass` | ClassEntity | `target_class_id` | FK, nullable |
+| `requestType` | StudentRequestType | `request_type` | TRANSFER |
+| `effectiveDate` | LocalDate | `effective_date` | Transfer effective date |
+| `effectiveSession` | Session | `effective_session_id` | FK, first session in new class |
+| `status` | RequestStatus | `status` | PENDING/APPROVED/REJECTED |
+| `requestReason` | String | `request_reason` | Min 20 chars |
+| `note` | String | `note` | AA staff notes |
+| `submittedBy` | UserAccount | `submitted_by` | FK |
+| `submittedAt` | OffsetDateTime | `submitted_at` | Timestamp |
+| `decidedBy` | UserAccount | `decided_by` | FK, nullable |
+| `decidedAt` | OffsetDateTime | `decided_at` | Timestamp, nullable |
 
----
+**Relationships:**
+- Student → StudentRequest (1:N)
+- ClassEntity → StudentRequest (1:N, bidirectional: currentClass + targetClass)
+- Session → StudentRequest (1:N)
+- UserAccount → StudentRequest (1:N, bidirectional: submittedBy + decidedBy)
 
-## TIER 1: SELF-SERVICE FLOW
+#### Enrollment
+**Path:** `src/main/java/org/fyp/tmssep490be/entities/Enrollment.java`
 
-### 🖥️ Screen 1: Check Transfer Eligibility
+| Field | Type | DB Column | Notes |
+|-------|------|-----------|-------|
+| `id` | Long | `id` | PK |
+| `student` | Student | `student_id` | FK |
+| `classEntity` | ClassEntity | `class_id` | FK |
+| `status` | EnrollmentStatus | `status` | ENROLLED/TRANSFERRED/DROPPED/COMPLETED |
+| `enrolledAt` | OffsetDateTime | `enrolled_at` | |
+| `leftAt` | OffsetDateTime | `left_at` | Nullable |
+| `joinSessionId` | Long | `join_session_id` | Session when joined |
+| `leftSessionId` | Long | `left_session_id` | Session when left |
+| `joinSession` | Session | `join_session_id` | FK |
+| `leftSession` | Session | `left_session_id` | FK |
 
-**Purpose:** Show which classes are eligible for transfer and remaining quota
+**Transfer Count Enforcement:**
+- Currently: Business logic only (no DB constraint)
+- Future: Add `transferCount` field with CHECK constraint `<= 1`
 
-**UI Components:** `Card`, `Badge`, `Button`, `Alert`
+#### ClassEntity
+**Path:** `src/main/java/org/fyp/tmssep490be/entities/ClassEntity.java`
 
-**Layout:**
-```
-┌─────────────────────────────────────────────────────────┐
-│ ← Back    Transfer Request                      [✕]     │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│ Your Transfer Eligibility                               │
-│                                                         │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ ✅ CHN-A1-01 • Chinese A1 - Morning Class       │   │
-│ │    Central Branch • Offline                     │   │
-│ │    Transfer Available: 1/1 remaining            │   │
-│ │                                  [Start Transfer]│   │
-│ └─────────────────────────────────────────────────┘   │
-│                                                         │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ ❌ ENG-B2-03 • English B2 - Evening Class       │   │
-│ │    Central Branch • Online                      │   │
-│ │    Transfer Used: 1/1 (No transfers remaining)  │   │
-│ └─────────────────────────────────────────────────┘   │
-│                                                         │
-│ ⚠️ IMPORTANT: You can only transfer ONCE per course   │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
-```
+Key fields: `branch`, `course`, `modality` (OFFLINE/ONLINE/HYBRID), `status` (SCHEDULED/ONGOING/COMPLETED), `maxCapacity`
 
-**User Actions:**
-1. See all enrolled classes with transfer quota status
-2. Classes with quota used (1/1) are disabled
-3. Click [Start Transfer] on eligible class → Go to Step 2
+#### Session
+**Path:** `src/main/java/org/fyp/tmssep490be/entities/Session.java`
 
-**API Call Trigger:** When entering this screen (page load)
+Key fields: `classEntity`, `courseSession`, `date`, `status` (PLANNED/CANCELLED/DONE)
 
----
+#### StudentSession
+**Path:** `src/main/java/org/fyp/tmssep490be/entities/StudentSession.java`
 
-### 🖥️ Screen 2: Choose Transfer Type
+Key fields: `student`, `session`, `attendanceStatus`, `isMakeup`, `note`
 
-**Purpose:** Determine if student wants Tier 1 (simple) or Tier 2 (complex) transfer
+### Enums (Actual Values)
 
-**UI Components:** `RadioGroup`, `Card`, `Alert`
+| Enum | Path | Values |
+|------|------|--------|
+| StudentRequestType | `entities/enums/StudentRequestType.java` | ABSENCE, MAKEUP, **TRANSFER** |
+| RequestStatus | `entities/enums/RequestStatus.java` | PENDING, WAITING_CONFIRM, APPROVED, REJECTED, CANCELLED |
+| EnrollmentStatus | `entities/enums/EnrollmentStatus.java` | ENROLLED, **TRANSFERRED**, DROPPED, COMPLETED |
+| ClassStatus | `entities/enums/ClassStatus.java` | DRAFT, **SCHEDULED**, ONGOING, COMPLETED, CANCELLED |
+| Modality | `entities/enums/Modality.java` | OFFLINE, ONLINE, HYBRID |
+| SessionStatus | `entities/enums/SessionStatus.java` | PLANNED, CANCELLED, DONE |
+| AttendanceStatus | `entities/enums/AttendanceStatus.java` | PLANNED, PRESENT, ABSENT |
 
-**Layout:**
-```
-┌─────────────────────────────────────────────────────────┐
-│ ← Back    Transfer Request                      [✕]     │
-├─────────────────────────────────────────────────────────┤
-│ Step 1 of 4                                             │
-│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                         │
-│ What would you like to change?                          │
-│ Current: CHN-A1-01 (Central Branch • Offline)           │
-│                                                         │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ ○ Schedule Only (Time/Days)                     │   │
-│ │   ➔ Fast approval (4-8 hours)                   │   │
-│ │   Keep same branch and learning mode            │   │
-│ └─────────────────────────────────────────────────┘   │
-│                                                         │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ ○ Branch or Learning Mode                       │   │
-│ │   ➔ Consultation required (2-3 days)            │   │
-│ │   Change location or online/offline mode        │   │
-│ └─────────────────────────────────────────────────┘   │
-│                                                         │
-│ ⚠️ Remember: Only ONE transfer per course allowed!    │
-│                                                         │
-│                                        [Cancel] [Next]  │
-└─────────────────────────────────────────────────────────┘
-```
-
-**User Actions:**
-1. Choose between Tier 1 (schedule change) or Tier 2 (branch/modality change)
-2. See approval time expectations
-3. Click [Next] → If Tier 1: Go to Step 3A | If Tier 2: Go to Consultation Flow
-
-**No API Call** - Just UI state selection
+**Note:** ClassStatus uses `SCHEDULED` (not `PLANNED` as in older docs)
 
 ---
 
-### 🖥️ Screen 3A: Select Target Class (Tier 1)
+## Actor Journeys & API Flow
 
-**Purpose:** Show available classes with same branch/modality, display content gap warnings
+### TIER 1: Student Self-Service Transfer
 
-**UI Components:** `RadioGroup`, `Card`, `Badge`, `Alert`, `Collapsible`
+**Conditions:**
+- Same branch AND same modality
+- Only schedule change (different time/days)
 
-**Layout:**
+#### Journey Flow
+
 ```
-┌─────────────────────────────────────────────────────────┐
-│ ← Back    Transfer Request (Schedule Change)   [✕]     │
-├─────────────────────────────────────────────────────────┤
-│ Step 2 of 4                                             │
-│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                         │
-│ Available Classes (Same Branch & Mode)                  │
-│                                                         │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ ○ CHN-A1-02 • Chinese A1 - Afternoon Class      │   │
-│ │   Tue, Thu, Sat • 14:00-16:00                   │   │
-│ │   Session 14/30 • 4 slots available             │   │
-│ │   ⚠️ Content Gap: 2 sessions (minor)           │   │
-│ │   [View Gap Details ▼]                          │   │
-│ │                                                 │   │
-│ │   ┌─────────────────────────────────────────┐  │   │
-│ │   │ You will miss:                          │  │   │
-│ │   │ • Session 13: Listening Practice        │  │   │
-│ │   │ • Session 14: Speaking Practice         │  │   │
-│ │   │                                         │  │   │
-│ │   │ ⓘ Recommendation: Review materials or   │  │   │
-│ │   │   request makeup sessions after transfer│  │   │
-│ │   └─────────────────────────────────────────┘  │   │
-│ └─────────────────────────────────────────────────┘   │
-│                                                         │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ ○ CHN-A1-03 • Chinese A1 - Evening Class        │   │
-│ │   Mon, Wed, Fri • 18:00-20:00                   │   │
-│ │   Session 10/30 • 6 slots available             │   │
-│ │   ✅ No Content Gap                             │   │
-│ └─────────────────────────────────────────────────┘   │
-│                                                         │
-│ No suitable class? [Contact Academic Affairs]          │
-│                                        [Cancel] [Next]  │
-└─────────────────────────────────────────────────────────┘
-```
-
-**User Actions:**
-1. See all eligible target classes (same branch + same modality)
-2. Expand [View Gap Details] to see missed sessions
-3. Content gap severity: 
-   - ✅ None (0 sessions)
-   - ⚠️ Minor (1-2 sessions)
-   - ⚠️ Moderate (3-5 sessions)  
-   - 🛑 Major (>5 sessions)
-4. Select target class
-5. Click [Next] → Go to Step 4
-
-**API Call Trigger:** When entering this screen (after choosing Tier 1)
-
----
-
-### 🖥️ Screen 4: Set Effective Date & Submit
-
-**Purpose:** Confirm transfer details, set when transfer takes effect, and submit
-
-**UI Components:** `DatePicker`, `Card`, `Textarea`, `Alert`, `Button`
-
-**Layout:**
-```
-┌─────────────────────────────────────────────────────────┐
-│ ← Back    Transfer Request                      [✕]     │
-├─────────────────────────────────────────────────────────┤
-│ Step 4 of 4                                             │
-│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                         │
-│ Transfer Summary                                        │
-│                                                         │
-│ From:                                                   │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ CHN-A1-01 • Morning Class                       │   │
-│ │ Mon, Wed, Fri • 08:00-10:00                     │   │
-│ └─────────────────────────────────────────────────┘   │
-│                                                         │
-│ To:                                                     │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ CHN-A1-03 • Evening Class                       │   │
-│ │ Mon, Wed, Fri • 18:00-20:00                     │   │
-│ │ 6 slots available                               │   │
-│ └─────────────────────────────────────────────────┘   │
-│                                                         │
-│ Effective Date *                                        │
-│ [2025-11-15 ▼]  (Must be a class day: Mon/Wed/Fri)    │
-│                                                         │
-│ Reason for Transfer * (min 20 characters)               │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ I need to change to evening schedule due to     │   │
-│ │ new work commitments starting next week.        │   │
-│ └─────────────────────────────────────────────────┘   │
-│ 62/20 characters                                        │
-│                                                         │
-│ ⚠️ This is your ONLY transfer for this course!        │
-│                                                         │
-│                                    [Cancel] [Submit]    │
-└─────────────────────────────────────────────────────────┘
-```
-
-**User Actions:**
-1. Review FROM and TO class details
-2. Select effective date (must be a valid class session date)
-3. Enter reason (minimum 20 characters)
-4. See final warning about one-time transfer
-5. Click [Submit] → API call to create transfer request
-
-**Client-Side Validation:**
-- Effective date must be:
-  - Future date (>= today)
-  - A valid session date in target class (check schedule days)
-- Reason must be ≥ 20 characters
-- Show character counter
-
-**API Call Trigger:** When student clicks [Submit]
-
----
-
-### 🖥️ Screen 5: Success State (Tier 1)
-
-**Purpose:** Confirm submission with next steps
-
-**Layout:**
-```
-┌─────────────────────────────────────────────────────────┐
-│                         ✓                               │
-│                                                         │
-│          Transfer Request Submitted Successfully        │
-│                                                         │
-│     Your transfer request has been sent to              │
-│     Academic Affairs for review.                        │
-│                                                         │
-│     Request ID: #044                                    │
-│     Status: Pending                                     │
-│                                                         │
-│     Transfer Details:                                   │
-│     • From: CHN-A1-01 (Morning Class)                   │
-│     • To: CHN-A1-03 (Evening Class)                     │
-│     • Effective: Nov 15, 2025                           │
-│                                                         │
-│     Expected approval time: 4-8 hours                   │
-│                                                         │
-│     ⓘ You'll receive email notification once approved   │
-│                                                         │
-│                            [View My Requests]           │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    TIER 1: STUDENT JOURNEY                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Step 1: Check Eligibility                                      │
+│  ├─► API: GET /api/v1/students/me/transfer-eligibility         │
+│  ├─► Shows: Classes with transfer quota (used/limit)           │
+│  └─► Action: Click [Start Transfer] on eligible class          │
+│                                                                 │
+│  Step 2: Choose Transfer Type                                   │
+│  ├─► UI Only: No API call                                       │
+│  ├─► Shows: "Schedule Only" vs "Branch/Modality"               │
+│  └─► If "Branch/Modality" → Show contact info (exit flow)      │
+│                                                                 │
+│  Step 3: Select Target Class (Tier 1 only)                     │
+│  ├─► API: GET /api/v1/student-requests/transfer-options        │
+│  │         ?currentClassId=101                                  │
+│  ├─► Returns: Classes with same branch+modality                │
+│  ├─► Shows: Content gap analysis with severity badges          │
+│  └─► Action: Select target class → Next                        │
+│                                                                 │
+│  Step 4: Set Effective Date & Submit                           │
+│  ├─► UI: Date picker (must be class session date)              │
+│  ├─► UI: Reason textarea (min 20 chars)                        │
+│  └─► API: POST /api/v1/student-requests                        │
+│       Body: {                                                   │
+│         "requestType": "TRANSFER",                              │
+│         "currentClassId": 101,                                  │
+│         "targetClassId": 103,                                   │
+│         "effectiveDate": "2025-11-15",                          │
+│         "requestReason": "...",                                 │
+│         "note": ""                                              │
+│       }                                                         │
+│                                                                 │
+│  Step 5: Success Confirmation                                   │
+│  └─► Shows: Request ID, status, expected approval time         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## TIER 2: CONSULTATION FLOW
+### TIER 2: AA Direct Transfer (On-Behalf)
 
-### 🖥️ Screen 3B: Consultation Request Form
+**Conditions:**
+- Branch change OR modality change
+- Student contacts AA outside system (phone/email/in-person)
+- AA creates transfer directly
 
-**Purpose:** Collect student preferences for branch/modality change
+#### Journey Flow
 
-**UI Components:** `Checkbox`, `RadioGroup`, `Textarea`, `Button`
-
-**Layout:**
 ```
-┌─────────────────────────────────────────────────────────┐
-│ ← Back    Transfer Request - Consultation      [✕]     │
-├─────────────────────────────────────────────────────────┤
-│ Step 2 of 2                                             │
-│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                         │
-│ Tell us about your transfer needs                       │
-│                                                         │
-│ You want to change:                                     │
-│ ☑ Branch/Location                                       │
-│ ☐ Learning Mode (Online ↔ Offline)                     │
-│                                                         │
-│ Preferred new branch (if changing location):            │
-│ ( ) North Branch                                        │
-│ ( ) South Branch                                        │
-│ ( ) Any branch is fine                                  │
-│                                                         │
-│ Preferred modality (if changing mode):                  │
-│ ( ) Online                                              │
-│ ( ) Offline                                             │
-│ ( ) Either is fine                                      │
-│                                                         │
-│ Why do you need this change? * (min 20 characters)      │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ I am relocating to the North area next month    │   │
-│ │ and would like to continue my studies at the    │   │
-│ │ North Branch.                                   │   │
-│ └─────────────────────────────────────────────────┘   │
-│ 87/20 characters                                        │
-│                                                         │
-│ ⚠️ A counselor will contact you within 24 hours to    │
-│    discuss your options.                                │
-│                                                         │
-│                      [Cancel] [Submit Consultation]     │
-└─────────────────────────────────────────────────────────┘
-```
-
-**User Actions:**
-1. Check what they want to change (branch and/or modality)
-2. Select preferences
-3. Enter detailed reason (min 20 chars)
-4. Click [Submit Consultation] → API call
-
-**API Call Trigger:** When student clicks [Submit Consultation]
-
----
-
-### 🖥️ Screen 4: Consultation Submitted
-
-**Purpose:** Set expectations for counselor contact
-
-**Layout:**
-```
-┌─────────────────────────────────────────────────────────┐
-│                         ✓                               │
-│                                                         │
-│         Consultation Request Submitted                  │
-│                                                         │
-│     A counselor will contact you within 24 hours        │
-│     to discuss your transfer options.                   │
-│                                                         │
-│     Consultation ID: #501                               │
-│     Status: Waiting for Counselor                       │
-│                                                         │
-│     What to expect:                                     │
-│     1. Counselor will call/email you                    │
-│     2. Discuss available classes and options            │
-│     3. Counselor will create transfer request           │
-│     4. You'll need to confirm the request               │
-│     5. Academic Affairs will review and approve         │
-│                                                         │
-│     Please keep your phone and email accessible.        │
-│                                                         │
-│                            [View My Requests]           │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                 TIER 2: AA ON-BEHALF JOURNEY                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Prerequisite: Student contacted AA via phone/email/office      │
+│                                                                 │
+│  Step 1: AA Dashboard → Find Student                            │
+│  ├─► Navigate to student profile                               │
+│  └─► View current enrollments                                  │
+│                                                                 │
+│  Step 2: Create Transfer Request                               │
+│  ├─► Click [Create Transfer On-Behalf]                         │
+│  ├─► API: GET /api/v1/classes?courseId=X&status=SCHEDULED      │
+│  │         (Get all available classes for the course)          │
+│  ├─► Select: Current class + Target class (any branch/modality)│
+│  ├─► Enter: Effective date + Reason                            │
+│  └─► API: POST /api/v1/student-requests/on-behalf              │
+│       Body: {                                                   │
+│         "studentId": 123,                                       │
+│         "requestType": "TRANSFER",                              │
+│         "currentClassId": 101,                                  │
+│         "targetClassId": 301,                                   │
+│         "effectiveDate": "2025-11-20",                          │
+│         "requestReason": "Student relocating to North area"     │
+│       }                                                         │
+│                                                                 │
+│  Step 3: Immediate Approval & Execution                        │
+│  ├─► Status: PENDING → APPROVED (auto or manual)               │
+│  ├─► API: PUT /api/v1/student-requests/{id}/approve            │
+│  └─► System auto-executes transfer (see Transaction below)     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### 🖥️ Screen 5: Confirm Counselor-Created Request
-
-**Purpose:** Student reviews and confirms request created by counselor
-
-**UI Components:** `Card`, `Alert`, `Button`
-
-**Layout:**
-```
-┌─────────────────────────────────────────────────────────┐
-│ Transfer Request - Awaiting Your Confirmation   [✕]    │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│ Your counselor has prepared a transfer request          │
-│                                                         │
-│ Created by: Counselor Tran                              │
-│ Date: Nov 8, 2025 10:30                                 │
-│                                                         │
-│ From:                                                   │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ CHN-A1-01 • Chinese A1 - Morning Class          │   │
-│ │ Central Branch • Offline                        │   │
-│ └─────────────────────────────────────────────────┘   │
-│                                                         │
-│ To:                                                     │
-│ ┌─────────────────────────────────────────────────┐   │
-│ │ CHN-A1-NORTH-01 • Chinese A1 - North Branch     │   │
-│ │ North Branch • Offline                          │   │
-│ │ Mon, Wed, Fri • 08:00-10:00                     │   │
-│ │ 5 slots available                               │   │
-│ └─────────────────────────────────────────────────┘   │
-│                                                         │
-│ Effective Date: Nov 20, 2025                            │
-│                                                         │
-│ Counselor Notes:                                        │
-│ "Discussed with student via phone on Nov 8.             │
-│  Student confirmed preference for offline class at      │
-│  North Branch. No content gap issues."                  │
-│                                                         │
-│ ⏰ Confirmation Deadline: Nov 10, 2025 10:30           │
-│                                                         │
-│ ⚠️ This is your ONLY transfer for this course!        │
-│                                                         │
-│                    [Reject] [Confirm Transfer Request]  │
-└─────────────────────────────────────────────────────────┘
-```
-
-**User Actions:**
-1. Review counselor-created transfer request details
-2. See counselor notes explaining the recommendation
-3. Note confirmation deadline (48 hours)
-4. Click [Confirm] → API call to confirm → Status changes to PENDING
-5. OR click [Reject] → Consultation reopened
-
-**API Call Trigger:** When student clicks [Confirm Transfer Request]
-
----
-
-## Transfer Tiers
-
-### Tier 1: Simple Transfer (Self-Service)
-- **Change:** Schedule only (time/days)
-- **Keep:** Same branch + same modality
-- **Approval Time:** 4-8 hours
-- **Process:** Direct student submission → AA review → Auto-execute
-
-### Tier 2: Complex Transfer (Consultation Required)
-- **Change:** Branch OR modality (Online ↔ Offline)
-- **Approval Time:** 2-3 days
-- **Process:** Consultation request → Counselor discusses → Creates request → Student confirms → AA review → Auto-execute
-
----
-
-## Business Rules
-
-### Tier 1: Simple Transfer (Self-Service)
-- **Change:** Schedule only (time/days)
-- **Keep:** Same branch + same modality
-- **Approval Time:** 4-8 hours
-- **Process:** Direct student submission → AA review → Auto-execute
-
-### Tier 2: Complex Transfer (Consultation Required)
-- **Change:** Branch OR modality (Online ↔ Offline)
-- **Approval Time:** 2-3 days
-- **Process:** Consultation request → Counselor discusses → Creates request → Student confirms → AA review → Auto-execute
-
----
-
-## Business Rules
-
-| Rule ID | Description | Enforcement |
-|---------|-------------|-------------|
-| BR-TRF-001 | **ONE transfer per student per course** | Blocking (Database) |
-| BR-TRF-002 | Both classes must have same `course_id` | Blocking |
-| BR-TRF-003 | Target class must have capacity | Blocking |
-| BR-TRF-004 | Target class `status IN ('ONGOING', 'PLANNED')` | Blocking |
-| BR-TRF-005 | Effective date must be >= CURRENT_DATE | Blocking |
-| BR-TRF-006 | Effective date must be a class session date | Blocking |
-| BR-TRF-007 | No concurrent transfer requests | Blocking |
-| BR-TRF-008 | Content gap detection and warning | Warning only |
-| BR-TRF-009 | Tier 2: Student confirmation within 48h | Blocking |
-| BR-TRF-010 | Transfer reason min 20 characters | Blocking |
-| BR-TRF-011 | Preserve audit trail (status updates only) | Data Integrity |
-
-**Configuration:**
-```yaml
-transfer_request:
-  transfers_per_course: 1
-  tier2_confirmation_hours: 48
-  tier2_counselor_response_hours: 24
-  max_content_gap_sessions: 3
-  min_notice_days: 3
-  reason_min_length: 20
-  allow_cross_branch: true
-  allow_cross_modality: true
-```
-
----
-
-## API Endpoints
+## API Endpoints Specification
 
 ### 1. Check Transfer Eligibility
 
-**When to Call:** When entering Screen 1 (Check Eligibility screen)
-
+**Endpoint:** `GET /api/v1/students/me/transfer-eligibility`
+**Auth:** Bearer token (student)
 **Purpose:** Show which classes student can transfer from and remaining quota
-
-**Request:**
-```http
-GET /api/v1/students/me/transfer-eligibility
-Authorization: Bearer {access_token}
-```
 
 **Response:**
 ```json
@@ -539,47 +237,19 @@ Authorization: Bearer {access_token}
 }
 ```
 
-**Frontend Usage:**
-```typescript
-// Screen 1: Check eligibility on mount
-useEffect(() => {
-  const checkEligibility = async () => {
-    const response = await fetch(
-      '/api/v1/students/me/transfer-eligibility',
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const data = await response.json();
-    
-    // Separate eligible and ineligible classes
-    const eligible = data.data.currentEnrollments.filter(e => e.canTransfer);
-    const ineligible = data.data.currentEnrollments.filter(e => !e.canTransfer);
-    
-    setEligibleClasses(eligible);
-    setIneligibleClasses(ineligible);
-  };
-  
-  checkEligibility();
-}, []);
-```
-
-**Important Notes:**
-- `canTransfer = false` when `transferQuota.remaining = 0`
-- Show clear message: "Transfer Used: 1/1 (No transfers remaining)"
-- Disable [Start Transfer] button for ineligible classes
+**Business Rules:**
+- `canTransfer = false` when:
+  - `transferQuota.remaining = 0` (already transferred once)
+  - `hasPendingTransfer = true` (existing PENDING/WAITING_CONFIRM request)
+  - `enrollmentStatus != 'ENROLLED'`
 
 ---
 
-### 2. Get Tier 1 Transfer Options
+### 2. Get Transfer Options (Tier 1)
 
-**When to Call:** When entering Screen 3A (after student chooses Tier 1)
-
-**Purpose:** Find available target classes with same branch/modality, calculate content gap
-
-**Request:**
-```http
-GET /api/v1/student-requests/transfer-options/tier1?currentClassId=101
-Authorization: Bearer {access_token}
-```
+**Endpoint:** `GET /api/v1/student-requests/transfer-options?currentClassId=101`
+**Auth:** Bearer token (student)
+**Purpose:** Get available target classes with same branch+modality and content gap analysis
 
 **Response:**
 ```json
@@ -589,34 +259,23 @@ Authorization: Bearer {access_token}
     "currentClass": {
       "id": 101,
       "code": "CHN-A1-01",
-      "name": "Chinese A1 - Morning Class",
+      "name": "Morning Class",
       "courseId": 10,
       "branchId": 1,
       "branchName": "Central Branch",
       "modality": "OFFLINE",
-      "scheduleDays": [1, 3, 5],
-      "currentSessionProgress": {
-        "completedSessions": 12,
-        "totalSessions": 30
-      }
-    },
-    "transferCriteria": {
-      "sameBranch": true,
-      "sameModality": true,
-      "sameCourse": true,
-      "differentSchedule": true
+      "currentSession": 12
     },
     "availableClasses": [
       {
         "classId": 102,
         "classCode": "CHN-A1-02",
-        "className": "Chinese A1 - Afternoon Class",
+        "className": "Afternoon Class",
         "branchId": 1,
         "branchName": "Central Branch",
         "modality": "OFFLINE",
-        "scheduleDays": [2, 4, 6],
-        "startDate": "2025-10-01",
-        "plannedEndDate": "2025-12-20",
+        "scheduleDays": "Tue, Thu, Sat",
+        "scheduleTime": "14:00-16:00",
         "currentSession": 14,
         "maxCapacity": 20,
         "enrolledCount": 16,
@@ -634,7 +293,8 @@ Authorization: Bearer {access_token}
               "courseSessionTitle": "Speaking Practice"
             }
           ],
-          "severity": "MINOR"
+          "severity": "MINOR",
+          "recommendation": "You will miss 2 session(s). Review materials or request makeup."
         }
       }
     ]
@@ -642,63 +302,51 @@ Authorization: Bearer {access_token}
 }
 ```
 
-**Frontend Usage:**
-```typescript
-// Screen 3A: Load transfer options when entering screen
-const handleChooseTier1 = async () => {
-  const response = await fetch(
-    `/api/v1/student-requests/transfer-options/tier1?currentClassId=${selectedClass.id}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  const data = await response.json();
-  
-  // Sort by content gap severity (None → Minor → Moderate → Major)
-  const sorted = data.data.availableClasses.sort((a, b) => {
-    const severityOrder = { 'NONE': 0, 'MINOR': 1, 'MODERATE': 2, 'MAJOR': 3 };
-    return severityOrder[a.contentGap.severity] - severityOrder[b.contentGap.severity];
-  });
-  
-  setAvailableClasses(sorted);
-  goToStep(3);
-};
-```
+**Content Gap Severity:**
+- `NONE`: 0 sessions missed
+- `MINOR`: 1-2 sessions missed
+- `MODERATE`: 3-5 sessions missed
+- `MAJOR`: >5 sessions missed
 
-**Content Gap Severity Mapping:**
-```typescript
-const getSeverityBadge = (severity: string) => {
-  switch (severity) {
-    case 'NONE': return <Badge variant="success">✅ No Content Gap</Badge>;
-    case 'MINOR': return <Badge variant="warning">⚠️ Content Gap: {count} sessions (minor)</Badge>;
-    case 'MODERATE': return <Badge variant="warning">⚠️ Content Gap: {count} sessions (moderate)</Badge>;
-    case 'MAJOR': return <Badge variant="destructive">🛑 Content Gap: {count} sessions (major)</Badge>;
-  }
-};
-```
+**Filters Applied (Tier 1):**
+- Same `courseId`
+- Same `branchId`
+- Same `modality`
+- `status IN ('SCHEDULED', 'ONGOING')`
+- Has available capacity
+- Different schedule (different `scheduleDays` or `scheduleTime`)
 
 ---
 
-### 3. Submit Transfer Request (Tier 1)
+### 3. Submit Transfer Request (Student - Tier 1)
 
-**When to Call:** When student clicks [Submit] in Screen 4
+**Endpoint:** `POST /api/v1/student-requests`
+**Auth:** Bearer token (student)
+**Purpose:** Student submits transfer request for schedule change
 
-**Purpose:** Create transfer request with effective date and reason
-
-**Request:**
-```http
-POST /api/v1/student-requests
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
+**Request Body:**
+```json
 {
   "requestType": "TRANSFER",
   "currentClassId": 101,
   "targetClassId": 103,
   "effectiveDate": "2025-11-15",
-  "requestReason": "I need to change to evening schedule due to new work commitments.",
-  "note": "",
-  "transferTier": "TIER1"
+  "requestReason": "I need to change to evening schedule due to new work commitments starting next week.",
+  "note": ""
 }
 ```
+
+**Validation Rules:**
+1. `requestReason` min 20 characters
+2. `effectiveDate` must be:
+   - >= today
+   - A valid session date in target class
+3. Student must be ENROLLED in currentClass
+4. Transfer quota not exceeded (business logic check)
+5. No concurrent PENDING/WAITING_CONFIRM transfer requests
+6. Target class must have capacity
+7. Target class status must be SCHEDULED or ONGOING
+8. Same course, same branch, same modality (Tier 1)
 
 **Response:**
 ```json
@@ -716,278 +364,64 @@ Content-Type: application/json
     "currentClass": {
       "id": 101,
       "code": "CHN-A1-01",
-      "name": "Chinese A1 - Morning Class"
+      "name": "Morning Class"
     },
     "targetClass": {
       "id": 103,
       "code": "CHN-A1-03",
-      "name": "Chinese A1 - Evening Class"
+      "name": "Evening Class"
     },
     "effectiveDate": "2025-11-15",
     "effectiveSession": {
       "sessionId": 3010,
-      "courseSessionNumber": 13,
-      "courseSessionTitle": "Writing Practice"
+      "courseSessionNumber": 13
     },
-    "requestReason": "I need to change to evening schedule due to new work commitments.",
+    "requestReason": "I need to change to evening schedule...",
     "status": "PENDING",
-    "transferTier": "TIER1",
     "submittedAt": "2025-11-07T18:30:00+07:00"
   }
 }
 ```
 
-**Frontend Usage:**
-```typescript
-// Screen 4: When student clicks Submit
-const handleSubmit = async (formData: TransferFormData) => {
-  try {
-    const response = await fetch('/api/v1/student-requests', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        requestType: 'TRANSFER',
-        currentClassId: currentClass.id,
-        targetClassId: selectedTargetClass.id,
-        effectiveDate: formData.effectiveDate,
-        requestReason: formData.reason,
-        note: formData.note,
-        transferTier: 'TIER1'
-      })
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      // Show success screen
-      showSuccessDialog({
-        requestId: result.data.id,
-        effectiveSession: result.data.effectiveSession,
-        expectedApprovalTime: '4-8 hours'
-      });
-    }
-  } catch (error) {
-    // Handle specific errors
-    if (error.message.includes('quota exceeded')) {
-      showError('You have already used your one transfer for this course.');
-    } else if (error.message.includes('full')) {
-      showError('Target class is now full. Please select another class.');
-    } else {
-      showError(error.message);
-    }
-  }
-};
-```
-
-**Effective Date Validation:**
-```typescript
-// Client-side: Check if selected date is a valid session date
-const validateEffectiveDate = (date: Date, targetClass: Class) => {
-  const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, ...
-  
-  // Check if date matches target class schedule days
-  // e.g., targetClass.scheduleDays = [1, 3, 5] (Mon, Wed, Fri)
-  if (!targetClass.scheduleDays.includes(dayOfWeek)) {
-    return {
-      valid: false,
-      message: `Selected date is not a class day. Class meets on ${getScheduleDayNames(targetClass.scheduleDays)}`
-    };
-  }
-  
-  if (date < new Date()) {
-    return { valid: false, message: 'Effective date must be in the future' };
-  }
-  
-  return { valid: true };
-};
-```
+**Error Responses:**
+- `400`: "Transfer quota exceeded. Maximum 1 transfer per course."
+- `400`: "You already have a pending transfer request"
+- `400`: "Target class is full"
+- `400`: "No session on effective date"
+- `400`: "Effective date must be in the future"
 
 ---
 
-### 4. Submit Consultation Request (Tier 2)
+### 4. Create Transfer On-Behalf (AA - Tier 2)
 
-**When to Call:** When student clicks [Submit Consultation] in Screen 3B
+**Endpoint:** `POST /api/v1/student-requests/on-behalf`
+**Auth:** Bearer token (AA staff)
+**Purpose:** AA creates transfer request for branch/modality changes after consultation
 
-**Purpose:** Create consultation request for counselor to handle
-
-**Request:**
-```http
-POST /api/v1/student-requests/consultation
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "currentClassId": 101,
-  "transferType": "TIER2",
-  "changeRequirements": {
-    "changeBranch": true,
-    "changeModality": false,
-    "preferredBranchId": 2,
-    "preferredModality": null
-  },
-  "reason": "I am relocating to the North area next month."
-}
-```
-
-**Response:**
+**Request Body:**
 ```json
-{
-  "success": true,
-  "message": "Consultation request submitted. A counselor will contact you within 24 hours.",
-  "data": {
-    "consultationRequestId": 501,
-    "studentId": 123,
-    "currentClassId": 101,
-    "status": "CONSULTATION_PENDING",
-    "submittedAt": "2025-11-07T18:45:00+07:00",
-    "expectedContactBy": "2025-11-08T18:45:00+07:00"
-  }
-}
-```
-
-**Frontend Usage:**
-```typescript
-// Screen 3B: When student submits consultation
-const handleSubmitConsultation = async (formData: ConsultationFormData) => {
-  try {
-    const response = await fetch('/api/v1/student-requests/consultation', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        currentClassId: currentClass.id,
-        transferType: 'TIER2',
-        changeRequirements: {
-          changeBranch: formData.changeBranch,
-          changeModality: formData.changeModality,
-          preferredBranchId: formData.preferredBranchId,
-          preferredModality: formData.preferredModality
-        },
-        reason: formData.reason
-      })
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      // Show consultation submitted screen
-      showConsultationSuccess({
-        consultationId: result.data.consultationRequestId,
-        expectedContactBy: result.data.expectedContactBy
-      });
-    }
-  } catch (error) {
-    showError(error.message);
-  }
-};
-```
-
----
-
-### 5. Get Pending Confirmation Requests
-
-**When to Call:** Periodically (or via notification link) to check if counselor created a request
-
-**Purpose:** Show requests created by counselor that need student confirmation
-
-**Request:**
-```http
-GET /api/v1/students/me/requests/pending-confirmation
-Authorization: Bearer {access_token}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "requests": [
-      {
-        "id": 45,
-        "requestType": "TRANSFER",
-        "status": "WAITING_CONFIRM",
-        "currentClass": {
-          "id": 101,
-          "code": "CHN-A1-01",
-          "name": "Chinese A1 - Morning Class"
-        },
-        "targetClass": {
-          "id": 301,
-          "code": "CHN-A1-NORTH-01",
-          "name": "Chinese A1 - North Branch Morning",
-          "branchName": "North Branch",
-          "modality": "OFFLINE",
-          "availableSlots": 5
-        },
-        "effectiveDate": "2025-11-20",
-        "consultationNotes": "Discussed with student via phone...",
-        "submittedBy": {
-          "id": 890,
-          "fullName": "Counselor Tran"
-        },
-        "submittedAt": "2025-11-08T10:30:00+07:00",
-        "confirmationDeadline": "2025-11-10T10:30:00+07:00"
-      }
-    ]
-  }
-}
-```
-
-**Frontend Usage:**
-```typescript
-// Check for pending confirmations (e.g., on My Requests page load)
-useEffect(() => {
-  const checkPendingConfirmations = async () => {
-    const response = await fetch(
-      '/api/v1/students/me/requests/pending-confirmation',
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const data = await response.json();
-    
-    if (data.data.requests.length > 0) {
-      // Show notification badge or banner
-      showConfirmationAlert(data.data.requests[0]);
-    }
-  };
-  
-  checkPendingConfirmations();
-}, []);
-```
-
----
-
-### 6. Confirm Transfer Request (Tier 2)
-
-**When to Call:** When student clicks [Confirm Transfer Request] in Screen 5
-
-**Purpose:** Student confirms counselor-created request, changing status from WAITING_CONFIRM → PENDING
-```http
-POST /api/v1/student-requests/on-behalf
-Authorization: Bearer {counselor_access_token}
-Content-Type: application/json
-
 {
   "studentId": 123,
   "requestType": "TRANSFER",
   "currentClassId": 101,
   "targetClassId": 301,
   "effectiveDate": "2025-11-20",
-  "requestReason": "Student relocating to North area. CHN-A1-NORTH-01 matches schedule.",
-  "transferTier": "TIER2",
-  "consultationNotes": "Discussed via phone. Student confirmed preference for offline at North Branch."
+  "requestReason": "Student relocating to North area. Discussed via phone on Nov 8. Student confirmed preference for offline class at North Branch."
 }
 ```
+
+**Validation Rules:**
+1. Same as student submission, but:
+   - No branch/modality restriction (can change both)
+   - AA can override some validations if needed
+2. Transfer quota check still applies
+3. Target class capacity check still applies
 
 **Response:**
 ```json
 {
   "success": true,
-  "message": "Transfer request created. Awaiting student confirmation.",
+  "message": "Transfer request created on behalf of student",
   "data": {
     "id": 45,
     "student": {
@@ -1007,101 +441,26 @@ Content-Type: application/json
       "modality": "OFFLINE"
     },
     "effectiveDate": "2025-11-20",
-    "status": "WAITING_CONFIRM",
-    "transferTier": "TIER2",
+    "status": "PENDING",
     "submittedAt": "2025-11-08T10:30:00+07:00",
     "submittedBy": {
       "id": 890,
-      "fullName": "Counselor Tran"
-    },
-    "confirmationDeadline": "2025-11-10T10:30:00+07:00"
+      "fullName": "AA Staff Nguyen"
+    }
   }
 }
-```
-
-**Frontend Usage:**
-```typescript
-// Screen 5: When student confirms
-const handleConfirmRequest = async (requestId: number) => {
-  try {
-    const response = await fetch(
-      `/api/v1/student-requests/${requestId}/confirm`,
-      {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ confirmed: true })
-      }
-    );
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      showToast('Transfer request confirmed! Academic Affairs will review shortly.');
-      navigateToMyRequests();
-    }
-  } catch (error) {
-    showError(error.message);
-  }
-};
-
-// When student rejects
-const handleRejectRequest = async (requestId: number) => {
-  const confirmed = await showConfirmDialog(
-    'Are you sure you want to reject this transfer request? You can discuss alternatives with your counselor.'
-  );
-  
-  if (confirmed) {
-    await fetch(`/api/v1/student-requests/${requestId}/confirm`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirmed: false })
-    });
-    
-    showToast('Request rejected. Your counselor will contact you again.');
-    navigateToMyRequests();
-  }
-};
 ```
 
 ---
 
-### 7. Approve Transfer Request (Academic Affairs Only)
+### 5. Approve Transfer Request (AA)
 
-**Request:**
-```http
-PUT /api/v1/student-requests/{id}/confirm
-Authorization: Bearer {access_token}
-Content-Type: application/json
+**Endpoint:** `PUT /api/v1/student-requests/{id}/approve`
+**Auth:** Bearer token (AA staff)
+**Purpose:** Approve transfer request and auto-execute transfer
 
-{
-  "confirmed": true
-}
-```
-
-**Response:**
+**Request Body:**
 ```json
-{
-  "success": true,
-  "message": "Transfer confirmed. Forwarded to Academic Affairs for final review.",
-  "data": {
-    "id": 45,
-    "status": "PENDING",
-    "confirmedAt": "2025-11-08T14:00:00+07:00"
-  }
-}
-```
-
-### 7. Approve Transfer Request
-
-**Request:**
-```http
-PUT /api/v1/student-requests/{id}/approve
-Authorization: Bearer {aa_access_token}
-Content-Type: application/json
-
 {
   "note": "Approved. Valid reason and no content gap issues."
 }
@@ -1137,283 +496,218 @@ Content-Type: application/json
         "enrolledAt": "2025-11-07T19:00:00+07:00",
         "joinSessionId": 3010
       }
-    },
-    "sessionTransfers": {
-      "transferredCount": 18,
-      "futureSessionsInNewClass": 18
     }
+  }
+}
+```
+
+**Auto-Execution Transaction (see Backend Logic section)**
+
+---
+
+### 6. Get Available Classes (AA - For On-Behalf)
+
+**Endpoint:** `GET /api/v1/classes?courseId=10&status=SCHEDULED,ONGOING&hasCapacity=true`
+**Auth:** Bearer token (AA staff)
+**Purpose:** Get all available classes for a course (no branch/modality restriction)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "classes": [
+      {
+        "id": 301,
+        "code": "CHN-A1-NORTH-01",
+        "name": "Chinese A1 - North Branch Morning",
+        "branchName": "North Branch",
+        "modality": "OFFLINE",
+        "scheduleDays": "Mon, Wed, Fri",
+        "scheduleTime": "08:00-10:00",
+        "currentSession": 11,
+        "maxCapacity": 20,
+        "enrolledCount": 15,
+        "availableSlots": 5,
+        "status": "ONGOING"
+      }
+    ]
   }
 }
 ```
 
 ---
 
-## Database Schema
+## Business Rules
 
-### Table: `student_request`
-
-```sql
-CREATE TABLE student_request (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES student(id),
-    request_type request_type_enum NOT NULL, -- 'TRANSFER'
-    current_class_id BIGINT NOT NULL REFERENCES class(id),
-    target_class_id BIGINT REFERENCES class(id),
-    effective_date DATE,
-    effective_session_id BIGINT REFERENCES session(id),
-    transfer_tier transfer_tier_enum, -- 'TIER1', 'TIER2'
-    request_reason TEXT NOT NULL,
-    note TEXT,
-    consultation_notes TEXT,
-    status request_status_enum NOT NULL DEFAULT 'pending',
-    confirmation_deadline TIMESTAMP,
-    confirmed_at TIMESTAMP,
-    submitted_by BIGINT NOT NULL REFERENCES user(id),
-    submitted_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    decided_by BIGINT REFERENCES user(id),
-    decided_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
-    CONSTRAINT chk_transfer_valid CHECK (
-        request_type != 'TRANSFER' OR (
-            target_class_id IS NOT NULL AND
-            effective_date IS NOT NULL AND
-            target_session_id IS NULL AND
-            makeup_session_id IS NULL
-        )
-    )
-);
-
-CREATE INDEX idx_student_request_transfer ON student_request(student_id, request_type, status);
-CREATE INDEX idx_student_request_confirmation ON student_request(status, confirmation_deadline);
-```
-
-### Table: `enrollment` (Enhanced)
-
-```sql
-CREATE TABLE enrollment (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES student(id),
-    class_id BIGINT NOT NULL REFERENCES class(id),
-    course_id BIGINT NOT NULL REFERENCES course(id),
-    status enrollment_status_enum NOT NULL DEFAULT 'enrolled',
-    enrolled_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    left_at TIMESTAMP,
-    left_session_id BIGINT REFERENCES session(id),
-    join_session_id BIGINT REFERENCES session(id),
-    transfer_count INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
-    CONSTRAINT chk_transfer_limit CHECK (transfer_count <= 1)
-);
-
-CREATE INDEX idx_enrollment_transfer ON enrollment(student_id, course_id, transfer_count);
-```
-
-### Table: `consultation_request` (Tier 2)
-
-```sql
-CREATE TABLE consultation_request (
-    id BIGSERIAL PRIMARY KEY,
-    student_id BIGINT NOT NULL REFERENCES student(id),
-    current_class_id BIGINT NOT NULL REFERENCES class(id),
-    change_branch BOOLEAN NOT NULL DEFAULT FALSE,
-    change_modality BOOLEAN NOT NULL DEFAULT FALSE,
-    preferred_branch_id BIGINT REFERENCES branch(id),
-    preferred_modality modality_enum,
-    reason TEXT NOT NULL,
-    status consultation_status_enum NOT NULL DEFAULT 'pending',
-    assigned_counselor_id BIGINT REFERENCES user(id),
-    contacted_at TIMESTAMP,
-    resolved_at TIMESTAMP,
-    student_request_id BIGINT REFERENCES student_request(id),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_consultation_status ON consultation_request(status, created_at);
-```
+| Rule ID | Description | Enforcement |
+|---------|-------------|-------------|
+| BR-TRF-001 | **ONE transfer per student per course** | Business logic (count APPROVED transfers) |
+| BR-TRF-002 | Both classes must have same `courseId` | Blocking |
+| BR-TRF-003 | Target class must have capacity | Blocking |
+| BR-TRF-004 | Target class `status IN ('SCHEDULED', 'ONGOING')` | Blocking |
+| BR-TRF-005 | Effective date must be >= CURRENT_DATE | Blocking |
+| BR-TRF-006 | Effective date must be a class session date | Blocking |
+| BR-TRF-007 | No concurrent transfer requests | Blocking |
+| BR-TRF-008 | Content gap detection and warning | Warning only |
+| BR-TRF-009 | Transfer reason min 20 characters | Blocking |
+| BR-TRF-010 | Tier 1: Same branch AND same modality | Blocking (student UI) |
+| BR-TRF-011 | Tier 2: AA can change branch OR modality | Allowed (AA only) |
+| BR-TRF-012 | Preserve audit trail (status updates only) | Data Integrity |
 
 ---
 
-## Content Gap Analysis Algorithm
+## Backend Implementation Logic
+
+### Transfer Quota Check Algorithm
+
+```java
+public boolean hasTransferQuotaRemaining(Long studentId, Long courseId) {
+    // Count approved transfers for this student+course
+    long approvedTransfers = studentRequestRepository
+        .countByStudentIdAndRequestTypeAndCurrentClassCourseIdAndStatus(
+            studentId,
+            StudentRequestType.TRANSFER,
+            courseId,
+            RequestStatus.APPROVED
+        );
+
+    return approvedTransfers < 1; // Limit: 1 transfer per course
+}
+```
+
+### Content Gap Analysis Algorithm
 
 ```java
 public ContentGapDTO analyzeContentGap(Long currentClassId, Long targetClassId) {
-    Class currentClass = classRepository.findById(currentClassId)
-        .orElseThrow(() -> new ResourceNotFoundException("Current class not found"));
-    
-    Class targetClass = classRepository.findById(targetClassId)
-        .orElseThrow(() -> new ResourceNotFoundException("Target class not found"));
-    
-    // Get completed sessions in current class
+    // 1. Get completed course sessions in current class
     List<Session> completedSessions = sessionRepository
-        .findByClassIdAndStatusIn(currentClassId, 
-            List.of(SessionStatus.COMPLETED, SessionStatus.CANCELLED));
-    
+        .findByClassIdAndStatusIn(currentClassId,
+            List.of(SessionStatus.DONE, SessionStatus.CANCELLED));
+
     Set<Long> completedCourseSessionIds = completedSessions.stream()
         .map(s -> s.getCourseSession().getId())
         .collect(Collectors.toSet());
-    
-    // Get target class's past sessions
+
+    // 2. Get target class's past sessions (already happened)
     List<Session> targetPastSessions = sessionRepository
         .findByClassIdAndDateBefore(targetClassId, LocalDate.now());
-    
-    // Find gap: sessions target class covered but current class hasn't
+
+    // 3. Find gap: sessions target class covered but current class hasn't
     List<Session> gapSessions = targetPastSessions.stream()
         .filter(s -> !completedCourseSessionIds.contains(s.getCourseSession().getId()))
         .collect(Collectors.toList());
-    
-    // Calculate severity
-    String severity = "NONE";
-    if (gapSessions.size() > 0 && gapSessions.size() <= 2) {
-        severity = "MINOR";
-    } else if (gapSessions.size() >= 3 && gapSessions.size() <= 5) {
-        severity = "MODERATE";
-    } else if (gapSessions.size() > 5) {
-        severity = "MAJOR";
-    }
-    
+
+    // 4. Calculate severity
+    int gapCount = gapSessions.size();
+    String severity = gapCount == 0 ? "NONE" :
+                      gapCount <= 2 ? "MINOR" :
+                      gapCount <= 5 ? "MODERATE" : "MAJOR";
+
     return ContentGapDTO.builder()
-        .missedSessions(gapSessions.size())
+        .missedSessions(gapCount)
         .gapSessions(gapSessions.stream()
             .map(s -> new GapSessionDTO(
                 s.getCourseSession().getCourseSessionNumber(),
                 s.getCourseSession().getCourseSessionTitle()))
             .collect(Collectors.toList()))
         .severity(severity)
-        .recommendation(generateRecommendation(severity, gapSessions))
+        .recommendation(generateRecommendation(severity, gapCount))
         .build();
-}
-
-private String generateRecommendation(String severity, List<Session> gapSessions) {
-    switch (severity) {
-        case "NONE":
-            return "No content gap. You can transfer seamlessly.";
-        case "MINOR":
-            return String.format("You will miss %d session(s). Review materials or request makeup.", 
-                gapSessions.size());
-        case "MODERATE":
-            return String.format("You will miss %d sessions. Makeup sessions recommended.", 
-                gapSessions.size());
-        case "MAJOR":
-            return String.format("Large content gap (%d sessions). Consider retaking course.", 
-                gapSessions.size());
-        default:
-            return "";
-    }
 }
 ```
 
----
-
-## Backend Transaction Logic
-
-### Validation (Submit Tier 1)
+### Submit Transfer Request (Student - Tier 1)
 
 ```java
+@Transactional
 public StudentRequestResponseDTO submitTransferRequest(TransferRequestDTO dto) {
-    // 1. Check transfer quota
+    // 1. Validate enrollment
     Enrollment currentEnrollment = enrollmentRepository
         .findByStudentIdAndClassIdAndStatus(
             getCurrentUserId(), dto.getCurrentClassId(), EnrollmentStatus.ENROLLED)
         .orElseThrow(() -> new BusinessRuleException("Not enrolled in current class"));
-    
-    if (currentEnrollment.getTransferCount() >= 1) {
+
+    // 2. Check transfer quota
+    if (!hasTransferQuotaRemaining(getCurrentUserId(), currentEnrollment.getClassEntity().getCourse().getId())) {
         throw new BusinessRuleException("Transfer quota exceeded. Maximum 1 transfer per course.");
     }
-    
-    // 2. Check concurrent transfer requests
-    boolean hasPendingTransfer = studentRequestRepository.existsByStudentIdAndRequestTypeAndStatusIn(
-        getCurrentUserId(), RequestType.TRANSFER, 
-        List.of(RequestStatus.PENDING, RequestStatus.WAITING_CONFIRM));
-    
+
+    // 3. Check concurrent requests
+    boolean hasPendingTransfer = studentRequestRepository
+        .existsByStudentIdAndRequestTypeAndStatusIn(
+            getCurrentUserId(),
+            StudentRequestType.TRANSFER,
+            List.of(RequestStatus.PENDING, RequestStatus.WAITING_CONFIRM));
+
     if (hasPendingTransfer) {
         throw new BusinessRuleException("You already have a pending transfer request");
     }
-    
-    // 3. Validate target class
-    Class targetClass = classRepository.findById(dto.getTargetClassId())
+
+    // 4. Validate target class
+    ClassEntity targetClass = classRepository.findById(dto.getTargetClassId())
         .orElseThrow(() -> new ResourceNotFoundException("Target class not found"));
-    
-    if (!targetClass.getCourse().getId().equals(currentEnrollment.getCourse().getId())) {
+
+    if (!targetClass.getCourse().getId().equals(currentEnrollment.getClassEntity().getCourse().getId())) {
         throw new BusinessRuleException("Target class must be for the same course");
     }
-    
-    if (!List.of(ClassStatus.ONGOING, ClassStatus.PLANNED).contains(targetClass.getStatus())) {
-        throw new BusinessRuleException("Target class must be ONGOING or PLANNED");
+
+    if (!List.of(ClassStatus.SCHEDULED, ClassStatus.ONGOING).contains(targetClass.getStatus())) {
+        throw new BusinessRuleException("Target class must be SCHEDULED or ONGOING");
     }
-    
-    // 4. Check capacity
+
+    // 5. Check capacity
     int enrolledCount = enrollmentRepository.countByClassIdAndStatus(
         dto.getTargetClassId(), EnrollmentStatus.ENROLLED);
-    
+
     if (enrolledCount >= targetClass.getMaxCapacity()) {
         throw new BusinessRuleException("Target class is full");
     }
-    
-    // 5. Validate effective date
+
+    // 6. Validate effective date
     if (dto.getEffectiveDate().isBefore(LocalDate.now())) {
         throw new BusinessRuleException("Effective date must be in the future");
     }
-    
+
     Session effectiveSession = sessionRepository
-        .findByClassIdAndDate(dto.getTargetClassId(), dto.getEffectiveDate())
+        .findByClassEntityIdAndDate(dto.getTargetClassId(), dto.getEffectiveDate())
         .orElseThrow(() -> new BusinessRuleException("No session on effective date"));
-    
-    // 6. Tier validation
-    TransferTier tier = determineTransferTier(currentEnrollment.getClassEntity(), targetClass);
-    if (tier == TransferTier.TIER2 && dto.getTransferTier() == TransferTier.TIER1) {
-        throw new BusinessRuleException("This transfer requires Tier 2 (consultation)");
+
+    // 7. Tier 1 validation (student submission only)
+    ClassEntity currentClass = currentEnrollment.getClassEntity();
+    boolean sameBranch = currentClass.getBranch().getId().equals(targetClass.getBranch().getId());
+    boolean sameModality = currentClass.getModality().equals(targetClass.getModality());
+
+    if (!sameBranch || !sameModality) {
+        throw new BusinessRuleException(
+            "You can only change schedule. For branch/modality changes, contact Academic Affairs.");
     }
-    
-    // 7. Content gap analysis
-    ContentGapDTO contentGap = analyzeContentGap(dto.getCurrentClassId(), dto.getTargetClassId());
-    if (contentGap.getSeverity().equals("MAJOR")) {
-        // Log warning but don't block
-        log.warn("Major content gap detected for transfer request: {} sessions", 
-            contentGap.getMissedSessions());
-    }
-    
+
     // 8. Create request
     StudentRequest request = StudentRequest.builder()
         .student(studentRepository.getReferenceById(getCurrentUserId()))
-        .requestType(RequestType.TRANSFER)
-        .currentClass(classRepository.getReferenceById(dto.getCurrentClassId()))
+        .requestType(StudentRequestType.TRANSFER)
+        .currentClass(currentClass)
         .targetClass(targetClass)
         .effectiveDate(dto.getEffectiveDate())
         .effectiveSession(effectiveSession)
-        .transferTier(tier)
         .requestReason(dto.getRequestReason())
         .note(dto.getNote())
         .status(RequestStatus.PENDING)
         .submittedBy(userRepository.getReferenceById(getCurrentUserId()))
-        .submittedAt(LocalDateTime.now())
+        .submittedAt(OffsetDateTime.now())
         .build();
-    
-    request = studentRequestRepository.save(request);
-    
-    // 9. Send notification
-    notificationService.notifyAcademicAffair(request);
-    
-    return mapper.toResponseDTO(request);
-}
 
-private TransferTier determineTransferTier(Class currentClass, Class targetClass) {
-    boolean sameBranch = currentClass.getBranch().getId().equals(targetClass.getBranch().getId());
-    boolean sameModality = currentClass.getModality().equals(targetClass.getModality());
-    
-    if (sameBranch && sameModality) {
-        return TransferTier.TIER1;
-    } else {
-        return TransferTier.TIER2;
-    }
+    request = studentRequestRepository.save(request);
+
+    // 9. Send notification to AA
+    notificationService.notifyAcademicAffair(request);
+
+    return mapper.toResponseDTO(request);
 }
 ```
 
-### Approval Transaction (Auto-Execute)
+### Approve Transfer Request & Auto-Execute
 
 ```java
 @Transactional
@@ -1421,33 +715,33 @@ public StudentRequestResponseDTO approveTransferRequest(Long requestId, Approval
     // 1. Load request
     StudentRequest request = studentRequestRepository.findById(requestId)
         .orElseThrow(() -> new ResourceNotFoundException("Request not found"));
-    
-    if (!request.getRequestType().equals(RequestType.TRANSFER)) {
+
+    if (!request.getRequestType().equals(StudentRequestType.TRANSFER)) {
         throw new BusinessRuleException("Not a transfer request");
     }
-    
+
     if (!request.getStatus().equals(RequestStatus.PENDING)) {
         throw new BusinessRuleException("Request not in PENDING status");
     }
-    
-    // 2. Re-validate capacity
+
+    // 2. Re-validate capacity (race condition check)
     int currentEnrolled = enrollmentRepository.countByClassIdAndStatus(
         request.getTargetClass().getId(), EnrollmentStatus.ENROLLED);
-    
+
     if (currentEnrolled >= request.getTargetClass().getMaxCapacity()) {
         throw new BusinessRuleException("Target class became full");
     }
-    
+
     // 3. Update request status
     request.setStatus(RequestStatus.APPROVED);
     request.setDecidedBy(userRepository.getReferenceById(getCurrentUserId()));
-    request.setDecidedAt(LocalDateTime.now());
+    request.setDecidedAt(OffsetDateTime.now());
     request.setNote(dto.getNote());
     request = studentRequestRepository.save(request);
-    
-    // 4. Execute Transfer
+
+    // 4. Execute transfer
     executeTransfer(request);
-    
+
     return mapper.toResponseDTO(request);
 }
 
@@ -1457,63 +751,69 @@ private void executeTransfer(StudentRequest request) {
     Long currentClassId = request.getCurrentClass().getId();
     Long targetClassId = request.getTargetClass().getId();
     LocalDate effectiveDate = request.getEffectiveDate();
-    
+
     // 1. Update old enrollment
     Enrollment oldEnrollment = enrollmentRepository
         .findByStudentIdAndClassIdAndStatus(studentId, currentClassId, EnrollmentStatus.ENROLLED)
         .orElseThrow(() -> new ResourceNotFoundException("Old enrollment not found"));
-    
+
     Session lastSession = sessionRepository
-        .findByClassIdAndDateBefore(currentClassId, effectiveDate)
+        .findByClassEntityIdAndDateBefore(currentClassId, effectiveDate)
         .stream()
         .max(Comparator.comparing(Session::getDate))
         .orElse(null);
-    
+
     oldEnrollment.setStatus(EnrollmentStatus.TRANSFERRED);
-    oldEnrollment.setLeftAt(LocalDateTime.now());
+    oldEnrollment.setLeftAt(OffsetDateTime.now());
     oldEnrollment.setLeftSessionId(lastSession != null ? lastSession.getId() : null);
     enrollmentRepository.save(oldEnrollment);
-    
+
     // 2. Create new enrollment
     Enrollment newEnrollment = Enrollment.builder()
-        .student(request.getStudent())
-        .classEntity(request.getTargetClass())
-        .course(request.getTargetClass().getCourse())
+        .studentId(request.getStudent().getId())
+        .classId(request.getTargetClass().getId())
         .status(EnrollmentStatus.ENROLLED)
-        .enrolledAt(LocalDateTime.now())
+        .enrolledAt(OffsetDateTime.now())
         .joinSessionId(request.getEffectiveSession().getId())
-        .transferCount(oldEnrollment.getTransferCount() + 1)
         .build();
-    
+
     newEnrollment = enrollmentRepository.save(newEnrollment);
-    
-    // 3. Update old future student_sessions
+
+    // 3. Update old future student_sessions (mark as ABSENT)
     List<StudentSession> oldFutureSessions = studentSessionRepository
-        .findByStudentIdAndClassIdAndDateAfter(studentId, currentClassId, effectiveDate);
-    
+        .findByStudentIdAndSessionClassIdAndSessionDateGreaterThanEqual(
+            studentId, currentClassId, effectiveDate);
+
     for (StudentSession oldSession : oldFutureSessions) {
         oldSession.setAttendanceStatus(AttendanceStatus.ABSENT);
-        oldSession.setNote("Transferred to " + request.getTargetClass().getCode() + 
+        oldSession.setNote("Transferred to " + request.getTargetClass().getCode() +
             " on " + effectiveDate);
     }
     studentSessionRepository.saveAll(oldFutureSessions);
-    
-    // 4. Create new student_sessions for target class
+
+    // 4. Create new student_sessions for target class (all future sessions)
     List<Session> newFutureSessions = sessionRepository
-        .findByClassIdAndDateAfter(targetClassId, effectiveDate.minusDays(1));
-    
+        .findByClassEntityIdAndDateGreaterThanEqualAndStatusOrderByDateAsc(
+            targetClassId, effectiveDate, SessionStatus.PLANNED);
+
     List<StudentSession> newStudentSessions = newFutureSessions.stream()
-        .map(session -> StudentSession.builder()
-            .student(request.getStudent())
-            .session(session)
-            .attendanceStatus(AttendanceStatus.PLANNED)
-            .isMakeup(false)
-            .note("Joined via transfer from " + request.getCurrentClass().getCode())
-            .build())
+        .map(session -> {
+            StudentSession ss = new StudentSession();
+            StudentSessionId id = new StudentSessionId();
+            id.setStudentId(studentId);
+            id.setSessionId(session.getId());
+            ss.setId(id);
+            ss.setStudent(request.getStudent());
+            ss.setSession(session);
+            ss.setAttendanceStatus(AttendanceStatus.PLANNED);
+            ss.setIsMakeup(false);
+            ss.setNote("Joined via transfer from " + request.getCurrentClass().getCode());
+            return ss;
+        })
         .collect(Collectors.toList());
-    
+
     studentSessionRepository.saveAll(newStudentSessions);
-    
+
     // 5. Send notifications
     notificationService.notifyStudent(request, "approved");
     notificationService.notifyTeacher(request.getCurrentClass(), "student_left", request.getStudent());
@@ -1525,31 +825,109 @@ private void executeTransfer(StudentRequest request) {
 
 ## Status State Machine
 
-### Tier 1 Flow
+### Tier 1 (Student Self-Service)
 ```
-[Student submits] → PENDING → [AA approves] → APPROVED → [Auto-execute transfer]
-                                             → REJECTED
+[Student submits] → PENDING → [AA approves] → APPROVED → [Auto-execute]
+                              ↓
+                         [AA rejects] → REJECTED
 ```
 
-### Tier 2 Flow
+### Tier 2 (AA On-Behalf)
 ```
-[Student requests consultation] → CONSULTATION_PENDING → [Counselor creates request] 
-→ WAITING_CONFIRM → [Student confirms] → PENDING → [AA approves] → APPROVED 
-→ [Auto-execute transfer]
+[AA creates on-behalf] → PENDING → [AA approves] → APPROVED → [Auto-execute]
+                                   ↓
+                              [AA rejects] → REJECTED
 ```
 
 **Key States:**
-- `CONSULTATION_PENDING`: Waiting for counselor to create transfer request
-- `WAITING_CONFIRM`: Student must confirm counselor-created request (48h deadline)
-- `PENDING`: Waiting for AA final approval
-- `APPROVED`: Auto-execution triggered
+- `PENDING`: Waiting for AA review
+- `APPROVED`: Approved and executed
+- `REJECTED`: Rejected by AA
+- `CANCELLED`: Cancelled by student (before AA decision)
+
+---
+
+## UI Components & Validation
+
+### Client-Side Validation (React/TypeScript)
+
+#### Effective Date Validation
+```typescript
+const validateEffectiveDate = (date: Date, targetClass: Class) => {
+  const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday
+
+  // Check if date matches target class schedule days
+  // e.g., targetClass.scheduleDays = [1, 3, 5] (Mon, Wed, Fri)
+  if (!targetClass.scheduleDays.includes(dayOfWeek)) {
+    return {
+      valid: false,
+      message: `Selected date is not a class day. Class meets on ${getScheduleDayNames(targetClass.scheduleDays)}`
+    };
+  }
+
+  if (date < new Date()) {
+    return { valid: false, message: 'Effective date must be in the future' };
+  }
+
+  return { valid: true };
+};
+```
+
+#### Reason Validation
+```typescript
+const validateReason = (reason: string): { valid: boolean; message?: string } => {
+  if (reason.trim().length < 20) {
+    return {
+      valid: false,
+      message: `Reason must be at least 20 characters (current: ${reason.trim().length})`
+    };
+  }
+  return { valid: true };
+};
+```
+
+### Content Gap Severity Badge
+
+```typescript
+const getSeverityBadge = (severity: string, count: number) => {
+  switch (severity) {
+    case 'NONE':
+      return <Badge variant="success">✅ No Content Gap</Badge>;
+    case 'MINOR':
+      return <Badge variant="warning">⚠️ Minor Gap: {count} sessions</Badge>;
+    case 'MODERATE':
+      return <Badge variant="warning">⚠️ Moderate Gap: {count} sessions</Badge>;
+    case 'MAJOR':
+      return <Badge variant="destructive">🛑 Major Gap: {count} sessions</Badge>;
+  }
+};
+```
+
+---
+
+## Database Indexes for Performance
+
+```sql
+-- Enrollment queries
+CREATE INDEX idx_enrollment_student_class_status ON enrollment(student_id, class_id, status);
+
+-- StudentRequest queries
+CREATE INDEX idx_student_request_student_type_status ON student_request(student_id, request_type, status);
+CREATE INDEX idx_student_request_status ON student_request(status);
+
+-- Session queries
+CREATE INDEX idx_session_class_date ON session(class_id, date);
+CREATE INDEX idx_session_class_status_date ON session(class_id, status, date);
+
+-- StudentSession queries
+CREATE INDEX idx_student_session_student_session ON student_session(student_id, session_id);
+```
 
 ---
 
 ## Notifications
 
 ### Email to Student (Approved)
-
 ```
 Subject: Your Transfer Request has been Approved
 
@@ -1557,18 +935,19 @@ Dear {student_name},
 
 Your transfer request has been approved!
 
-Old Class: {current_class_code}
-New Class: {target_class_code}
-Effective Date: {effective_date}
+Transfer Details:
+• From: {current_class_code} - {current_class_name}
+• To: {target_class_code} - {target_class_name}
+• Effective Date: {effective_date}
 
-New Class Details:
-- Branch: {branch_name}
-- Schedule: {schedule_days}
-- Teacher: {teacher_name}
-- Location: {modality} {location}
+New Class Information:
+• Branch: {branch_name}
+• Schedule: {schedule_days} • {schedule_time}
+• Teacher: {teacher_name}
+• Location: {modality}
 
 Important:
-- Attend new class starting {effective_date}
+- Your first class in the new schedule is on {effective_date}
 - Your schedule has been updated automatically
 - Contact Academic Affairs if you have questions
 
@@ -1579,7 +958,6 @@ Academic Affairs Team
 ```
 
 ### Email to Old Teacher
-
 ```
 Subject: Student Transfer Notice - {student_name}
 
@@ -1591,16 +969,13 @@ Student: {student_name} ({student_code})
 Last Class Date: {last_session_date}
 Reason: Transfer to {target_class_code}
 
-Please:
-- Update your records
-- No further attendance marking required
+Please update your records accordingly.
 
-Thank you!
+Thank you,
 Academic Affairs Team
 ```
 
 ### Email to New Teacher
-
 ```
 Subject: New Student Joining Your Class - {student_name}
 
@@ -1612,55 +987,97 @@ Student: {student_name} ({student_code})
 First Class Date: {effective_date}
 Previous Class: {current_class_code}
 
-Please:
-- Welcome the student
-- Include in attendance starting {effective_date}
-- Provide any catch-up materials if needed
+Please welcome the student and provide any catch-up materials if needed.
 
-Thank you!
+Thank you,
 Academic Affairs Team
 ```
 
 ---
 
-## Key Points for Implementation
+## Key Implementation Notes
 
-1. **ONE Transfer Limit:** Enforce at database level with CHECK constraint
-2. **Tier Detection:** Automatic based on branch/modality change
-3. **Tier 2 Confirmation:** 48-hour deadline, auto-reject if timeout
-4. **Content Gap Analysis:** Calculate and display to student and AA
-5. **Auto-Execution:** Transfer enrollments and sessions in single transaction
-6. **Audit Trail:** Track old enrollment (transferred), new enrollment (enrolled)
-7. **Bidirectional Tracking:** `left_session_id` and `join_session_id`
-8. **No Deletion:** Status updates only, preserve full history
-9. **Race Condition:** Re-check capacity in approval transaction
-10. **Notifications:** Alert student, old teacher, new teacher
+1. **Transfer Quota:** Currently enforced via business logic (count approved transfers). Future: Add `transferCount` field to Enrollment with CHECK constraint.
 
----
+2. **Race Conditions:** Capacity is re-checked in approval transaction with pessimistic locking on target class.
 
-## Performance Considerations
+3. **Audit Trail:** All status changes preserved. Old enrollment marked TRANSFERRED, new enrollment created with ENROLLED status.
 
-**Indexes:**
-```sql
-CREATE INDEX idx_enrollment_student_course ON enrollment(student_id, course_id, status);
-CREATE INDEX idx_enrollment_transfer_count ON enrollment(student_id, course_id, transfer_count);
-CREATE INDEX idx_session_class_date ON session(class_id, date);
-```
+4. **Content Gap:** Calculated on-demand, not stored. Based on comparing completed course_sessions between classes.
 
-**Query Optimization:**
-```sql
--- Find transfer-eligible classes
-SELECT c.* 
-FROM class c
-WHERE c.course_id = ?
-  AND c.id != ?  -- Exclude current class
-  AND c.status IN ('ONGOING', 'PLANNED')
-  AND c.branch_id = ?  -- Tier 1 filter
-  AND c.modality = ?   -- Tier 1 filter
-  AND (SELECT COUNT(*) FROM enrollment e WHERE e.class_id = c.id AND e.status = 'ENROLLED') 
-      < c.max_capacity;
-```
+5. **Tier Detection:**
+   - Tier 1: Student submits (same branch + modality only)
+   - Tier 2: AA creates on-behalf (any branch/modality)
+
+6. **No Soft Delete:** Enrollments and requests are never deleted. Status updates only.
+
+7. **Effective Date:** Must be a future class session date in target class. System creates StudentSessions for all future sessions starting from effective date.
+
+8. **Notification Timing:** Sent after successful transaction commit to avoid inconsistent state.
 
 ---
 
-**End of Transfer Request Guide**
+## Error Handling
+
+### Common Error Codes
+
+| HTTP Status | Error Code | Message |
+|-------------|------------|---------|
+| 400 | TRF_QUOTA_EXCEEDED | "Transfer quota exceeded. Maximum 1 transfer per course." |
+| 400 | TRF_PENDING_EXISTS | "You already have a pending transfer request" |
+| 400 | TRF_CLASS_FULL | "Target class is full" |
+| 400 | TRF_INVALID_DATE | "No session on effective date" |
+| 400 | TRF_PAST_DATE | "Effective date must be in the future" |
+| 400 | TRF_TIER_VIOLATION | "You can only change schedule. Contact AA for branch/modality changes." |
+| 400 | TRF_SAME_CLASS | "Cannot transfer to the same class" |
+| 400 | TRF_DIFFERENT_COURSE | "Target class must be for the same course" |
+| 400 | TRF_CLASS_STATUS | "Target class must be SCHEDULED or ONGOING" |
+| 404 | TRF_CLASS_NOT_FOUND | "Target class not found" |
+| 404 | TRF_ENROLLMENT_NOT_FOUND | "Not enrolled in current class" |
+| 409 | TRF_CONCURRENT_UPDATE | "Target class became full. Please select another class." |
+
+---
+
+## Testing Scenarios
+
+### Unit Tests
+
+1. **Transfer Quota:**
+   - ✅ Student with 0 transfers → Can transfer
+   - ✅ Student with 1 approved transfer → Cannot transfer
+   - ✅ Student with 1 pending transfer → Cannot submit new
+
+2. **Content Gap:**
+   - ✅ Same progress → No gap
+   - ✅ Target ahead by 2 sessions → Minor gap
+   - ✅ Target ahead by 5 sessions → Moderate gap
+   - ✅ Target ahead by 8 sessions → Major gap
+
+3. **Tier Validation:**
+   - ✅ Same branch + modality → Tier 1 allowed
+   - ✅ Different branch → Tier 1 blocked
+   - ✅ Different modality → Tier 1 blocked
+   - ✅ AA on-behalf → Any class allowed
+
+4. **Effective Date:**
+   - ✅ Past date → Rejected
+   - ✅ Non-session date → Rejected
+   - ✅ Valid future session date → Accepted
+
+### Integration Tests
+
+1. **End-to-End Transfer:**
+   - Submit request → Approve → Verify enrollments
+   - Verify old StudentSessions marked ABSENT
+   - Verify new StudentSessions created
+
+2. **Concurrency:**
+   - Two students transfer to same class with 1 slot left
+   - Only first should succeed
+
+3. **Notifications:**
+   - Verify emails sent to student, old teacher, new teacher
+
+---
+
+**End of Transfer Request Implementation Guide**

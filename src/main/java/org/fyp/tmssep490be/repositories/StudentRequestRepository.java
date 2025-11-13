@@ -68,4 +68,44 @@ public interface StudentRequestRepository extends JpaRepository<StudentRequest, 
         @Param("makeupSessionId") Long makeupSessionId,
         @Param("statuses") List<RequestStatus> statuses
     );
+
+    // ============== TRANSFER REQUEST METHODS ==============
+
+    /**
+     * Check for duplicate transfer requests between same classes
+     */
+    @Query("SELECT COUNT(sr) > 0 FROM StudentRequest sr " +
+           "WHERE sr.student.id = :studentId " +
+           "AND sr.currentClass.id = :currentClassId " +
+           "AND sr.targetClass.id = :targetClassId " +
+           "AND sr.requestType = :requestType " +
+           "AND sr.status IN :statuses")
+    boolean existsByStudentIdAndCurrentClassIdAndTargetClassIdAndRequestTypeAndStatusIn(
+            @Param("studentId") Long studentId,
+            @Param("currentClassId") Long currentClassId,
+            @Param("targetClassId") Long targetClassId,
+            @Param("requestType") StudentRequestType requestType,
+            @Param("statuses") List<RequestStatus> statuses);
+
+    /**
+     * Count approved transfers for a student in a specific course
+     */
+    @Query("SELECT COUNT(sr) FROM StudentRequest sr " +
+           "JOIN sr.targetClass tc " +
+           "JOIN tc.course c " +
+           "WHERE sr.student.id = :studentId " +
+           "AND sr.requestType = :requestType " +
+           "AND sr.status = :status " +
+           "AND c.id = :courseId")
+    long countByStudentIdAndRequestTypeAndStatusAndTargetClassCourseId(
+            @Param("studentId") Long studentId,
+            @Param("requestType") StudentRequestType requestType,
+            @Param("status") RequestStatus status,
+            @Param("courseId") Long courseId
+    );
+
+    /**
+     * Count approved transfers by student and request type
+     */
+    long countByStudentIdAndRequestTypeAndStatus(Long studentId, StudentRequestType requestType, RequestStatus status);
 }

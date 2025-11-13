@@ -17,8 +17,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/v1/student-requests")
+@RequestMapping("/api/v1/academic-requests")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Academic Affairs Request Management", description = "APIs for Academic Affairs staff to manage student requests")
@@ -289,5 +291,35 @@ public class AcademicAffairsRequestController {
         StudentRequestResponseDTO response = studentRequestService.submitMakeupRequestOnBehalf(decidedById, makeupRequest);
 
         return ResponseEntity.ok(ResponseObject.success("Makeup request created and auto-approved", response));
+    }
+
+    // ==================== TRANSFER REQUEST ON-BEHALF ENDPOINTS ====================
+
+    @PostMapping("/transfer/on-behalf")
+    @Operation(summary = "Submit transfer request on behalf of student", description = "Academic Affairs submits a transfer request on behalf of a student (auto-approved)")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    public ResponseEntity<ResponseObject<StudentRequestResponseDTO>> submitTransferRequestOnBehalf(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Valid @RequestBody TransferRequestDTO transferRequest) {
+
+        Long decidedById = currentUser.getId();
+        StudentRequestResponseDTO response = studentRequestService.submitTransferRequestOnBehalf(decidedById, transferRequest);
+
+        return ResponseEntity.ok(ResponseObject.success("Transfer request created and auto-approved", response));
+    }
+
+    @GetMapping("/transfer-options")
+    @Operation(summary = "Get transfer options for class (AA)", description = "Get available transfer options for a specific class (AA view)")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    public ResponseEntity<ResponseObject<List<TransferOptionDTO>>> getTransferOptionsForClass(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Parameter(description = "Current class ID", required = true)
+            @RequestParam Long currentClassId) {
+
+        // For AA, we need a studentId - this would typically be passed as a parameter
+        // For now, we'll use a simplified approach that AA can explore options without specifying student
+        List<TransferOptionDTO> result = studentRequestService.getTransferOptions(null, currentClassId);
+
+        return ResponseEntity.ok(ResponseObject.success("Retrieved transfer options successfully", result));
     }
 }

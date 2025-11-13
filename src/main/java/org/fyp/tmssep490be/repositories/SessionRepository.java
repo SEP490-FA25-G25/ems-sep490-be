@@ -86,4 +86,33 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
         @Param("courseSessionId") Long courseSessionId,
         @Param("excludeSessionId") Long excludeSessionId
     );
+
+    /**
+     * Find future sessions for a class after a specific date (for transfer)
+     */
+    List<Session> findByClassEntityIdAndDateAfter(Long classId, LocalDate date);
+
+    /**
+     * Find completed/cancelled sessions by class ID and status
+     * Used for content gap analysis - get sessions already done in a class
+     */
+    @Query("SELECT s FROM Session s WHERE s.classEntity.id = :classId " +
+           "AND s.status IN :statuses " +
+           "ORDER BY s.date ASC")
+    List<Session> findByClassIdAndStatusIn(
+        @Param("classId") Long classId,
+        @Param("statuses") List<SessionStatus> statuses
+    );
+
+    /**
+     * Find past sessions by class ID (date < today)
+     * Used for content gap analysis - get sessions target class already covered
+     */
+    @Query("SELECT s FROM Session s WHERE s.classEntity.id = :classId " +
+           "AND s.date < :date " +
+           "ORDER BY s.date ASC")
+    List<Session> findByClassIdAndDateBefore(
+        @Param("classId") Long classId,
+        @Param("date") LocalDate date
+    );
 }

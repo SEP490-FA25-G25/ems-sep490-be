@@ -67,4 +67,22 @@ public interface ClassRepository extends JpaRepository<ClassEntity, Long> {
            "AND s.date >= CURRENT_DATE AND s.status = 'PLANNED' " +
            "ORDER BY s.date ASC")
     List<org.fyp.tmssep490be.entities.Session> findUpcomingSessions(@Param("classId") Long classId, Pageable pageable);
+
+    /**
+     * Find classes by course ID and status for transfer options
+     */
+    List<ClassEntity> findByCourseIdAndStatusIn(Long courseId, List<ClassStatus> statuses);
+
+    /**
+     * Find class by ID with course eagerly fetched
+     * Used for transfer operations to avoid lazy loading issues
+     * Enhanced to fetch branch, subject, and level to prevent lazy loading
+     */
+    @Query("SELECT c FROM ClassEntity c " +
+           "JOIN FETCH c.course co " +
+           "LEFT JOIN FETCH co.subject " +
+           "LEFT JOIN FETCH co.level " +
+           "JOIN FETCH c.branch " +
+           "WHERE c.id = :classId")
+    Optional<ClassEntity> findByIdWithCourse(@Param("classId") Long classId);
 }
