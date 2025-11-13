@@ -24,13 +24,10 @@ import java.util.List;
 /**
  * Spring Security configuration with JWT authentication and role-based authorization.
  * Stateless session management with JWT tokens.
- *
- * TEMPORARY CONFIGURATION: Authentication disabled for testing purposes.
- * TODO: Re-enable authentication by changing .anyRequest().permitAll() back to .anyRequest().authenticated()
  */
 @Configuration
 @EnableWebSecurity
-// @EnableMethodSecurity(prePostEnabled = true) // DISABLED FOR TESTING
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfiguration {
 
@@ -65,8 +62,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/v1/courses/*/approve").hasAnyRole("MANAGER", "ADMIN")
                         .requestMatchers("/api/v1/classes/*/approve").hasAnyRole("CENTER_HEAD", "MANAGER", "ADMIN")
 
-                        // All other endpoints are public (for testing)
-                        .anyRequest().permitAll()
+                        .anyRequest().authenticated()
                 )
 
                 // Configure exception handling

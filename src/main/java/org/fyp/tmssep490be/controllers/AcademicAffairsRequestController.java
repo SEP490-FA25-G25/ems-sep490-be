@@ -9,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
 import org.fyp.tmssep490be.dtos.studentrequest.*;
+import org.fyp.tmssep490be.entities.Student;
+import org.fyp.tmssep490be.exceptions.ResourceNotFoundException;
+import org.fyp.tmssep490be.repositories.StudentRepository;
 import org.fyp.tmssep490be.security.UserPrincipal;
 import org.fyp.tmssep490be.services.StudentRequestService;
 import org.springframework.data.domain.Page;
@@ -17,8 +20,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/v1/student-requests")
+@RequestMapping("/api/v1/academic-requests")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Academic Affairs Request Management", description = "APIs for Academic Affairs staff to manage student requests")
@@ -26,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 public class AcademicAffairsRequestController {
 
     private final StudentRequestService studentRequestService;
+    private final StudentRepository studentRepository;
 
     @GetMapping("/pending")
     @Operation(summary = "Get pending requests for review", description = "Retrieve all pending requests that need Academic Affairs review with filtering and pagination")
@@ -289,5 +295,76 @@ public class AcademicAffairsRequestController {
         StudentRequestResponseDTO response = studentRequestService.submitMakeupRequestOnBehalf(decidedById, makeupRequest);
 
         return ResponseEntity.ok(ResponseObject.success("Makeup request created and auto-approved", response));
+    }
+
+    // ==================== TRANSFER REQUEST ON-BEHALF ENDPOINTS ====================
+
+    @GetMapping("/students/{studentId}/transfer-eligibility")
+    @Operation(
+        summary = "Get student transfer eligibility (AA)",
+        description = "Check if student is eligible for class transfer with quota and policy info"
+    )
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    public ResponseEntity<ResponseObject<TransferEligibilityDTO>> getStudentTransferEligibility(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Parameter(description = "Student ID", required = true)
+            @PathVariable Long studentId) {
+
+        log.info("AA user {} checking transfer eligibility for student {}", currentUser.getId(), studentId);
+
+        // Get student's user account ID
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + studentId));
+
+        Long userId = student.getUserAccount().getId();
+
+        // Reuse existing service logic
+        TransferEligibilityDTO result = studentRequestService.getTransferEligibility(userId);
+
+        return ResponseEntity.ok(ResponseObject.success("Retrieved transfer eligibility successfully", result));
+    }
+
+    @PostMapping("/transfer/on-behalf")
+    @Operation(summary = "Submit transfer request on behalf of student", description = "Academic Affairs submits a transfer request on behalf of a student (auto-approved)")
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    public ResponseEntity<ResponseObject<StudentRequestResponseDTO>> submitTransferRequestOnBehalf(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Valid @RequestBody TransferRequestDTO transferRequest) {
+
+        Long decidedById = currentUser.getId();
+        StudentRequestResponseDTO response = studentRequestService.submitTransferRequestOnBehalf(decidedById, transferRequest);
+
+        return ResponseEntity.ok(ResponseObject.success("Transfer request created and auto-approved", response));
+    }
+
+    @GetMapping("/transfer-options")
+    @Operation(
+        summary = "Get flexible transfer options (AA)",
+        description = "Get transfer options with flexible branch/modality filtering for Academic Affairs. " +
+                      "Supports: schedule-only change, branch change, modality change, or combined changes."
+    )
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    public ResponseEntity<ResponseObject<TransferOptionsResponseDTO>> getFlexibleTransferOptions(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+
+            @Parameter(description = "Current class ID", required = true)
+            @RequestParam Long currentClassId,
+
+            @Parameter(description = "Target branch ID (optional - for branch change)")
+            @RequestParam(required = false) Long targetBranchId,
+
+            @Parameter(description = "Target modality (optional - for modality change): OFFLINE, ONLINE, HYBRID")
+            @RequestParam(required = false) String targetModality,
+
+            @Parameter(description = "Schedule change only (same branch & modality, different time slot)")
+            @RequestParam(required = false) Boolean scheduleOnly) {
+
+        log.info("AA user {} getting flexible transfer options for class {} (targetBranch: {}, targetModality: {}, scheduleOnly: {})",
+                currentUser.getId(), currentClassId, targetBranchId, targetModality, scheduleOnly);
+
+        TransferOptionsResponseDTO result = studentRequestService.getTransferOptionsFlexible(
+                currentClassId, targetBranchId, targetModality, scheduleOnly);
+
+        return ResponseEntity.ok(ResponseObject.success("Retrieved transfer options successfully", result));
     }
 }

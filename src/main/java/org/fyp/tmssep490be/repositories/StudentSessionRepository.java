@@ -79,4 +79,30 @@ public interface StudentSessionRepository extends JpaRepository<StudentSession, 
            "WHERE ss.student.id = :studentId " +
            "AND s.classEntity.id = :classId")
     List<StudentSession> findByStudentIdAndClassEntityId(@Param("studentId") Long studentId, @Param("classId") Long classId);
+
+    /**
+     * Find student sessions for a class after a specific date (for transfer)
+     */
+    @Query("SELECT ss FROM StudentSession ss " +
+           "JOIN ss.session s " +
+           "WHERE ss.student.id = :studentId " +
+           "AND s.classEntity.id = :classId " +
+           "AND s.date > :date")
+    List<StudentSession> findByStudentIdAndClassEntityIdAndSessionDateAfter(
+            @Param("studentId") Long studentId,
+            @Param("classId") Long classId,
+            @Param("date") LocalDate date
+    );
+
+    /**
+     * Find sessions for a student on a specific date (for conflict checking)
+     */
+    @Query("SELECT s FROM Session s " +
+           "JOIN StudentSession ss ON s.id = ss.session.id " +
+           "WHERE ss.student.id = :studentId " +
+           "AND s.date = :date")
+    List<org.fyp.tmssep490be.entities.Session> findSessionsForStudentByDate(
+            @Param("studentId") Long studentId,
+            @Param("date") LocalDate date
+    );
 }

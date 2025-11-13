@@ -1,6 +1,7 @@
 package org.fyp.tmssep490be.exceptions;
 
 import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
@@ -48,8 +50,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NullPointerException.class)
     public ResponseEntity<ResponseObject<Void>> handleNullPointerException(NullPointerException e) {
+        // Log full stack trace for debugging
+        log.error("NullPointerException occurred: {}", e.getMessage(), e);
+        
+        // Return user-friendly error message
+        String errorMessage = "Null value encountered in the application";
+        if (e.getMessage() != null && !e.getMessage().isEmpty()) {
+            errorMessage += ": " + e.getMessage();
+        }
+        
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ResponseObject.error("Null value encountered in the application"));
+                .body(ResponseObject.error(errorMessage));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

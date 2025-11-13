@@ -20,7 +20,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/student-requests")
+@RequestMapping("/api/v1/student-requests-submission")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Student Request Submission", description = "APIs for submitting new student requests")
