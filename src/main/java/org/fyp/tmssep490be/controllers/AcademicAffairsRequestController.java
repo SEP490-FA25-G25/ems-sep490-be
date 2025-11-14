@@ -8,12 +8,16 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
+import org.fyp.tmssep490be.dtos.schedule.WeeklyScheduleResponseDTO;
 import org.fyp.tmssep490be.dtos.studentrequest.*;
 import org.fyp.tmssep490be.entities.Student;
 import org.fyp.tmssep490be.exceptions.ResourceNotFoundException;
 import org.fyp.tmssep490be.repositories.StudentRepository;
 import org.fyp.tmssep490be.security.UserPrincipal;
 import org.fyp.tmssep490be.services.StudentRequestService;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -250,6 +254,72 @@ public class AcademicAffairsRequestController {
                 return instance;
             }
         }
+    }
+
+    // ==================== STUDENT SCHEDULE FOR AA ENDPOINTS ====================
+
+    @GetMapping("/students/{studentId}/schedule")
+    @Operation(
+        summary = "Get student weekly schedule (AA)",
+        description = "Get weekly schedule for a specific student. Used by AA for absence request workflow. " +
+                      "Can filter by specific class if classId is provided."
+    )
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    public ResponseEntity<ResponseObject<WeeklyScheduleResponseDTO>> getStudentWeeklySchedule(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Parameter(description = "Student ID", required = true)
+            @PathVariable Long studentId,
+            @Parameter(
+                description = "Monday of the target week in ISO 8601 format (YYYY-MM-DD). " +
+                        "If not provided, defaults to current week Monday.",
+                example = "2025-11-10"
+            )
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate weekStart,
+            @Parameter(description = "Filter by specific class ID (optional). If provided, only returns sessions for this class.")
+            @RequestParam(required = false) Long classId) {
+
+        log.info("AA user {} requesting weekly schedule for student: {}, class: {}, week: {}",
+                currentUser.getId(), studentId, classId, weekStart);
+
+        // 1. Default to current week if not specified
+        if (weekStart == null) {
+            weekStart = studentRequestService.getCurrentWeekStart();
+            log.debug("Using current week start: {}", weekStart);
+        }
+
+        // 2. Fetch schedule (with optional class filter)
+        WeeklyScheduleResponseDTO schedule;
+        if (classId != null) {
+            schedule = studentRequestService.getWeeklyScheduleByClass(studentId, classId, weekStart);
+        } else {
+            schedule = studentRequestService.getWeeklySchedule(studentId, weekStart);
+        }
+
+        return ResponseEntity.ok(ResponseObject.success("Retrieved student weekly schedule successfully", schedule));
+    }
+
+    // ==================== ABSENCE REQUEST ON-BEHALF ENDPOINTS ====================
+
+    @PostMapping("/absence/on-behalf")
+    @Operation(
+        summary = "Submit absence request on behalf of student",
+        description = "Academic Affairs submits an absence request on behalf of a student. " +
+                      "The request is auto-approved and the student session is automatically marked as EXCUSED."
+    )
+    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    public ResponseEntity<ResponseObject<StudentRequestResponseDTO>> submitAbsenceRequestOnBehalf(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Valid @RequestBody AbsenceRequestDTO absenceRequest) {
+
+        log.info("AA user {} submitting absence request on-behalf for student {} session {}",
+                currentUser.getId(), absenceRequest.getStudentId(), absenceRequest.getTargetSessionId());
+
+        Long decidedById = currentUser.getId();
+        StudentRequestResponseDTO response = studentRequestService.submitAbsenceRequestOnBehalf(decidedById, absenceRequest);
+
+        return ResponseEntity.ok(ResponseObject.success("Absence request created and auto-approved", response));
     }
 
     // ==================== MAKEUP REQUEST ON-BEHALF ENDPOINTS ====================

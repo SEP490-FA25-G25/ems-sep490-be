@@ -3,6 +3,7 @@ package org.fyp.tmssep490be.services.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.classes.ClassSearchCriteria;
+import org.fyp.tmssep490be.dtos.schedule.WeeklyScheduleResponseDTO;
 import org.fyp.tmssep490be.dtos.studentrequest.*;
 import org.fyp.tmssep490be.entities.*;
 import org.fyp.tmssep490be.entities.enums.*;
@@ -11,6 +12,7 @@ import org.fyp.tmssep490be.exceptions.DuplicateRequestException;
 import org.fyp.tmssep490be.exceptions.ResourceNotFoundException;
 import org.fyp.tmssep490be.repositories.*;
 import org.fyp.tmssep490be.services.StudentRequestService;
+import org.fyp.tmssep490be.services.StudentScheduleService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +41,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
     private final EnrollmentRepository enrollmentRepository;
     private final StudentSessionRepository studentSessionRepository;
     private final UserAccountRepository userAccountRepository;
+    private final StudentScheduleService studentScheduleService;
 
     // Configuration values (in real implementation, these would come from properties)
     private static final int LEAD_TIME_DAYS = 1;
@@ -971,6 +974,79 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return submitMakeupRequestInternal(student.getId(), dto, submittedBy, false);
+    }
+
+    @Override
+    @Transactional
+    public StudentRequestResponseDTO submitAbsenceRequestOnBehalf(Long decidedById, AbsenceRequestDTO dto) {
+        log.info("AA user {} submitting absence request on-behalf for student {} session {}",
+                decidedById, dto.getStudentId(), dto.getTargetSessionId());
+
+        // 1. Validate studentId is provided (required for on-behalf)
+        if (dto.getStudentId() == null) {
+            throw new BusinessRuleException("MISSING_STUDENT_ID", "Student ID is required for on-behalf requests");
+        }
+
+        // 2. Validate student exists
+        Student student = studentRepository.findById(dto.getStudentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + dto.getStudentId()));
+
+        // 3. Validate session exists
+        Session session = sessionRepository.findById(dto.getTargetSessionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
+
+        // 4. Validate enrollment
+        Enrollment enrollment = enrollmentRepository
+                .findByStudentIdAndClassIdAndStatus(student.getId(), dto.getCurrentClassId(), EnrollmentStatus.ENROLLED);
+
+        if (enrollment == null) {
+            throw new BusinessRuleException("NOT_ENROLLED", "Student is not enrolled in this class");
+        }
+
+        // 5. Check duplicate request
+        if (hasDuplicateRequest(student.getId(), dto.getTargetSessionId(), StudentRequestType.ABSENCE)) {
+            throw new DuplicateRequestException("Duplicate absence request for this session");
+        }
+
+        // 6. Get entities
+        ClassEntity classEntity = classRepository.findById(dto.getCurrentClassId())
+                .orElseThrow(() -> new ResourceNotFoundException("Class not found"));
+        UserAccount submittedBy = userAccountRepository.findById(decidedById)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // 7. Create request with auto-approval
+        String finalNote = dto.getNote() != null
+            ? dto.getNote() + " [Auto-approved by Academic Affairs]"
+            : "Auto-approved by Academic Affairs";
+
+        StudentRequest request = StudentRequest.builder()
+                .student(student)
+                .requestType(StudentRequestType.ABSENCE)
+                .currentClass(classEntity)
+                .targetSession(session)
+                .requestReason(dto.getRequestReason())
+                .note(finalNote)
+                .status(RequestStatus.APPROVED)  // Auto-approved for AA on-behalf
+                .submittedBy(submittedBy)
+                .submittedAt(OffsetDateTime.now())
+                .decidedBy(submittedBy)  // Same AA user
+                .decidedAt(OffsetDateTime.now())
+                .build();
+
+        request = studentRequestRepository.save(request);
+        log.info("Absence request created and auto-approved with id: {}", request.getId());
+
+        // 8. Mark student session as ABSENT (approved absence request)
+        StudentSession.StudentSessionId ssId = new StudentSession.StudentSessionId(student.getId(), session.getId());
+        StudentSession ss = studentSessionRepository.findById(ssId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student session not found"));
+
+        ss.setAttendanceStatus(AttendanceStatus.ABSENT);
+        studentSessionRepository.save(ss);
+
+        log.info("Marked student session as ABSENT (approved absence) for student {} session {}", student.getId(), session.getId());
+
+        return mapToStudentResponseDTO(request);
     }
 
     @Override
@@ -2206,5 +2282,24 @@ public class StudentRequestServiceImpl implements StudentRequestService {
         }
 
         return String.join(", ", scheduleDayNames);
+    }
+
+    // ==================== STUDENT SCHEDULE METHODS FOR AA ====================
+
+    @Override
+    public WeeklyScheduleResponseDTO getWeeklySchedule(Long studentId, LocalDate weekStart) {
+        log.info("AA getting weekly schedule for student: {}, week: {}", studentId, weekStart);
+        return studentScheduleService.getWeeklySchedule(studentId, weekStart);
+    }
+
+    @Override
+    public WeeklyScheduleResponseDTO getWeeklyScheduleByClass(Long studentId, Long classId, LocalDate weekStart) {
+        log.info("AA getting weekly schedule for student: {}, class: {}, week: {}", studentId, classId, weekStart);
+        return studentScheduleService.getWeeklyScheduleByClass(studentId, classId, weekStart);
+    }
+
+    @Override
+    public LocalDate getCurrentWeekStart() {
+        return studentScheduleService.getCurrentWeekStart();
     }
 }

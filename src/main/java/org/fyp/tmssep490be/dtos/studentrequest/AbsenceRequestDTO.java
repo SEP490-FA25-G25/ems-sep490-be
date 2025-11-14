@@ -17,6 +17,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AbsenceRequestDTO {
 
+    /**
+     * Student ID - ONLY used for Academic Affairs on-behalf submissions.
+     * For student self-service, this field is null (student ID extracted from JWT).
+     */
+    private Long studentId;
+
     @NotNull(message = "Class ID is required")
     private Long currentClassId;
 

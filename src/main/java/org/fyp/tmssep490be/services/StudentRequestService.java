@@ -1,5 +1,6 @@
 package org.fyp.tmssep490be.services;
 
+import org.fyp.tmssep490be.dtos.schedule.WeeklyScheduleResponseDTO;
 import org.fyp.tmssep490be.dtos.studentrequest.*;
 import org.fyp.tmssep490be.entities.StudentRequest;
 import org.fyp.tmssep490be.entities.enums.StudentRequestType;
@@ -36,6 +37,7 @@ public interface StudentRequestService {
     // AA on-behalf operations
     MissedSessionsResponseDTO getMissedSessionsForStudent(Long studentId, Integer weeksBack);
     MakeupOptionsResponseDTO getMakeupOptionsForStudent(Long targetSessionId, Long studentId);
+    StudentRequestResponseDTO submitAbsenceRequestOnBehalf(Long decidedById, AbsenceRequestDTO dto);
     StudentRequestResponseDTO submitMakeupRequestOnBehalf(Long decidedById, MakeupRequestDTO dto);
     StudentRequestResponseDTO submitTransferRequestOnBehalf(Long decidedById, TransferRequestDTO dto);
 
@@ -45,4 +47,9 @@ public interface StudentRequestService {
     boolean hasExceededTransferLimit(Long studentId, Long courseId);
     boolean isValidTransfer(Long currentClassId, Long targetClassId);
     void executeTransfer(StudentRequest request);
+
+    // Student Schedule methods for AA
+    WeeklyScheduleResponseDTO getWeeklySchedule(Long studentId, LocalDate weekStart);
+    WeeklyScheduleResponseDTO getWeeklyScheduleByClass(Long studentId, Long classId, LocalDate weekStart);
+    LocalDate getCurrentWeekStart();
 }

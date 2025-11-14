@@ -46,7 +46,8 @@ public class StudentScheduleController {
     @Operation(
             summary = "Get weekly schedule",
             description = "Get the authenticated student's class schedule for a specific week. " +
-                    "Returns sessions organized by day and timeslot."
+                    "Returns sessions organized by day and timeslot. " +
+                    "Can filter by specific class if classId is provided."
     )
     @ApiResponses({
             @ApiResponse(
@@ -78,10 +79,17 @@ public class StudentScheduleController {
             )
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate weekStart
+            LocalDate weekStart,
+
+            @Parameter(
+                    description = "Filter by specific class ID (optional). If provided, only returns sessions for this class.",
+                    example = "2"
+            )
+            @RequestParam(required = false)
+            Long classId
     ) {
-        log.info("Student {} requesting weekly schedule for week: {}",
-                userPrincipal.getId(), weekStart);
+        log.info("Student {} requesting weekly schedule for week: {}, class: {}",
+                userPrincipal.getId(), weekStart, classId);
 
         // 1. Extract student ID from JWT
         Long studentId = studentContextHelper.getStudentId(userPrincipal);
@@ -103,8 +111,13 @@ public class StudentScheduleController {
             );
         }
 
-        // 4. Fetch schedule
-        WeeklyScheduleResponseDTO schedule = studentScheduleService.getWeeklySchedule(studentId, weekStart);
+        // 4. Fetch schedule (with optional class filter)
+        WeeklyScheduleResponseDTO schedule;
+        if (classId != null) {
+            schedule = studentScheduleService.getWeeklyScheduleByClass(studentId, classId, weekStart);
+        } else {
+            schedule = studentScheduleService.getWeeklySchedule(studentId, weekStart);
+        }
 
         // 5. Return response
         return ResponseEntity.ok(
