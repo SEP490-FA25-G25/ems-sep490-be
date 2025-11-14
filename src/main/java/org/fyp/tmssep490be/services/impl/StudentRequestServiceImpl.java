@@ -572,6 +572,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .currentClass(mapToClassSummaryDTO(request.getCurrentClass()))
                 .targetClass(mapToClassSummaryDTO(request.getTargetClass())) // For TRANSFER only
                 .targetSession(mapToSessionSummaryDTO(sessionToMap))
+                .makeupSession(mapToSessionSummaryDTO(request.getMakeupSession())) // For MAKEUP only
                 .effectiveDate(effectiveDateStr) // For TRANSFER only
                 .requestReason(request.getRequestReason())
                 .note(request.getNote())
@@ -603,6 +604,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .currentClass(mapToAAClassSummaryDTO(request.getCurrentClass()))
                 .targetClass(mapToAAClassSummaryDTO(request.getTargetClass())) // For TRANSFER only
                 .targetSession(mapToAASessionSummaryDTO(sessionToMap))
+                .makeupSession(mapToAASessionSummaryDTO(request.getMakeupSession())) // For MAKEUP only
                 .effectiveDate(effectiveDateStr) // For TRANSFER only
                 .requestReason(request.getRequestReason())
                 .note(request.getNote())
@@ -638,6 +640,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .currentClass(mapToDetailClassDTO(request.getCurrentClass()))
                 .targetClass(mapToDetailClassDTO(request.getTargetClass())) // For TRANSFER only
                 .targetSession(mapToDetailSessionDTO(sessionToMap))
+                .makeupSession(mapToDetailSessionDTO(request.getMakeupSession())) // For MAKEUP only
                 .effectiveDate(effectiveDateStr) // For TRANSFER only
                 .requestReason(request.getRequestReason())
                 .note(request.getNote())
