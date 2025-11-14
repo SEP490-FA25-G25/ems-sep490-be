@@ -83,6 +83,60 @@ public class StudentScheduleServiceImpl implements StudentScheduleService {
     }
 
     @Override
+    public WeeklyScheduleResponseDTO getWeeklyScheduleByClass(Long studentId, Long classId, LocalDate weekStart) {
+        log.info("Getting weekly schedule for student: {}, class: {}, week: {}", studentId, classId, weekStart);
+
+        // 1. Validate weekStart is Monday
+        if (weekStart.getDayOfWeek() != DayOfWeek.MONDAY) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // 2. Calculate week range
+        LocalDate weekEnd = weekStart.plusDays(6);
+
+        // 3. Fetch student
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STUDENT_NOT_FOUND));
+
+        // 4. Fetch all sessions for this week filtered by class (with JOIN FETCH)
+        List<StudentSession> studentSessions = studentSessionRepository
+                .findWeeklyScheduleByStudentIdAndClassId(studentId, classId, weekStart, weekEnd);
+
+        log.debug("Found {} sessions for student {} in class {} for week {} to {}",
+                studentSessions.size(), studentId, classId, weekStart, weekEnd);
+
+        // 5. Extract unique timeslots
+        List<TimeSlotTemplate> timeSlots = studentSessions.stream()
+                .map(ss -> ss.getSession().getTimeSlotTemplate())
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted(Comparator.comparing(TimeSlotTemplate::getStartTime))
+                .toList();
+
+        // 6. Group by day of week
+        Map<DayOfWeek, List<SessionSummaryDTO>> scheduleMap = studentSessions.stream()
+                .collect(Collectors.groupingBy(
+                        ss -> ss.getSession().getDate().getDayOfWeek(),
+                        Collectors.mapping(this::mapToSessionSummaryDTO, Collectors.toList())
+                ));
+
+        // 7. Ensure all days exist in map (even if empty)
+        for (DayOfWeek day : DayOfWeek.values()) {
+            scheduleMap.putIfAbsent(day, new ArrayList<>());
+        }
+
+        // 8. Build response
+        return WeeklyScheduleResponseDTO.builder()
+                .weekStart(weekStart)
+                .weekEnd(weekEnd)
+                .studentId(student.getId())
+                .studentName(student.getUserAccount().getFullName())
+                .timeSlots(timeSlots.stream().map(this::mapToTimeSlotDTO).toList())
+                .schedule(scheduleMap)
+                .build();
+    }
+
+    @Override
     public SessionDetailDTO getSessionDetail(Long studentId, Long sessionId) {
         log.info("Getting session detail for student: {}, session: {}", studentId, sessionId);
 
