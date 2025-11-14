@@ -572,6 +572,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .currentClass(mapToClassSummaryDTO(request.getCurrentClass()))
                 .targetClass(mapToClassSummaryDTO(request.getTargetClass())) // For TRANSFER only
                 .targetSession(mapToSessionSummaryDTO(sessionToMap))
+                .makeupSession(mapToSessionSummaryDTO(request.getMakeupSession())) // For MAKEUP only
                 .effectiveDate(effectiveDateStr) // For TRANSFER only
                 .requestReason(request.getRequestReason())
                 .note(request.getNote())
@@ -603,6 +604,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .currentClass(mapToAAClassSummaryDTO(request.getCurrentClass()))
                 .targetClass(mapToAAClassSummaryDTO(request.getTargetClass())) // For TRANSFER only
                 .targetSession(mapToAASessionSummaryDTO(sessionToMap))
+                .makeupSession(mapToAASessionSummaryDTO(request.getMakeupSession())) // For MAKEUP only
                 .effectiveDate(effectiveDateStr) // For TRANSFER only
                 .requestReason(request.getRequestReason())
                 .note(request.getNote())
@@ -638,6 +640,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .currentClass(mapToDetailClassDTO(request.getCurrentClass()))
                 .targetClass(mapToDetailClassDTO(request.getTargetClass())) // For TRANSFER only
                 .targetSession(mapToDetailSessionDTO(sessionToMap))
+                .makeupSession(mapToDetailSessionDTO(request.getMakeupSession())) // For MAKEUP only
                 .effectiveDate(effectiveDateStr) // For TRANSFER only
                 .requestReason(request.getRequestReason())
                 .note(request.getNote())
@@ -935,16 +938,25 @@ public class StudentRequestServiceImpl implements StudentRequestService {
         }
 
         // Find makeup options with same course session
+        // For OFFLINE: filter by same branch; For ONLINE/HYBRID: allow different branches
         List<Session> makeupOptions = sessionRepository.findMakeupSessionOptions(
                 targetSession.getCourseSession().getId(),
-                targetSessionId
+                targetSessionId,
+                targetSession.getClassEntity().getBranch().getId(),
+                targetSession.getClassEntity().getModality().name()
         );
 
         // Apply smart ranking and filtering
         List<MakeupOptionDTO> rankedOptions = makeupOptions.stream()
                 .map(session -> mapToMakeupOptionDTO(session, targetSession, studentId))
                 .filter(option -> option != null) // Filter out sessions with conflicts
-                .sorted((a, b) -> b.getMatchScore().getTotalScore().compareTo(a.getMatchScore().getTotalScore()))
+                .sorted((a, b) -> {
+                    // Primary: Sort by total score (higher is better)
+                    int scoreCompare = b.getMatchScore().getTotalScore().compareTo(a.getMatchScore().getTotalScore());
+                    if (scoreCompare != 0) return scoreCompare;
+                    // Secondary: If scores are equal, prefer earlier date (closer to today)
+                    return a.getDate().compareTo(b.getDate());
+                })
                 .collect(Collectors.toList());
 
         // Build response with target session context

@@ -759,6 +759,64 @@ SELECT id, 7 FROM session WHERE class_id = 7;
 INSERT INTO teaching_slot (session_id, teacher_id, status)
 SELECT id, 11, 'SCHEDULED' FROM session WHERE class_id = 7;
 
+
+-- ========== MAKEUP OPTIONS TEST DATA ==========
+-- Generate makeup sessions for student 1's absences (2025-11-03 to 2025-11-16)
+
+-- Scenario A: OFFLINE class same branch (HN) - PERFECT MATCH
+INSERT INTO "class" (id, branch_id, course_id, code, name, modality, start_date, planned_end_date, schedule_days, max_capacity, status, approval_status, created_by, decided_by, submitted_at, decided_at, created_at, updated_at) VALUES
+(8, 1, 1, 'HN-FOUND-MAKEUP-O', 'HN Foundation Makeup (Offline)', 'OFFLINE', '2025-11-05', '2025-12-21', ARRAY[3,5]::smallint[], 15, 'ONGOING', 'APPROVED', 6, 3, '2025-11-01 10:00:00+07', '2025-11-01 14:00:00+07', '2025-11-01 10:00:00+07', '2025-11-01 14:00:00+07');
+
+-- Scenario B: ONLINE class different branch (HCM) - CROSS-BRANCH MATCH
+INSERT INTO "class" (id, branch_id, course_id, code, name, modality, start_date, planned_end_date, schedule_days, max_capacity, status, approval_status, created_by, decided_by, submitted_at, decided_at, created_at, updated_at) VALUES
+(9, 2, 1, 'HCM-FOUND-MAKEUP-ON', 'HCM Foundation Makeup (Online)', 'ONLINE', '2025-11-06', '2025-12-22', ARRAY[4,6]::smallint[], 25, 'ONGOING', 'APPROVED', 8, 4, '2025-11-01 10:00:00+07', '2025-11-01 14:00:00+07', '2025-11-01 10:00:00+07', '2025-11-01 14:00:00+07');
+
+-- Scenario C: OFFLINE class different branch (HCM) - SHOULD BE FILTERED
+INSERT INTO "class" (id, branch_id, course_id, code, name, modality, start_date, planned_end_date, schedule_days, max_capacity, status, approval_status, created_by, decided_by, submitted_at, decided_at, created_at, updated_at) VALUES
+(10, 2, 1, 'HCM-FOUND-MAKEUP-OFF', 'HCM Foundation Makeup (Offline)', 'OFFLINE', '2025-11-04', '2025-12-20', ARRAY[2,4]::smallint[], 15, 'ONGOING', 'APPROVED', 8, 4, '2025-11-01 10:00:00+07', '2025-11-01 14:00:00+07', '2025-11-01 10:00:00+07', '2025-11-01 14:00:00+07');
+
+-- Sessions for makeup classes
+DO $$
+DECLARE
+    -- Course session IDs corresponding to student 1's recent absences
+    v_absent_course_session_ids INT[] := ARRAY[10, 11, 12, 16]; -- Added 16 for the user's test case
+    v_session_id_counter INT := 700;
+BEGIN
+    -- Class 8 Sessions (HN, OFFLINE) - Wed, Fri
+    INSERT INTO session (id, class_id, course_session_id, time_slot_template_id, date, type, status, created_at, updated_at) VALUES
+    (v_session_id_counter + 1, 8, v_absent_course_session_ids[1], 3, '2025-11-05', 'CLASS', 'PLANNED', NOW(), NOW()),
+    (v_session_id_counter + 2, 8, v_absent_course_session_ids[2], 3, '2025-11-07', 'CLASS', 'PLANNED', NOW(), NOW()),
+    (v_session_id_counter + 3, 8, v_absent_course_session_ids[3], 3, '2025-11-12', 'CLASS', 'PLANNED', NOW(), NOW()),
+    (v_session_id_counter + 10, 8, v_absent_course_session_ids[4], 3, '2025-11-14', 'CLASS', 'PLANNED', NOW(), NOW()); -- Makeup for session 116 (course_session_id 16)
+
+    -- Class 9 Sessions (HCM, ONLINE) - Thu, Sat
+    INSERT INTO session (id, class_id, course_session_id, time_slot_template_id, date, type, status, created_at, updated_at) VALUES
+    (v_session_id_counter + 4, 9, v_absent_course_session_ids[1], 7, '2025-11-06', 'CLASS', 'PLANNED', NOW(), NOW()),
+    (v_session_id_counter + 5, 9, v_absent_course_session_ids[2], 7, '2025-11-08', 'CLASS', 'PLANNED', NOW(), NOW()),
+    (v_session_id_counter + 6, 9, v_absent_course_session_ids[3], 7, '2025-11-13', 'CLASS', 'PLANNED', NOW(), NOW()),
+    (v_session_id_counter + 11, 9, v_absent_course_session_ids[4], 7, '2025-11-15', 'CLASS', 'PLANNED', NOW(), NOW()); -- Makeup for session 116 (course_session_id 16)
+
+    -- Class 10 Sessions (HCM, OFFLINE) - Tue, Thu
+    INSERT INTO session (id, class_id, course_session_id, time_slot_template_id, date, type, status, created_at, updated_at) VALUES
+    (v_session_id_counter + 7, 10, v_absent_course_session_ids[1], 7, '2025-11-04', 'CLASS', 'PLANNED', NOW(), NOW()),
+    (v_session_id_counter + 8, 10, v_absent_course_session_ids[2], 7, '2025-11-06', 'CLASS', 'PLANNED', NOW(), NOW()),
+    (v_session_id_counter + 9, 10, v_absent_course_session_ids[3], 7, '2025-11-11', 'CLASS', 'PLANNED', NOW(), NOW()),
+    (v_session_id_counter + 12, 10, v_absent_course_session_ids[4], 7, '2025-11-13', 'CLASS', 'PLANNED', NOW(), NOW()); -- Makeup for session 116 (course_session_id 16)
+END $$;
+
+-- Assign resources and teachers for makeup classes
+-- Class 8 (HN Offline) -> Room 102, Teacher 4
+INSERT INTO session_resource (session_id, resource_id) SELECT id, 2 FROM session WHERE class_id = 8;
+INSERT INTO teaching_slot (session_id, teacher_id, status) SELECT id, 4, 'SCHEDULED' FROM session WHERE class_id = 8;
+
+-- Class 9 (HCM Online) -> Zoom 01, Teacher 12
+INSERT INTO session_resource (session_id, resource_id) SELECT id, 8 FROM session WHERE class_id = 9;
+INSERT INTO teaching_slot (session_id, teacher_id, status) SELECT id, 12, 'SCHEDULED' FROM session WHERE class_id = 9;
+
+-- Class 10 (HCM Offline) -> Room 101, Teacher 13
+INSERT INTO session_resource (session_id, resource_id) SELECT id, 5 FROM session WHERE class_id = 10;
+INSERT INTO teaching_slot (session_id, teacher_id, status) SELECT id, 13, 'SCHEDULED' FROM session WHERE class_id = 10;
+
 -- ========== TIER 5: ENROLLMENTS & ATTENDANCE ==========
 
 -- Enrollments for Class 1 (HN-FOUND-C1) - 15 students, all completed
@@ -875,6 +933,21 @@ LEFT JOIN course_session cs ON s.course_session_id = cs.id
 WHERE e.class_id = 2 
   AND s.class_id = 2
   AND (e.join_session_id IS NULL OR s.id >= e.join_session_id);
+
+-- MAKEUP FLOW TEST DATA: Create recent absences for student 1
+-- Mark student 1 as ABSENT for 3 recent sessions (last week of Oct 2025)
+UPDATE student_session 
+SET attendance_status = 'ABSENT', note = 'Missed session, eligible for makeup.'
+WHERE student_id = 1 
+  AND session_id IN (
+    SELECT id FROM session 
+    WHERE class_id = 2 
+      AND status = 'DONE'
+      AND date >= '2025-10-27'  -- Last week
+      AND date <= '2025-11-01'  -- Before reference date
+    ORDER BY date DESC
+    LIMIT 3
+  );
 
 -- Student Sessions for Class 3
 INSERT INTO student_session (student_id, session_id, is_makeup, attendance_status, homework_status, recorded_at, created_at, updated_at)

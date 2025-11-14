@@ -28,7 +28,8 @@ public class AARequestResponseDTO {
     private ClassSummaryDTO targetClass; // For TRANSFER requests only
 
     // Session information
-    private SessionSummaryDTO targetSession; // For ABSENCE/MAKEUP requests
+    private SessionSummaryDTO targetSession; // For ABSENCE/MAKEUP: the missed session; For TRANSFER: effective session
+    private SessionSummaryDTO makeupSession; // For MAKEUP requests only - the session student wants to attend
 
     // Transfer-specific fields
     private String effectiveDate; // For TRANSFER requests - date when transfer takes effect
