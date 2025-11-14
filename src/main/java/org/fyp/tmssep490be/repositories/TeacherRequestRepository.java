@@ -68,8 +68,11 @@ public interface TeacherRequestRepository extends JpaRepository<TeacherRequest, 
            "LEFT JOIN FETCH rt.userAccount rua " +
            "LEFT JOIN FETCH tr.session s " +
            "LEFT JOIN FETCH s.classEntity c " +
+           "LEFT JOIN FETCH s.courseSession cs " +
+           "LEFT JOIN FETCH s.timeSlotTemplate tst " +
            "LEFT JOIN FETCH tr.newResource nr " +
            "LEFT JOIN FETCH tr.newTimeSlot nts " +
+           "LEFT JOIN FETCH tr.decidedBy db " +
            "WHERE tr.id = :id")
     Optional<TeacherRequest> findByIdWithTeacherAndSession(@Param("id") Long id);
     
@@ -90,6 +93,7 @@ public interface TeacherRequestRepository extends JpaRepository<TeacherRequest, 
            "LEFT JOIN FETCH t.userAccount ua " +
            "LEFT JOIN FETCH tr.session s " +
            "LEFT JOIN FETCH s.classEntity c " +
+           "LEFT JOIN FETCH tr.decidedBy db " +
            "ORDER BY tr.submittedAt DESC")
     List<TeacherRequest> findAllByOrderBySubmittedAtDesc();
 
@@ -102,6 +106,7 @@ public interface TeacherRequestRepository extends JpaRepository<TeacherRequest, 
            "LEFT JOIN FETCH t.userAccount ua " +
            "LEFT JOIN FETCH tr.session s " +
            "LEFT JOIN FETCH s.classEntity c " +
+           "LEFT JOIN FETCH tr.decidedBy db " +
            "WHERE tr.status = :status " +
            "ORDER BY tr.submittedAt DESC")
     List<TeacherRequest> findByStatusOrderBySubmittedAtDesc(@Param("status") RequestStatus status);

@@ -85,6 +85,21 @@ public interface TeacherRequestService {
     List<ModalityResourceSuggestionDTO> suggestModalityResources(Long sessionId, Long userId);
 
     /**
+     * Suggest valid time slots for rescheduling a request (Staff only)
+     */
+    List<RescheduleSlotSuggestionDTO> suggestSlotsForStaff(Long requestId, java.time.LocalDate date);
+
+    /**
+     * Suggest valid resources for rescheduling a request (Staff only)
+     */
+    List<RescheduleResourceSuggestionDTO> suggestResourcesForStaff(Long requestId, java.time.LocalDate date, Long timeSlotId);
+
+    /**
+     * Suggest compatible resources for modality change request (Staff only)
+     */
+    List<ModalityResourceSuggestionDTO> suggestModalityResourcesForStaff(Long requestId);
+
+    /**
      * Get teacher's future sessions (7 days from today or specific date)
      * @param userId Current authenticated user ID
      * @param date Optional date filter (if null, returns next 7 days)
@@ -99,6 +114,13 @@ public interface TeacherRequestService {
      * @return List of candidate teachers sorted by priority
      */
     List<SwapCandidateDTO> suggestSwapCandidates(Long sessionId, Long userId);
+
+    /**
+     * Suggest swap candidate teachers for a request (Staff only)
+     * @param requestId Request ID to find replacement for
+     * @return List of candidate teachers sorted by priority
+     */
+    List<SwapCandidateDTO> suggestSwapCandidatesForStaff(Long requestId);
 
     /**
      * Confirm swap request (Replacement Teacher only)

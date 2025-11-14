@@ -9,6 +9,7 @@ import org.fyp.tmssep490be.entities.enums.RequestStatus;
 import org.fyp.tmssep490be.entities.enums.TeacherRequestType;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 /**
@@ -28,6 +29,9 @@ public class TeacherRequestResponseDTO {
     private Long sessionId;
     private String classCode;
     private LocalDate sessionDate;
+    private LocalTime sessionStartTime;
+    private LocalTime sessionEndTime;
+    private String sessionTopic;
     private Long teacherId;
     private String teacherName;
     private String teacherEmail;
@@ -35,7 +39,8 @@ public class TeacherRequestResponseDTO {
     private String replacementTeacherName;
     private String replacementTeacherEmail;
     private LocalDate newDate;
-    private Long newTimeSlotId;
+    private LocalTime newTimeSlotStartTime;
+    private LocalTime newTimeSlotEndTime;
     private String newTimeSlotName;
     private Long newResourceId;
     private String newResourceName;
@@ -43,6 +48,9 @@ public class TeacherRequestResponseDTO {
     private String note;
     private OffsetDateTime submittedAt;
     private OffsetDateTime decidedAt;
+    private Long decidedById;
+    private String decidedByName;
+    private String decidedByEmail;
     private Long newSessionId;
 }
 

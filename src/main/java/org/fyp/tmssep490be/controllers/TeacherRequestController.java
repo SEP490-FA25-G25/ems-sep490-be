@@ -102,88 +102,165 @@ public class TeacherRequestController {
     }
 
     /**
-     * Suggest time slots (RESCHEDULE) for a session on a selected date
+     * Suggest time slots (RESCHEDULE)
+     * For TEACHER: uses sessionId to suggest slots for a session
+     * For ACADEMIC_AFFAIR: uses requestId to suggest slots for a request (to override reschedule)
      */
-    @GetMapping("/{sessionId}/reschedule/slots")
-    @PreAuthorize("hasRole('TEACHER')")
-    @Operation(summary = "Suggest time slots for reschedule", description = "List time slots without conflicts on the selected date")
+    @GetMapping("/{id}/reschedule/slots")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ACADEMIC_AFFAIR')")
+    @Operation(
+            summary = "Suggest time slots for reschedule",
+            description = "For TEACHER: List time slots without conflicts on the selected date for a session. " +
+                    "For ACADEMIC_AFFAIR: List time slots without conflicts on the selected date for a reschedule request. " +
+                    "If date is not provided for staff, uses the date from the request."
+    )
     public ResponseEntity<ResponseObject<List<RescheduleSlotSuggestionDTO>>> suggestSlots(
-            @PathVariable Long sessionId,
-            @RequestParam("date") java.time.LocalDate date,
+            @PathVariable Long id,
+            @RequestParam(value = "date", required = false) java.time.LocalDate date,
             @AuthenticationPrincipal UserPrincipal currentUser
     ) {
-        List<RescheduleSlotSuggestionDTO> items = teacherRequestService.suggestSlots(sessionId, date, currentUser.getId());
-        return ResponseEntity.ok(ResponseObject.<List<RescheduleSlotSuggestionDTO>>builder()
-                .success(true)
-                .message(items.isEmpty() ? "No suitable time slots for the selected date" : "OK")
-                .data(items)
-                .build());
+        boolean isAcademicStaff = isAcademicAffair(currentUser);
+        
+        if (isAcademicStaff) {
+            // Staff: id is requestId, date is optional (if not provided, uses date from request)
+            List<RescheduleSlotSuggestionDTO> items = teacherRequestService.suggestSlotsForStaff(id, date);
+            return ResponseEntity.ok(ResponseObject.<List<RescheduleSlotSuggestionDTO>>builder()
+                    .success(true)
+                    .message(items.isEmpty() ? "No suitable time slots for the selected date" : "OK")
+                    .data(items)
+                    .build());
+        } else {
+            // Teacher: id is sessionId, date is required
+            if (date == null) {
+                throw new IllegalArgumentException("Date parameter is required for teachers");
+            }
+            List<RescheduleSlotSuggestionDTO> items = teacherRequestService.suggestSlots(id, date, currentUser.getId());
+            return ResponseEntity.ok(ResponseObject.<List<RescheduleSlotSuggestionDTO>>builder()
+                    .success(true)
+                    .message(items.isEmpty() ? "No suitable time slots for the selected date" : "OK")
+                    .data(items)
+                    .build());
+        }
     }
 
     /**
-     * Suggest resources (RESCHEDULE) for a session with selected date and time slot
+     * Suggest resources (RESCHEDULE)
+     * For TEACHER: uses sessionId to suggest resources for a session
+     * For ACADEMIC_AFFAIR: uses requestId to suggest resources for a request (to override reschedule)
      */
-    @GetMapping("/{sessionId}/reschedule/suggestions")
-    @PreAuthorize("hasRole('TEACHER')")
-    @Operation(summary = "Suggest resources for reschedule", description = "List resources without conflicts for date + time slot")
+    @GetMapping("/{id}/reschedule/suggestions")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ACADEMIC_AFFAIR')")
+    @Operation(
+            summary = "Suggest resources for reschedule",
+            description = "For TEACHER: List resources without conflicts for date + time slot for a session. " +
+                    "For ACADEMIC_AFFAIR: List resources without conflicts for date + time slot for a reschedule request. " +
+                    "If date/timeSlotId are not provided for staff, uses the date and timeSlot from the request."
+    )
     public ResponseEntity<ResponseObject<List<RescheduleResourceSuggestionDTO>>> suggestResources(
-            @PathVariable Long sessionId,
-            @RequestParam("date") java.time.LocalDate date,
-            @RequestParam("timeSlotId") Long timeSlotId,
+            @PathVariable Long id,
+            @RequestParam(value = "date", required = false) java.time.LocalDate date,
+            @RequestParam(value = "timeSlotId", required = false) Long timeSlotId,
             @AuthenticationPrincipal UserPrincipal currentUser
     ) {
-        List<RescheduleResourceSuggestionDTO> items = teacherRequestService.suggestResources(sessionId, date, timeSlotId, currentUser.getId());
-        return ResponseEntity.ok(ResponseObject.<List<RescheduleResourceSuggestionDTO>>builder()
-                .success(true)
-                .message(items.isEmpty() ? "No suitable resources for the selected slot" : "OK")
-                .data(items)
-                .build());
+        boolean isAcademicStaff = isAcademicAffair(currentUser);
+        
+        if (isAcademicStaff) {
+            // Staff: id is requestId, date and timeSlotId are optional (if not provided, uses from request)
+            List<RescheduleResourceSuggestionDTO> items = teacherRequestService.suggestResourcesForStaff(id, date, timeSlotId);
+            return ResponseEntity.ok(ResponseObject.<List<RescheduleResourceSuggestionDTO>>builder()
+                    .success(true)
+                    .message(items.isEmpty() ? "No suitable resources for the selected slot" : "OK")
+                    .data(items)
+                    .build());
+        } else {
+            // Teacher: id is sessionId, date and timeSlotId are required
+            if (date == null || timeSlotId == null) {
+                throw new IllegalArgumentException("Date and timeSlotId parameters are required for teachers");
+            }
+            List<RescheduleResourceSuggestionDTO> items = teacherRequestService.suggestResources(id, date, timeSlotId, currentUser.getId());
+            return ResponseEntity.ok(ResponseObject.<List<RescheduleResourceSuggestionDTO>>builder()
+                    .success(true)
+                    .message(items.isEmpty() ? "No suitable resources for the selected slot" : "OK")
+                    .data(items)
+                    .build());
+        }
     }
 
     /**
-     * Suggest resources for modality change (optional step when teacher selects session)
+     * Suggest resources for modality change
+     * For TEACHER: uses sessionId to suggest resources for a session
+     * For ACADEMIC_AFFAIR: uses requestId to suggest resources for a request (to override modality change)
      */
-    @GetMapping("/{sessionId}/modality/resources")
-    @PreAuthorize("hasRole('TEACHER')")
+    @GetMapping("/{id}/modality/resources")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ACADEMIC_AFFAIR')")
     @Operation(
             summary = "Suggest resources for modality change",
-            description = "List compatible resources for the session's existing schedule (date + time slot)."
+            description = "For TEACHER: List compatible resources for the session's existing schedule (date + time slot). " +
+                    "For ACADEMIC_AFFAIR: List compatible resources for the modality change request's session schedule."
     )
     public ResponseEntity<ResponseObject<List<ModalityResourceSuggestionDTO>>> suggestModalityResources(
-            @PathVariable Long sessionId,
+            @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser
     ) {
-        List<ModalityResourceSuggestionDTO> suggestions = teacherRequestService.suggestModalityResources(sessionId, currentUser.getId());
-        return ResponseEntity.ok(ResponseObject.<List<ModalityResourceSuggestionDTO>>builder()
-                .success(true)
-                .message(suggestions.isEmpty() ? "No compatible resources available" : "Modality resources loaded successfully")
-                .data(suggestions)
-                .build());
+        boolean isAcademicStaff = isAcademicAffair(currentUser);
+        
+        if (isAcademicStaff) {
+            // Staff: id is requestId
+            List<ModalityResourceSuggestionDTO> suggestions = teacherRequestService.suggestModalityResourcesForStaff(id);
+            return ResponseEntity.ok(ResponseObject.<List<ModalityResourceSuggestionDTO>>builder()
+                    .success(true)
+                    .message(suggestions.isEmpty() ? "No compatible resources available" : "Modality resources loaded successfully")
+                    .data(suggestions)
+                    .build());
+        } else {
+            // Teacher: id is sessionId
+            List<ModalityResourceSuggestionDTO> suggestions = teacherRequestService.suggestModalityResources(id, currentUser.getId());
+            return ResponseEntity.ok(ResponseObject.<List<ModalityResourceSuggestionDTO>>builder()
+                    .success(true)
+                    .message(suggestions.isEmpty() ? "No compatible resources available" : "Modality resources loaded successfully")
+                    .data(suggestions)
+                    .build());
+        }
     }
 
     /**
-     * Suggest swap candidate teachers (SWAP) for a session
+     * Suggest swap candidate teachers (SWAP)
+     * For TEACHER: uses sessionId to suggest candidates for a session
+     * For ACADEMIC_AFFAIR: uses requestId to suggest candidates for a request (to override replacement teacher)
      */
-    @GetMapping("/{sessionId}/swap/candidates")
-    @PreAuthorize("hasRole('TEACHER')")
+    @GetMapping("/{id}/swap/candidates")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ACADEMIC_AFFAIR')")
     @Operation(
             summary = "Suggest swap candidates",
-            description = "List teachers who can replace the current teacher for the session. " +
+            description = "For TEACHER: List teachers who can replace the current teacher for the session. " +
+                    "For ACADEMIC_AFFAIR: List teachers who can replace the original teacher for the swap request. " +
                     "Sorted by skill priority, availability priority, and name."
     )
     public ResponseEntity<ResponseObject<List<SwapCandidateDTO>>> suggestSwapCandidates(
-            @PathVariable Long sessionId,
+            @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal currentUser
     ) {
-        log.info("Suggest swap candidates for session {} by user {}", sessionId, currentUser.getId());
-
-        List<SwapCandidateDTO> candidates = teacherRequestService.suggestSwapCandidates(sessionId, currentUser.getId());
-
-        return ResponseEntity.ok(ResponseObject.<List<SwapCandidateDTO>>builder()
-                .success(true)
-                .message(candidates.isEmpty() ? "No suitable replacement teachers found" : "Swap candidates loaded successfully")
-                .data(candidates)
-                .build());
+        boolean isAcademicStaff = isAcademicAffair(currentUser);
+        
+        if (isAcademicStaff) {
+            // Staff: id is requestId
+            log.info("Suggest swap candidates for request {} by staff", id);
+            List<SwapCandidateDTO> candidates = teacherRequestService.suggestSwapCandidatesForStaff(id);
+            return ResponseEntity.ok(ResponseObject.<List<SwapCandidateDTO>>builder()
+                    .success(true)
+                    .message(candidates.isEmpty() ? "No suitable replacement teachers found" : "Swap candidates loaded successfully")
+                    .data(candidates)
+                    .build());
+        } else {
+            // Teacher: id is sessionId
+            log.info("Suggest swap candidates for session {} by user {}", id, currentUser.getId());
+            List<SwapCandidateDTO> candidates = teacherRequestService.suggestSwapCandidates(id, currentUser.getId());
+            return ResponseEntity.ok(ResponseObject.<List<SwapCandidateDTO>>builder()
+                    .success(true)
+                    .message(candidates.isEmpty() ? "No suitable replacement teachers found" : "Swap candidates loaded successfully")
+                    .data(candidates)
+                    .build());
+        }
     }
 
     /**

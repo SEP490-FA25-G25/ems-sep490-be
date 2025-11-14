@@ -7,6 +7,8 @@ import org.fyp.tmssep490be.entities.enums.AttendanceStatus;
 import org.fyp.tmssep490be.entities.enums.EnrollmentStatus;
 import org.fyp.tmssep490be.entities.enums.SessionStatus;
 import org.fyp.tmssep490be.entities.enums.TeachingSlotStatus;
+import org.fyp.tmssep490be.exceptions.CustomException;
+import org.fyp.tmssep490be.exceptions.ErrorCode;
 import org.fyp.tmssep490be.exceptions.ResourceNotFoundException;
 import org.fyp.tmssep490be.repositories.EnrollmentRepository;
 import org.fyp.tmssep490be.repositories.SessionRepository;
@@ -114,6 +116,12 @@ public class AttendanceServiceImpl implements AttendanceService {
         assertOwnership(teacherId, sessionId);
         if (request.getRecords() == null || request.getRecords().isEmpty()) {
             throw new IllegalArgumentException("Attendance records must not be empty");
+        }
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
+        if (session.getStatus() == SessionStatus.DONE) {
+            throw new CustomException(ErrorCode.SESSION_ALREADY_DONE);
         }
 
         OffsetDateTime now = OffsetDateTime.now();

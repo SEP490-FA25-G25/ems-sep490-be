@@ -356,6 +356,8 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                 .map(t -> RescheduleSlotSuggestionDTO.builder()
                         .timeSlotId(t.getId())
                         .label(t.getName())
+                        .startTime(t.getStartTime())
+                        .endTime(t.getEndTime())
                         .hasAvailableResource(null)
                         .availableResourceCount(null)
                         .build())
@@ -480,6 +482,246 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                 .filter(resource -> {
                     try {
                         validateResourceCapacity(resource, sessionId);
+                        return true;
+                    } catch (CustomException ex) {
+                        return false;
+                    }
+                })
+                .map(resource -> ModalityResourceSuggestionDTO.builder()
+                        .resourceId(resource.getId())
+                        .name(resource.getName())
+                        .resourceType(resource.getResourceType() != null ? resource.getResourceType().name() : null)
+                        .capacity(resource.getCapacity())
+                        .branchId(branch.getId())
+                        .currentResource(currentResourceIds.contains(resource.getId()))
+                        .build())
+                .sorted(Comparator.comparing(ModalityResourceSuggestionDTO::isCurrentResource).reversed()
+                        .thenComparing(dto -> dto.getName() != null ? dto.getName().toLowerCase() : ""))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RescheduleSlotSuggestionDTO> suggestSlotsForStaff(Long requestId, LocalDate date) {
+        log.info("Suggesting reschedule slots for request {} by staff", requestId);
+
+        // 1. Get request and validate
+        TeacherRequest request = teacherRequestRepository.findByIdWithTeacherAndSession(requestId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_REQUEST_NOT_FOUND));
+
+        if (request.getRequestType() != TeacherRequestType.RESCHEDULE) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        // 2. Get session and original teacher from request
+        Session session = request.getSession();
+        if (session == null) {
+            throw new CustomException(ErrorCode.SESSION_NOT_FOUND);
+        }
+
+        Teacher originalTeacher = request.getTeacher();
+        if (originalTeacher == null) {
+            throw new CustomException(ErrorCode.TEACHER_NOT_FOUND);
+        }
+
+        // 3. Use date from request if not provided
+        LocalDate finalDate = date;
+        if (finalDate == null) {
+            finalDate = request.getNewDate();
+            if (finalDate == null) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
+            log.info("Using date from request: {}", finalDate);
+        }
+
+        validateTimeWindow(finalDate);
+
+        final LocalDate dateForFilter = finalDate;
+        return timeSlotTemplateRepository.findAll().stream()
+                .filter(t -> {
+                    try {
+                        validateTeacherConflict(originalTeacher.getId(), dateForFilter, t.getId(), session.getId());
+                        ensureNoStudentConflicts(session.getId(), dateForFilter, t.getId());
+                        return true;
+                    } catch (CustomException ex) {
+                        return false;
+                    }
+                })
+                .map(t -> RescheduleSlotSuggestionDTO.builder()
+                        .timeSlotId(t.getId())
+                        .label(t.getName())
+                        .startTime(t.getStartTime())
+                        .endTime(t.getEndTime())
+                        .hasAvailableResource(null)
+                        .availableResourceCount(null)
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RescheduleResourceSuggestionDTO> suggestResourcesForStaff(Long requestId, LocalDate date, Long timeSlotId) {
+        log.info("Suggesting reschedule resources for request {} by staff", requestId);
+
+        // 1. Get request and validate
+        TeacherRequest request = teacherRequestRepository.findByIdWithTeacherAndSession(requestId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_REQUEST_NOT_FOUND));
+
+        if (request.getRequestType() != TeacherRequestType.RESCHEDULE) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        // 2. Get session and original teacher from request
+        Session session = request.getSession();
+        if (session == null) {
+            throw new CustomException(ErrorCode.SESSION_NOT_FOUND);
+        }
+
+        Teacher originalTeacher = request.getTeacher();
+        if (originalTeacher == null) {
+            throw new CustomException(ErrorCode.TEACHER_NOT_FOUND);
+        }
+
+        // 3. Use date and timeSlot from request if not provided
+        LocalDate finalDate = date;
+        if (finalDate == null) {
+            finalDate = request.getNewDate();
+            if (finalDate == null) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
+            log.info("Using date from request: {}", finalDate);
+        }
+        
+        Long finalTimeSlotId = timeSlotId;
+        if (finalTimeSlotId == null) {
+            TimeSlotTemplate newTimeSlot = request.getNewTimeSlot();
+            if (newTimeSlot == null) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
+            finalTimeSlotId = newTimeSlot.getId();
+            log.info("Using timeSlotId from request: {}", finalTimeSlotId);
+        }
+
+        validateTimeWindow(finalDate);
+
+        // Validate timeSlotId exists
+        if (!timeSlotTemplateRepository.existsById(finalTimeSlotId)) {
+            throw new CustomException(ErrorCode.TIMESLOT_NOT_FOUND);
+        }
+
+        ClassEntity classEntity = session.getClassEntity();
+
+        final LocalDate dateForFilter = finalDate;
+        final Long timeSlotIdForFilter = finalTimeSlotId;
+        return resourceRepository.findAll().stream()
+                .filter(r -> r.getBranch().getId().equals(classEntity.getBranch().getId()))
+                .filter(r -> {
+                    try {
+                        validateResourceTypeForModality(r, classEntity);
+                        return true;
+                    } catch (CustomException ex) {
+                        return false;
+                    }
+                })
+                .filter(r -> {
+                    try {
+                        validateResourceAvailability(r.getId(), dateForFilter, timeSlotIdForFilter, null);
+                        return true;
+                    } catch (CustomException ex) {
+                        return false;
+                    }
+                })
+                .filter(r -> {
+                    try {
+                        validateResourceCapacity(r, session.getId());
+                        return true;
+                    } catch (CustomException ex) {
+                        return false;
+                    }
+                })
+                .filter(r -> {
+                    try {
+                        validateTeacherConflict(originalTeacher.getId(), dateForFilter, timeSlotIdForFilter, session.getId());
+                        return true;
+                    } catch (CustomException ex) {
+                        return false;
+                    }
+                })
+                .filter(r -> ensureNoStudentConflicts(session.getId(), dateForFilter, timeSlotIdForFilter))
+                .map(r -> RescheduleResourceSuggestionDTO.builder()
+                        .resourceId(r.getId())
+                        .name(r.getName())
+                        .resourceType(r.getResourceType().name())
+                        .capacity(r.getCapacity())
+                        .branchId(r.getBranch().getId())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ModalityResourceSuggestionDTO> suggestModalityResourcesForStaff(Long requestId) {
+        log.info("Suggesting modality resources for request {} by staff", requestId);
+
+        // 1. Get request and validate
+        TeacherRequest request = teacherRequestRepository.findByIdWithTeacherAndSession(requestId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_REQUEST_NOT_FOUND));
+
+        if (request.getRequestType() != TeacherRequestType.MODALITY_CHANGE) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        // 2. Get session from request
+        Session session = request.getSession();
+        if (session == null) {
+            throw new CustomException(ErrorCode.SESSION_NOT_FOUND);
+        }
+
+        validateTimeWindow(session.getDate());
+
+        ClassEntity classEntity = session.getClassEntity();
+        if (classEntity == null) {
+            throw new CustomException(ErrorCode.CLASS_NOT_FOUND);
+        }
+
+        Branch branch = classEntity.getBranch();
+        if (branch == null) {
+            throw new CustomException(ErrorCode.BRANCH_NOT_FOUND);
+        }
+
+        TimeSlotTemplate timeSlotTemplate = session.getTimeSlotTemplate();
+        if (timeSlotTemplate == null) {
+            throw new CustomException(ErrorCode.TIMESLOT_NOT_FOUND);
+        }
+
+        Set<Long> currentResourceIds = sessionResourceRepository.findBySessionId(session.getId()).stream()
+                .map(SessionResource::getResource)
+                .filter(Objects::nonNull)
+                .map(Resource::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        return resourceRepository.findAll().stream()
+                .filter(resource -> resource.getBranch() != null && branch.getId().equals(resource.getBranch().getId()))
+                .filter(resource -> {
+                    try {
+                        validateResourceTypeForModality(resource, classEntity);
+                        return true;
+                    } catch (CustomException ex) {
+                        return false;
+                    }
+                })
+                .filter(resource -> {
+                    try {
+                        validateResourceAvailability(resource.getId(), session.getDate(), timeSlotTemplate.getId(), session.getId());
+                        return true;
+                    } catch (CustomException ex) {
+                        return false;
+                    }
+                })
+                .filter(resource -> {
+                    try {
+                        validateResourceCapacity(resource, session.getId());
                         return true;
                     } catch (CustomException ex) {
                         return false;
@@ -842,10 +1084,13 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
     private TeacherRequestResponseDTO mapToResponseDTO(TeacherRequest request) {
         Session session = request.getSession();
         ClassEntity classEntity = session != null ? session.getClassEntity() : null;
+        CourseSession courseSession = session != null ? session.getCourseSession() : null;
+        TimeSlotTemplate timeSlot = session != null ? session.getTimeSlotTemplate() : null;
         Teacher teacher = request.getTeacher();
         UserAccount teacherAccount = teacher != null ? teacher.getUserAccount() : null;
         Teacher replacementTeacher = request.getReplacementTeacher();
         UserAccount replacementTeacherAccount = replacementTeacher != null ? replacementTeacher.getUserAccount() : null;
+        UserAccount decidedBy = request.getDecidedBy();
         
         // Debug log
         log.debug("Mapping request {}: type={}, replacementTeacher={}, newResource={}, newTimeSlot={}, newDate={}", 
@@ -862,13 +1107,19 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                 .sessionId(session != null ? session.getId() : null)
                 .classCode(classEntity != null ? classEntity.getCode() : null)
                 .sessionDate(session != null ? session.getDate() : null)
+                .sessionStartTime(timeSlot != null ? timeSlot.getStartTime() : null)
+                .sessionEndTime(timeSlot != null ? timeSlot.getEndTime() : null)
+                .sessionTopic(courseSession != null ? courseSession.getTopic() : null)
                 .teacherId(teacher != null ? teacher.getId() : null)
                 .teacherName(teacherAccount != null ? teacherAccount.getFullName() : null)
                 .teacherEmail(teacherAccount != null ? teacherAccount.getEmail() : null)
                 .requestReason(request.getRequestReason())
                 .note(request.getNote())
                 .submittedAt(request.getSubmittedAt())
-                .decidedAt(request.getDecidedAt());
+                .decidedAt(request.getDecidedAt())
+                .decidedById(decidedBy != null ? decidedBy.getId() : null)
+                .decidedByName(decidedBy != null ? decidedBy.getFullName() : null)
+                .decidedByEmail(decidedBy != null ? decidedBy.getEmail() : null);
 
         // Chỉ populate các fields liên quan đến request type
         switch (request.getRequestType()) {
@@ -878,7 +1129,8 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                 builder.newResourceId(modalityResource != null ? modalityResource.getId() : null)
                         .newResourceName(modalityResource != null ? modalityResource.getName() : null)
                         .newDate(null)
-                        .newTimeSlotId(null)
+                        .newTimeSlotStartTime(null)
+                        .newTimeSlotEndTime(null)
                         .newTimeSlotName(null)
                         .replacementTeacherId(null)
                         .replacementTeacherName(null)
@@ -886,11 +1138,12 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                         .newSessionId(null);
                 break;
             case RESCHEDULE:
-                // Cần newDate, newTimeSlotId, newTimeSlotName, newResourceId, newResourceName, newSessionId
+                // Cần newDate, newTimeSlotStartTime, newTimeSlotEndTime, newTimeSlotName, newResourceId, newResourceName, newSessionId
                 TimeSlotTemplate rescheduleTimeSlot = request.getNewTimeSlot();
                 Resource rescheduleResource = request.getNewResource();
                 builder.newDate(request.getNewDate())
-                        .newTimeSlotId(rescheduleTimeSlot != null ? rescheduleTimeSlot.getId() : null)
+                        .newTimeSlotStartTime(rescheduleTimeSlot != null ? rescheduleTimeSlot.getStartTime() : null)
+                        .newTimeSlotEndTime(rescheduleTimeSlot != null ? rescheduleTimeSlot.getEndTime() : null)
                         .newTimeSlotName(rescheduleTimeSlot != null ? rescheduleTimeSlot.getName() : null)
                         .newResourceId(rescheduleResource != null ? rescheduleResource.getId() : null)
                         .newResourceName(rescheduleResource != null ? rescheduleResource.getName() : null)
@@ -905,7 +1158,8 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                         .replacementTeacherName(replacementTeacherAccount != null ? replacementTeacherAccount.getFullName() : null)
                         .replacementTeacherEmail(replacementTeacherAccount != null ? replacementTeacherAccount.getEmail() : null)
                         .newDate(null)
-                        .newTimeSlotId(null)
+                        .newTimeSlotStartTime(null)
+                        .newTimeSlotEndTime(null)
                         .newTimeSlotName(null)
                         .newResourceId(null)
                         .newResourceName(null)
@@ -914,7 +1168,8 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
             default:
                 // Fallback: set tất cả null
                 builder.newDate(null)
-                        .newTimeSlotId(null)
+                        .newTimeSlotStartTime(null)
+                        .newTimeSlotEndTime(null)
                         .newTimeSlotName(null)
                         .newResourceId(null)
                         .newResourceName(null)
@@ -934,8 +1189,33 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
     private TeacherRequestListDTO mapToListDTO(TeacherRequest request) {
         Session session = request.getSession();
         ClassEntity classEntity = session != null ? session.getClassEntity() : null;
+        CourseSession courseSession = session != null ? session.getCourseSession() : null;
         Teacher teacher = request.getTeacher();
         UserAccount teacherAccount = teacher != null ? teacher.getUserAccount() : null;
+        TimeSlotTemplate timeSlot = session != null ? session.getTimeSlotTemplate() : null;
+
+        Teacher replacementTeacher = request.getReplacementTeacher();
+        UserAccount replacementAccount = replacementTeacher != null ? replacementTeacher.getUserAccount() : null;
+
+        TimeSlotTemplate newTimeSlot = request.getNewTimeSlot();
+
+        UserAccount decidedBy = request.getDecidedBy();
+
+        Modality currentModality = null;
+        Modality newModality = null;
+        if (request.getRequestType() == TeacherRequestType.MODALITY_CHANGE) {
+            if (classEntity != null) {
+                currentModality = classEntity.getModality();
+            }
+            if (request.getNewResource() != null) {
+                ResourceType resourceType = request.getNewResource().getResourceType();
+                if (resourceType == ResourceType.ROOM) {
+                    newModality = Modality.OFFLINE;
+                } else if (resourceType == ResourceType.VIRTUAL) {
+                    newModality = Modality.ONLINE;
+                }
+            }
+        }
 
         return TeacherRequestListDTO.builder()
                 .id(request.getId())
@@ -943,14 +1223,26 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                 .status(request.getStatus())
                 .sessionId(session != null ? session.getId() : null)
                 .sessionDate(session != null ? session.getDate() : null)
+                .sessionStartTime(timeSlot != null ? timeSlot.getStartTime() : null)
+                .sessionEndTime(timeSlot != null ? timeSlot.getEndTime() : null)
                 .className(classEntity != null ? classEntity.getName() : null)
                 .classCode(classEntity != null ? classEntity.getCode() : null)
+                .sessionTopic(courseSession != null ? courseSession.getTopic() : null)
                 .teacherId(teacher != null ? teacher.getId() : null)
                 .teacherName(teacherAccount != null ? teacherAccount.getFullName() : null)
                 .teacherEmail(teacherAccount != null ? teacherAccount.getEmail() : null)
-                .requestReason(request.getRequestReason()) // Lý do tạo request - frontend có thể truncate nếu cần
+                .replacementTeacherName(replacementAccount != null ? replacementAccount.getFullName() : null)
+                .newSessionDate(request.getNewDate())
+                .newSessionStartTime(newTimeSlot != null ? newTimeSlot.getStartTime() : null)
+                .newSessionEndTime(newTimeSlot != null ? newTimeSlot.getEndTime() : null)
+                .requestReason(request.getRequestReason())
                 .submittedAt(request.getSubmittedAt())
                 .decidedAt(request.getDecidedAt())
+                .decidedById(decidedBy != null ? decidedBy.getId() : null)
+                .decidedByName(decidedBy != null ? decidedBy.getFullName() : null)
+                .decidedByEmail(decidedBy != null ? decidedBy.getEmail() : null)
+                .currentModality(currentModality)
+                .newModality(newModality)
                 .build();
     }
 
@@ -1100,9 +1392,29 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                     boolean hasConflict = hasTeacherConflict(teacher.getId(), session.getDate(), 
                             session.getTimeSlotTemplate().getId(), null);
 
+                    List<TeacherSkill> teacherSkills = teacherSkillsMap.getOrDefault(
+                            teacher.getId(), List.of());
+                    List<SwapCandidateDTO.SkillDetail> skillDetails = teacherSkills.stream()
+                            .map(skill -> {
+                                TeacherSkill.TeacherSkillId id = skill.getId();
+                                String skillName = id != null && id.getSkill() != null
+                                        ? id.getSkill().name()
+                                        : null;
+                                if (skillName == null) {
+                                    return null;
+                                }
+                                return SwapCandidateDTO.SkillDetail.builder()
+                                        .skill(skillName)
+                                        .level(skill.getLevel())
+                                        .build();
+                            })
+                            .filter(Objects::nonNull)
+                            .sorted(Comparator.comparing(SwapCandidateDTO.SkillDetail::getSkill))
+                            .collect(Collectors.toList());
+
                     // Simple skill priority: teacher has skills = 1, no skills = 0
                     // In future, can improve to match specific subject/course skills
-                    int skillPriority = teacherSkillsMap.containsKey(teacher.getId()) ? 1 : 0;
+                    int skillPriority = skillDetails.isEmpty() ? 0 : 1;
                     
                     // Availability priority: no conflict = 1, has conflict = 0
                     int availabilityPriority = hasConflict ? 0 : 1;
@@ -1114,10 +1426,149 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                             .skillPriority(skillPriority)
                             .availabilityPriority(availabilityPriority)
                             .hasConflict(hasConflict)
+                            .skills(skillDetails)
                             .build();
                 })
                 .sorted((a, b) -> {
                     // Sort by: skillPriority DESC, availabilityPriority DESC, name ASC
+                    int skillCompare = Integer.compare(b.getSkillPriority(), a.getSkillPriority());
+                    if (skillCompare != 0) return skillCompare;
+                    
+                    int availCompare = Integer.compare(b.getAvailabilityPriority(), a.getAvailabilityPriority());
+                    if (availCompare != 0) return availCompare;
+                    
+                    String nameA = a.getFullName() != null ? a.getFullName() : "";
+                    String nameB = b.getFullName() != null ? b.getFullName() : "";
+                    return nameA.compareToIgnoreCase(nameB);
+                })
+                .collect(Collectors.toList());
+
+        return candidates;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SwapCandidateDTO> suggestSwapCandidatesForStaff(Long requestId) {
+        log.info("Suggesting swap candidates for request {} by staff", requestId);
+
+        // 1. Get request and validate
+        TeacherRequest request = teacherRequestRepository.findByIdWithTeacherAndSession(requestId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_REQUEST_NOT_FOUND));
+
+        if (request.getRequestType() != TeacherRequestType.SWAP) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+
+        // 2. Get session and original teacher from request
+        Session session = request.getSession();
+        if (session == null) {
+            throw new CustomException(ErrorCode.SESSION_NOT_FOUND);
+        }
+
+        // Get original teacher from request, or fallback to session's teaching slot
+        Teacher originalTeacher = request.getTeacher();
+        if (originalTeacher == null) {
+            // Fallback: get teacher from session's teaching slot
+            log.warn("Teacher not found in request {}, trying to get from session's teaching slot", requestId);
+            List<TeachingSlot> teachingSlots = teachingSlotRepository.findBySessionIdWithTeacher(session.getId());
+            
+            if (teachingSlots.isEmpty()) {
+                throw new CustomException(ErrorCode.TEACHER_NOT_FOUND);
+            }
+            
+            Teacher teacherFromSlot = teachingSlots.get(0).getTeacher();
+            if (teacherFromSlot == null) {
+                throw new CustomException(ErrorCode.TEACHER_NOT_FOUND);
+            }
+            originalTeacher = teacherFromSlot;
+        }
+        
+        final Teacher finalOriginalTeacher = originalTeacher;
+
+        // 3. Get declined teachers for this session
+        List<TeacherRequest> swapRequestsForSession = teacherRequestRepository.findAll().stream()
+                .filter(tr -> tr.getSession() != null && tr.getSession().getId().equals(session.getId()))
+                .filter(tr -> tr.getRequestType() == TeacherRequestType.SWAP)
+                .filter(tr -> tr.getNote() != null && tr.getNote().contains("DECLINED_BY_TEACHER_ID_"))
+                .collect(Collectors.toList());
+
+        Set<Long> declinedTeacherIds = new HashSet<>();
+        for (TeacherRequest tr : swapRequestsForSession) {
+            String note = tr.getNote();
+            if (note != null && note.contains("DECLINED_BY_TEACHER_ID_")) {
+                try {
+                    String prefix = "DECLINED_BY_TEACHER_ID_";
+                    int startIndex = note.indexOf(prefix) + prefix.length();
+                    int endIndex = note.indexOf(":", startIndex);
+                    if (endIndex == -1) {
+                        endIndex = startIndex;
+                        while (endIndex < note.length() && Character.isDigit(note.charAt(endIndex))) {
+                            endIndex++;
+                        }
+                    }
+                    if (endIndex > startIndex) {
+                        String teacherIdStr = note.substring(startIndex, endIndex).trim();
+                        Long teacherId = Long.parseLong(teacherIdStr);
+                        declinedTeacherIds.add(teacherId);
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to parse declined teacher ID from note: {}", note, e);
+                }
+            }
+        }
+
+        // 4. Get all teachers except original teacher and declined teachers
+        List<Teacher> allTeachers = teacherRepository.findAll().stream()
+                .filter(t -> !t.getId().equals(finalOriginalTeacher.getId()))
+                .filter(t -> !declinedTeacherIds.contains(t.getId()))
+                .collect(Collectors.toList());
+
+        // 5. Get all teacher skills for quick lookup
+        List<TeacherSkill> allTeacherSkills = teacherSkillRepository.findAll();
+        java.util.Map<Long, List<TeacherSkill>> teacherSkillsMap = allTeacherSkills.stream()
+                .collect(Collectors.groupingBy(ts -> ts.getTeacher().getId()));
+
+        // 6. Map to candidates with priority calculation
+        List<SwapCandidateDTO> candidates = allTeachers.stream()
+                .map(teacher -> {
+                    UserAccount teacherAccount = teacher.getUserAccount();
+                    boolean hasConflict = hasTeacherConflict(teacher.getId(), session.getDate(), 
+                            session.getTimeSlotTemplate().getId(), null);
+
+                    List<TeacherSkill> teacherSkills = teacherSkillsMap.getOrDefault(
+                            teacher.getId(), List.of());
+                    List<SwapCandidateDTO.SkillDetail> skillDetails = teacherSkills.stream()
+                            .map(skill -> {
+                                TeacherSkill.TeacherSkillId id = skill.getId();
+                                String skillName = id != null && id.getSkill() != null
+                                        ? id.getSkill().name()
+                                        : null;
+                                if (skillName == null) {
+                                    return null;
+                                }
+                                return SwapCandidateDTO.SkillDetail.builder()
+                                        .skill(skillName)
+                                        .level(skill.getLevel())
+                                        .build();
+                            })
+                            .filter(Objects::nonNull)
+                            .sorted(Comparator.comparing(SwapCandidateDTO.SkillDetail::getSkill))
+                            .collect(Collectors.toList());
+
+                    int skillPriority = skillDetails.isEmpty() ? 0 : 1;
+                    int availabilityPriority = hasConflict ? 0 : 1;
+
+                    return SwapCandidateDTO.builder()
+                            .teacherId(teacher.getId())
+                            .fullName(teacherAccount != null ? teacherAccount.getFullName() : null)
+                            .email(teacherAccount != null ? teacherAccount.getEmail() : null)
+                            .skillPriority(skillPriority)
+                            .availabilityPriority(availabilityPriority)
+                            .hasConflict(hasConflict)
+                            .skills(skillDetails)
+                            .build();
+                })
+                .sorted((a, b) -> {
                     int skillCompare = Integer.compare(b.getSkillPriority(), a.getSkillPriority());
                     if (skillCompare != 0) return skillCompare;
                     

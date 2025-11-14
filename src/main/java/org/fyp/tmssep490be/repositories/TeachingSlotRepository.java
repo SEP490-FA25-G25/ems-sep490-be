@@ -67,4 +67,17 @@ public interface TeachingSlotRepository extends JpaRepository<TeachingSlot, Teac
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate
     );
+
+    /**
+     * Find teaching slot by session ID with teacher loaded
+     * Used to get teacher from session when request.teacher is null
+     */
+    @Query("""
+            SELECT ts FROM TeachingSlot ts
+            JOIN FETCH ts.teacher t
+            JOIN FETCH t.userAccount ua
+            WHERE ts.session.id = :sessionId
+              AND ts.status IN ('SCHEDULED', 'SUBSTITUTED')
+            """)
+    List<TeachingSlot> findBySessionIdWithTeacher(@Param("sessionId") Long sessionId);
 }

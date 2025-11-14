@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 
@@ -72,6 +73,8 @@ class TeacherRequestServiceImplRescheduleTest {
         TimeSlotTemplate t = new TimeSlotTemplate();
         t.setId(id);
         t.setName(name != null ? name : "TimeSlot-" + id);
+        t.setStartTime(LocalTime.of(8, 0)); // Default start time 08:00
+        t.setEndTime(LocalTime.of(10, 0)); // Default end time 10:00
         return t;
     }
 
