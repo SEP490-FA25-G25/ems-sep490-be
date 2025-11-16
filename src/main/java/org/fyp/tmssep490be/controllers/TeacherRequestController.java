@@ -291,7 +291,7 @@ public class TeacherRequestController {
      * Get my future sessions (7 days) or filter by specific date
      * GET /api/v1/teacher-requests/my-sessions
      */
-    @GetMapping("/{id}")
+    @GetMapping("/my-sessions")
     @PreAuthorize("hasRole('TEACHER') or hasRole('ROLE_ACADEMIC_AFFAIR')")
     @Operation(
             summary = "Get my future sessions",
