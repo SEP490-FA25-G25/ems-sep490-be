@@ -1,49 +1,49 @@
 # Development Commands - TMS SEP490 Backend
 
-## Environment Setup (Windows)
+## Environment Setup (Windows - REQUIRED FIRST)
 ```bash
-# Set Java 21 (adjust path as needed)
+# MUST run this before any Maven commands
 export JAVA_HOME="/c/Users/YourUsername/.jdks/openjdk-21.0.1"
 export PATH="$JAVA_HOME/bin:$PATH"
 
 # Verify setup
 java -version
-mvn -version
+./mvnw -version
 ```
 
-## Build & Run
+## Build & Run (Use Maven Wrapper)
 ```bash
 # Clean and compile
-mvn clean compile
+./mvnw clean compile
 
 # Run application (port 8080)
-mvn spring-boot:run
+./mvnw spring-boot:run
 
 # Build JAR (skip tests)
-mvn clean package -DskipTests
+./mvnw clean package -DskipTests
 
 # Run JAR
 java -jar target/tms-sep490-be-0.0.1-SNAPSHOT.jar
 ```
 
-## Testing Commands
+## Testing Commands (Use Maven Wrapper)
 ```bash
 # Run all tests with coverage
-mvn clean verify
+./mvnw clean verify
 
 # Run unit tests only
-mvn test
+./mvnw test
 
 # Run specific test class
-mvn test -Dtest=CenterServiceImplTest
+./mvnw test -Dtest=CenterServiceImplTest
 
 # Run specific test method
-mvn test -Dtest=CenterServiceImplTest#shouldFindCenterById
+./mvnw test -Dtest=CenterServiceImplTest#shouldFindCenterById
 
 # Run tests in parallel (faster)
-mvn -T 1C clean verify
+./mvnw -T 1C clean verify
 
-# View coverage report after mvn verify
+# View coverage report after ./mvnw verify
 # Open: target/site/jacoco/index.html
 ```
 
@@ -76,12 +76,13 @@ git pull origin branch-name
 git checkout -b new-branch
 ```
 
-## Maven Wrapper (Alternative)
+## Quick Start (Copy-Paste Ready)
 ```bash
-# Use if JAVA_HOME setup is problematic
-./mvnw clean compile
-./mvnw spring-boot:run
-./mvnw test -Dtest=ClassName
+# Setup environment + run application
+export JAVA_HOME="/c/Users/YourUsername/.jdks/openjdk-21.0.1" && export PATH="$JAVA_HOME/bin:$PATH" && ./mvnw spring-boot:run
+
+# Setup environment + run tests
+export JAVA_HOME="/c/Users/YourUsername/.jdks/openjdk-21.0.1" && export PATH="$JAVA_HOME/bin:$PATH" && ./mvnw clean verify
 ```
 
 ## Windows Specific

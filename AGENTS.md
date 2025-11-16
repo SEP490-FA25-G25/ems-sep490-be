@@ -73,47 +73,64 @@ State the correction factually and move on.
 
 ## Development Commands
 
-### Build and Run
+### ⚠️ IMPORTANT: Environment Setup (REQUIRED FIRST)
+```bash
+# MUST run this before any Maven commands on Windows
+export JAVA_HOME="/c/Users/YourUsername/.jdks/openjdk-21.0.1"
+export PATH="$JAVA_HOME/bin:$PATH"
+
+# Verify setup
+java -version
+./mvnw -version
+```
+
+### Build and Run (Use Maven Wrapper)
 ```bash
 # Build the project
-mvn clean compile
+./mvnw clean compile
 
 # Run the application
-mvn spring-boot:run
+./mvnw spring-boot:run
 
 # Build JAR file
-mvn clean package
+./mvnw clean package
 
 # Run JAR file
 java -jar target/tms-sep490-be-0.0.1-SNAPSHOT.jar
 
 # Skip tests during build
-mvn clean package -DskipTests
+./mvnw clean package -DskipTests
+
+# Quick start (setup + run in one command)
+export JAVA_HOME="/c/Users/YourUsername/.jdks/openjdk-21.0.1" && export PATH="$JAVA_HOME/bin:$PATH" && ./mvnw spring-boot:run
 ```
 
-### Testing Commands
+### Testing Commands (Use Maven Wrapper)
 ```bash
 # Run all tests (unit + integration + coverage)
-mvn clean verify
+./mvnw clean verify
 
 # Run only unit tests
-mvn test
+./mvnw test
 
 # Run specific test class
-mvn test -Dtest=CenterServiceImplTest
+./mvnw test -Dtest=CenterServiceImplTest
 
 # Run specific test method
-mvn test -Dtest=CenterServiceImplTest#shouldFindCenterById
+./mvnw test -Dtest=CenterServiceImplTest#shouldFindCenterById
 
 # Run tests with coverage report
-mvn clean verify jacoco:report
+./mvnw clean verify jacoco:report
 # View coverage report: target/site/jacoco/index.html
 
 # Run tests in parallel (faster)
-mvn -T 1C clean verify
+./mvnw -T 1C clean verify
 
 # Run integration tests only
-mvn verify -DskipUnitTests
+./mvnw verify -DskipUnitTests
+
+# Quick start (setup + test in one command)
+export JAVA_HOME="/c/Users/YourUsername/.jdks/openjdk-21.0.1" && export PATH="$JAVA_HOME/bin:$PATH" && ./mvnw clean verify
 ```
 
 ### Database Setup
@@ -124,17 +141,6 @@ docker run --name tms-postgres -e POSTGRES_PASSWORD=979712 -p 5432:5432 -d postg
 # Connect to database
 docker exec -it tms-postgres psql -U postgres
 CREATE DATABASE tms;
-```
-
-### Environment Setup on Windows
-```bash
-# Set JAVA_HOME (adjust path to your JDK installation)
-export JAVA_HOME="/c/Users/YourUsername/.jdks/openjdk-21.0.1"
-export PATH="$JAVA_HOME/bin:$PATH"
-
-# Verify setup
-java -version
-mvn -version
 ```
 
 ## Architecture Overview
@@ -176,7 +182,7 @@ org.fyp.tmssep490be/
 - **Role-based authorization**: ADMIN, MANAGER, CENTER_HEAD, etc.
 
 ### Authentication Flow
-1. POST `/api/v1/auth/login` � JWT tokens
+1. POST `/api/v1/auth/login`   JWT tokens
 2. Include `Authorization: Bearer <access_token>` in API calls
 3. Use refresh token to get new access token
 
@@ -291,24 +297,22 @@ class ServiceTest {
 ```bash
 # Ensure JAVA_HOME is set first
 export JAVA_HOME="/c/Users/YourUsername/.jdks/openjdk-21.0.1"
+export PATH="$JAVA_HOME/bin:$PATH"
 
 # Run specific test during development
-mvn test -Dtest=CenterServiceImplTest
+./mvnw test -Dtest=CenterServiceImplTest
 
 # Run REST API tests with REST Assured
-mvn test -Dtest=RestAssuredIT
+./mvnw test -Dtest=RestAssuredIT
 
 # Run tests with coverage
-mvn clean verify jacoco:report
+./mvnw clean verify jacoco:report
 
 # Run tests with parallel execution
-mvn -T 1C clean verify
+./mvnw -T 1C clean verify
 
 # Debug failing tests
-mvn test -X
-
-# Use Maven wrapper if JAVA_HOME setup is problematic
-./mvnw test -Dtest=CenterServiceImplTest
+./mvnw test -X
 ```
 
 ### API Documentation
@@ -336,3 +340,92 @@ mvn test -X
 - Support for bulk data operations
 - Import endpoints for courses, students, and enrollments
 - CSV file processing capabilities
+
+## Serena MCP Server Integration
+
+### Overview
+This project uses **Serena MCP (Model Context Protocol) Server** for intelligent code navigation and editing. Serena provides semantic understanding of the codebase through language server integration.
+
+### Memory Files Available
+After onboarding, these memory files contain project-specific knowledge:
+- `project_overview.md` - Tech stack, domain model, architecture
+- `suggested_commands.md` - Build, test, database commands
+- `code_style_conventions.md` - Naming patterns, Lombok usage, API responses
+- `task_completion_checklist.md` - Quality checks before completing tasks
+- `testing_guidelines.md` - Modern Spring Boot 3.4+ testing patterns
+- `codebase_structure.md` - Complete package layout and statistics
+
+### Key Serena Tools for This Project
+
+**Code Navigation (Use Instead of Reading Entire Files)**
+```
+# Get overview of symbols in a file
+mcp__serena__get_symbols_overview("src/main/java/.../StudentController.java")
+
+# Find specific symbol by name path
+mcp__serena__find_symbol("StudentController/createStudent", include_body=true)
+
+# Find references to a symbol
+mcp__serena__find_referencing_symbols("StudentService", "src/.../StudentService.java")
+
+# Search for patterns in codebase
+mcp__serena__search_for_pattern("@PreAuthorize.*ACADEMIC_AFFAIR")
+```
+
+**Code Editing (Symbol-Based)**
+```
+# Replace entire symbol body
+mcp__serena__replace_symbol_body("ServiceImpl/methodName", "src/...java", "new method body")
+
+# Insert after a symbol (e.g., add new method)
+mcp__serena__insert_after_symbol("ClassName/existingMethod", "src/...java", "new method")
+
+# Insert before a symbol (e.g., add imports)
+mcp__serena__insert_before_symbol("ClassName", "src/...java", "import statement")
+
+# Rename symbol throughout codebase
+mcp__serena__rename_symbol("oldName", "src/...java", "newName")
+```
+
+**Memory Management**
+```
+# Read project-specific knowledge
+mcp__serena__read_memory("code_style_conventions.md")
+
+# Update memory with new learnings
+mcp__serena__write_memory("new_insight.md", "content")
+
+# List all available memories
+mcp__serena__list_memories()
+```
+
+**Thinking Tools (Call Before Important Actions)**
+```
+# After gathering information
+mcp__serena__think_about_collected_information()
+
+# Before making code changes
+mcp__serena__think_about_task_adherence()
+
+# When task seems complete
+mcp__serena__think_about_whether_you_are_done()
+```
+
+### Best Practices with Serena
+
+1. **Don't Read Entire Files** - Use `get_symbols_overview` first, then `find_symbol` with specific name paths
+2. **Use Symbol-Based Editing** - Prefer `replace_symbol_body` over line-based edits for method changes
+3. **Check Memory Files** - Read relevant memories before starting complex tasks
+4. **Think Before Acting** - Call thinking tools before making significant changes
+5. **Restrict Searches** - Always pass `relative_path` to narrow searches to specific packages
+
+### Example Workflow
+
+```
+1. Read memory: mcp__serena__read_memory("code_style_conventions.md")
+2. Overview: mcp__serena__get_symbols_overview("src/.../StudentController.java")
+3. Find method: mcp__serena__find_symbol("StudentController/createStudent", include_body=true, depth=0)
+4. Think: mcp__serena__think_about_collected_information()
+5. Edit: mcp__serena__replace_symbol_body("StudentController/createStudent", ..., "updated body")
+6. Verify: mcp__serena__think_about_whether_you_are_done()
+```
