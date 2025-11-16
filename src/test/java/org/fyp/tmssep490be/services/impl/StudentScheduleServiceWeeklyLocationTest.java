@@ -11,10 +11,10 @@ import org.fyp.tmssep490be.utils.TestDataBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.ActiveProfiles;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -27,20 +27,20 @@ import static org.mockito.Mockito.*;
 /**
  * Tests for weekly schedule location improvements.
  * Verifies that specific room names are shown instead of generic branch names.
+ * Uses unit tests to avoid database connection issues.
  */
-@SpringBootTest
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 @DisplayName("StudentScheduleService Weekly Location Tests")
 class StudentScheduleServiceWeeklyLocationTest {
 
-    @Autowired
-    private StudentScheduleService studentScheduleService;
-
-    @MockitoBean
+    @Mock
     private StudentRepository studentRepository;
 
-    @MockitoBean
+    @Mock
     private StudentSessionRepository studentSessionRepository;
+
+    @InjectMocks
+    private StudentScheduleServiceImpl studentScheduleService;
 
     private Student testStudent;
     private List<StudentSession> testStudentSessions;
