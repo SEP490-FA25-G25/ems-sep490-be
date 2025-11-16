@@ -52,7 +52,15 @@
       "Bash(mvnw.cmd clean compile:*)",
       "Bash(STUDENT_ID=1:*)",
       "Bash(__NEW_LINE__ curl -X GET \"http://localhost:8080/api/v1/academic-requests/students/$STUDENT_ID/transfer-eligibility\" )",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "mcp__serena__get_current_config",
+      "mcp__serena__check_onboarding_performed",
+      "mcp__serena__onboarding",
+      "mcp__serena__list_dir",
+      "mcp__serena__get_symbols_overview",
+      "mcp__serena__find_symbol",
+      "mcp__serena__write_memory",
+      "mcp__serena__list_memories"
     ],
     "deny": [],
     "ask": []
