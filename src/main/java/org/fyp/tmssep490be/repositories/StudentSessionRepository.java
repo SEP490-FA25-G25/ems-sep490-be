@@ -106,6 +106,30 @@ public interface StudentSessionRepository extends JpaRepository<StudentSession, 
     List<StudentSession> findByStudentIdAndClassEntityId(@Param("studentId") Long studentId, @Param("classId") Long classId);
 
     /**
+     * Find all student sessions for a student (used for overview aggregation)
+     */
+    @Query("SELECT ss FROM StudentSession ss JOIN ss.session s WHERE ss.student.id = :studentId")
+    List<StudentSession> findAllByStudentId(@Param("studentId") Long studentId);
+
+    @Query("""
+            SELECT ss FROM StudentSession ss
+            JOIN FETCH ss.student st
+            JOIN FETCH st.userAccount ua
+            JOIN FETCH ss.session sess
+            LEFT JOIN FETCH sess.courseSession cs
+            WHERE ss.session.id = :sessionId
+            ORDER BY st.studentCode ASC
+            """)
+    List<StudentSession> findBySessionId(@Param("sessionId") Long sessionId);
+
+    @Query("""
+            SELECT ss FROM StudentSession ss
+            JOIN FETCH ss.student st
+            JOIN FETCH st.userAccount ua
+            JOIN FETCH ss.session sess
+            WHERE ss.session.id IN :sessionIds
+            """)
+    List<StudentSession> findBySessionIds(@Param("sessionIds") List<Long> sessionIds);
      * Find student sessions for a class after a specific date (for transfer)
      */
     @Query("SELECT ss FROM StudentSession ss " +

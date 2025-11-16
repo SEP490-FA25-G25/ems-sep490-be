@@ -63,6 +63,7 @@ public enum ErrorCode {
     SESSION_IN_USE(1292, "Cannot delete course session that is being used in actual sessions"),
     INVALID_SKILL_SET(1293, "Invalid skill set value(s)"),
     COURSE_SESSION_NOT_FOUND(1294, "Course session not found"),
+    SESSION_ALREADY_DONE(1295, "Cannot modify attendance for a session that has already been completed"),
 
     // PLO errors (1310-1329)
     PLO_NOT_FOUND(1310, "PLO not found"),
