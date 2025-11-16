@@ -291,8 +291,8 @@ public class TeacherRequestController {
      * Get my future sessions (7 days) or filter by specific date
      * GET /api/v1/teacher-requests/my-sessions
      */
-    @GetMapping("/my-sessions")
-    @PreAuthorize("hasRole('TEACHER')")
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('TEACHER') or hasRole('ROLE_ACADEMIC_AFFAIR')")
     @Operation(
             summary = "Get my future sessions",
             description = "Get teacher's future sessions within 7 days (or filter by specific date). " +
@@ -318,7 +318,7 @@ public class TeacherRequestController {
      * PATCH /api/v1/teacher-requests/{id}/approve
      */
     @PatchMapping("/{id}/approve")
-    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    @PreAuthorize("hasRole('ROLE_ACADEMIC_AFFAIR')")
     @Operation(
             summary = "Approve teacher request",
             description = "Approve a request. Staff can override Teacher's choices."
@@ -349,7 +349,7 @@ public class TeacherRequestController {
      * PATCH /api/v1/teacher-requests/{id}/reject
      */
     @PatchMapping("/{id}/reject")
-    @PreAuthorize("hasRole('ACADEMIC_AFFAIR')")
+    @PreAuthorize("hasRole('ROLE_ACADEMIC_AFFAIR')")
     @Operation(
             summary = "Reject teacher request",
             description = "Reject a request with reason"

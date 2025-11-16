@@ -72,29 +72,19 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
     /**
      * Find available makeup sessions for a specific course session
      * Returns sessions with same courseSessionId, in future, with available capacity
-     * For OFFLINE modality: filters by same branch
-     * For ONLINE/HYBRID modality: allows different branches
-     * Only returns sessions within 2 weeks from today
      */
     @Query(value = """
         SELECT s.* FROM session s
         JOIN class c ON s.class_id = c.id
         WHERE s.course_session_id = :courseSessionId
           AND s.date >= CURRENT_DATE
-          AND s.date <= CURRENT_DATE + INTERVAL '2 weeks'
           AND s.status = 'PLANNED'
           AND s.id != :excludeSessionId
-          AND (
-            :targetModality != 'OFFLINE'
-            OR c.branch_id = :targetBranchId
-          )
         ORDER BY s.date ASC
         """, nativeQuery = true)
     List<Session> findMakeupSessionOptions(
         @Param("courseSessionId") Long courseSessionId,
-        @Param("excludeSessionId") Long excludeSessionId,
-        @Param("targetBranchId") Long targetBranchId,
-        @Param("targetModality") String targetModality
+        @Param("excludeSessionId") Long excludeSessionId
     );
 
     /**
@@ -125,7 +115,4 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
         @Param("classId") Long classId,
         @Param("date") LocalDate date
     );
-
-    @Query("SELECT s FROM Session s WHERE s.classEntity.id = :classId ORDER BY s.date ASC, s.timeSlotTemplate.startTime ASC")
-    List<Session> findAllByClassIdOrderByDateAndTime(@Param("classId") Long classId);
 }

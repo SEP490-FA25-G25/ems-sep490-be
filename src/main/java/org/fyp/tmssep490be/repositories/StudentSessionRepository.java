@@ -44,6 +44,31 @@ public interface StudentSessionRepository extends JpaRepository<StudentSession, 
     );
 
     /**
+     * Find weekly schedule for a student filtered by specific class
+     * Uses JOIN FETCH to prevent N+1 queries
+     */
+    @Query("SELECT ss FROM StudentSession ss " +
+           "JOIN FETCH ss.session s " +
+           "JOIN FETCH s.timeSlotTemplate tst " +
+           "JOIN FETCH s.classEntity c " +
+           "JOIN FETCH c.course course " +
+           "JOIN FETCH c.branch branch " +
+           "JOIN FETCH s.courseSession cs " +
+           "LEFT JOIN FETCH cs.courseMaterials " +
+           "LEFT JOIN FETCH s.sessionResources sr " +
+           "LEFT JOIN FETCH sr.resource " +
+           "WHERE ss.student.id = :studentId " +
+           "AND s.classEntity.id = :classId " +
+           "AND s.date BETWEEN :startDate AND :endDate " +
+           "ORDER BY s.date ASC, tst.startTime ASC")
+    List<StudentSession> findWeeklyScheduleByStudentIdAndClassId(
+            @Param("studentId") Long studentId,
+            @Param("classId") Long classId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    /**
      * Find specific session for a student with authorization check
      * Ensures student can only access their own sessions
      */
@@ -105,4 +130,28 @@ public interface StudentSessionRepository extends JpaRepository<StudentSession, 
             WHERE ss.session.id IN :sessionIds
             """)
     List<StudentSession> findBySessionIds(@Param("sessionIds") List<Long> sessionIds);
+     * Find student sessions for a class after a specific date (for transfer)
+     */
+    @Query("SELECT ss FROM StudentSession ss " +
+           "JOIN ss.session s " +
+           "WHERE ss.student.id = :studentId " +
+           "AND s.classEntity.id = :classId " +
+           "AND s.date > :date")
+    List<StudentSession> findByStudentIdAndClassEntityIdAndSessionDateAfter(
+            @Param("studentId") Long studentId,
+            @Param("classId") Long classId,
+            @Param("date") LocalDate date
+    );
+
+    /**
+     * Find sessions for a student on a specific date (for conflict checking)
+     */
+    @Query("SELECT s FROM Session s " +
+           "JOIN StudentSession ss ON s.id = ss.session.id " +
+           "WHERE ss.student.id = :studentId " +
+           "AND s.date = :date")
+    List<org.fyp.tmssep490be.entities.Session> findSessionsForStudentByDate(
+            @Param("studentId") Long studentId,
+            @Param("date") LocalDate date
+    );
 }

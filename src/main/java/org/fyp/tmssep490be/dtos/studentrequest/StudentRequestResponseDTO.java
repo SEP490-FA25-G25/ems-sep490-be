@@ -22,9 +22,14 @@ public class StudentRequestResponseDTO {
 
     // Class information
     private ClassSummaryDTO currentClass;
+    private ClassSummaryDTO targetClass; // For TRANSFER requests only
 
     // Session information
-    private SessionSummaryDTO targetSession;
+    private SessionSummaryDTO targetSession; // For ABSENCE/MAKEUP: the missed session; For TRANSFER: effective session
+    private SessionSummaryDTO makeupSession; // For MAKEUP requests only - the session student wants to attend
+
+    // Transfer-specific fields
+    private String effectiveDate; // For TRANSFER requests - date when transfer takes effect
 
     // Request details
     private String requestReason;

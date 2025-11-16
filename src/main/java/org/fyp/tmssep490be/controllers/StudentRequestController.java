@@ -9,7 +9,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
 import org.fyp.tmssep490be.dtos.studentrequest.*;
+import org.fyp.tmssep490be.entities.Student;
 import org.fyp.tmssep490be.entities.enums.StudentRequestType;
+import org.fyp.tmssep490be.exceptions.BusinessRuleException;
+import org.fyp.tmssep490be.exceptions.ResourceNotFoundException;
+import org.fyp.tmssep490be.repositories.StudentRepository;
 import org.fyp.tmssep490be.security.UserPrincipal;
 import org.fyp.tmssep490be.services.StudentRequestService;
 import org.springframework.data.domain.Page;
@@ -22,7 +26,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/students/me")
+@RequestMapping("/api/v1/students-request")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Student Request Management", description = "APIs for students to manage their absence/makeup/transfer requests")
@@ -30,6 +34,7 @@ import java.util.List;
 public class StudentRequestController {
 
     private final StudentRequestService studentRequestService;
+    private final StudentRepository studentRepository;
 
     @GetMapping("/requests")
     @Operation(summary = "Get student's requests", description = "Retrieve all requests submitted by the current student with pagination and filtering")
@@ -44,7 +49,7 @@ public class StudentRequestController {
             @RequestParam(defaultValue = "0") Integer page,
             @Parameter(description = "Page size")
             @RequestParam(defaultValue = "10") Integer size,
-            @Parameter(description = "Sort criteria: field,direction (e.g., submittedAt,desc)")
+            @Parameter(description = "Sort criter......................................ia: field,direction (e.g., submittedAt,desc)")
             @RequestParam(defaultValue = "submittedAt,desc") String sort) {
 
         // Get student ID from user principal
@@ -139,5 +144,46 @@ public class StudentRequestController {
         MakeupOptionsResponseDTO result = studentRequestService.getMakeupOptions(targetSessionId, userId);
 
         return ResponseEntity.ok(ResponseObject.success("Retrieved makeup options successfully", result));
+    }
+
+    // ==================== TRANSFER REQUEST ENDPOINTS ====================
+
+    @GetMapping("/transfer-eligibility")
+    @Operation(summary = "Get transfer eligibility", description = "Check if student is eligible for class transfer and get current enrollments")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ResponseObject<TransferEligibilityDTO>> getTransferEligibility(
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+
+        Long userId = currentUser.getId();
+        TransferEligibilityDTO result = studentRequestService.getTransferEligibility(userId);
+
+        return ResponseEntity.ok(ResponseObject.success("Retrieved transfer eligibility successfully", result));
+    }
+
+    @GetMapping("/transfer-options")
+    @Operation(summary = "Get transfer options", description = "Get available classes to transfer to from a specific current class")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ResponseObject<List<TransferOptionDTO>>> getTransferOptions(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Parameter(description = "Current class ID to transfer from", required = true)
+            @RequestParam Long currentClassId) {
+
+        Long userId = currentUser.getId();
+        List<TransferOptionDTO> result = studentRequestService.getTransferOptions(userId, currentClassId);
+
+        return ResponseEntity.ok(ResponseObject.success("Retrieved transfer options successfully", result));
+    }
+
+    @PostMapping("/transfer-requests")
+    @Operation(summary = "Submit transfer request", description = "Submit a new class transfer request")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<ResponseObject<StudentRequestResponseDTO>> submitTransferRequest(
+            @AuthenticationPrincipal UserPrincipal currentUser,
+            @Valid @RequestBody TransferRequestDTO dto) {
+
+        Long userId = currentUser.getId();
+        StudentRequestResponseDTO result = studentRequestService.submitTransferRequest(userId, dto);
+
+        return ResponseEntity.ok(ResponseObject.success("Transfer request submitted successfully", result));
     }
 }
