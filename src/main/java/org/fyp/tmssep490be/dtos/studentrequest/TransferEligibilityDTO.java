@@ -27,15 +27,29 @@ public class TransferEligibilityDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CurrentClassInfo {
+        private Long enrollmentId;
         private Long classId;
         private String classCode;
         private String className;
+        private Long courseId;
         private String courseName;
         private String branchName;
         private String learningMode;
         private String scheduleInfo;
         private LocalDate enrollmentDate;
         private boolean canTransfer;
+        private boolean hasPendingTransfer;
+        private TransferQuotaInfo transferQuota;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TransferQuotaInfo {
+        private int used;
+        private int limit;
+        private int remaining;
     }
 
     @Data

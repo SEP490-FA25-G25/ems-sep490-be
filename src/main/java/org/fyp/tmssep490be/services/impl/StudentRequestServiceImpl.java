@@ -1372,19 +1372,24 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 student.getId(), List.of(EnrollmentStatus.ENROLLED));
 
         List<TransferEligibilityDTO.CurrentClassInfo> currentClasses = enrollments.stream()
-                .map(this::mapToCurrentClassInfo)
+                .map(enrollment -> mapToCurrentClassInfoWithQuota(enrollment, student.getId()))
                 .collect(Collectors.toList());
 
-        // Check transfer policy compliance
+        // Check transfer policy compliance (global summary)
+        int totalUsedTransfers = calculateUsedTransfers(student.getId());
+        int totalRemainingTransfers = currentClasses.stream()
+                .mapToInt(c -> c.getTransferQuota().getRemaining())
+                .sum();
+
         TransferEligibilityDTO.TransferPolicyInfo policyInfo = TransferEligibilityDTO.TransferPolicyInfo.builder()
                 .maxTransfersPerCourse(1) // Business rule: 1 transfer per course
-                .usedTransfers(calculateUsedTransfers(student.getId()))
-                .remainingTransfers(1) // This would be calculated per course
+                .usedTransfers(totalUsedTransfers)
+                .remainingTransfers(totalRemainingTransfers)
                 .requiresAAApproval(false) // Tier 1 transfers are auto-approved for same branch/mode
                 .policyDescription("Maximum 1 transfer per course. Same branch & mode changes are auto-approved.")
                 .build();
 
-        boolean eligible = !currentClasses.isEmpty() && policyInfo.getRemainingTransfers() > 0;
+        boolean eligible = !currentClasses.isEmpty() && totalRemainingTransfers > 0;
 
         return TransferEligibilityDTO.builder()
                 .eligibleForTransfer(eligible)
@@ -1921,12 +1926,14 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 studentId, StudentRequestType.TRANSFER, RequestStatus.APPROVED);
     }
 
-    private TransferEligibilityDTO.CurrentClassInfo mapToCurrentClassInfo(Enrollment enrollment) {
+    private TransferEligibilityDTO.CurrentClassInfo mapToCurrentClassInfoWithQuota(Enrollment enrollment, Long studentId) {
         ClassEntity cls = enrollment.getClassEntity();
 
         // Safe navigation with null checks
         String courseName = "Unknown Course";
+        Long courseId = null;
         if (cls.getCourse() != null) {
+            courseId = cls.getCourse().getId();
             String subjectName = cls.getCourse().getSubject() != null ?
                 cls.getCourse().getSubject().getName() : "Unknown Subject";
             String levelName = cls.getCourse().getLevel() != null ?
@@ -1939,16 +1946,42 @@ public class StudentRequestServiceImpl implements StudentRequestService {
         LocalDate enrollmentDate = enrollment.getEnrolledAt() != null ?
             enrollment.getEnrolledAt().toLocalDate() : LocalDate.now();
 
+        // Calculate per-course quota
+        int usedTransfersForCourse = 0;
+        if (courseId != null) {
+            usedTransfersForCourse = (int) studentRequestRepository.countByStudentIdAndRequestTypeAndStatusAndTargetClassCourseId(
+                    studentId, StudentRequestType.TRANSFER, RequestStatus.APPROVED, courseId);
+        }
+        int maxTransfersPerCourse = 1; // Business rule
+        int remainingTransfers = Math.max(0, maxTransfersPerCourse - usedTransfersForCourse);
+
+        TransferEligibilityDTO.TransferQuotaInfo quotaInfo = TransferEligibilityDTO.TransferQuotaInfo.builder()
+                .used(usedTransfersForCourse)
+                .limit(maxTransfersPerCourse)
+                .remaining(remainingTransfers)
+                .build();
+
+        // Check for pending transfer from this class
+        boolean hasPendingTransfer = studentRequestRepository.existsPendingTransferFromClass(
+                studentId, cls.getId(), StudentRequestType.TRANSFER, RequestStatus.PENDING);
+
+        // Determine if transfer is allowed
+        boolean canTransfer = remainingTransfers > 0 && !hasPendingTransfer;
+
         return TransferEligibilityDTO.CurrentClassInfo.builder()
+                .enrollmentId(enrollment.getId())
                 .classId(cls.getId())
                 .classCode(cls.getCode())
                 .className(cls.getName())
+                .courseId(courseId)
                 .courseName(courseName)
                 .branchName(branchName)
                 .learningMode(cls.getModality().name())
                 .scheduleInfo(scheduleInfo)
                 .enrollmentDate(enrollmentDate)
-                .canTransfer(true) // This would check specific business rules
+                .canTransfer(canTransfer)
+                .hasPendingTransfer(hasPendingTransfer)
+                .transferQuota(quotaInfo)
                 .build();
     }
 

@@ -108,4 +108,19 @@ public interface StudentRequestRepository extends JpaRepository<StudentRequest, 
      * Count approved transfers by student and request type
      */
     long countByStudentIdAndRequestTypeAndStatus(Long studentId, StudentRequestType requestType, RequestStatus status);
+
+    /**
+     * Check if student has pending transfer request from a specific class
+     * Used to prevent duplicate transfer requests from same source class
+     */
+    @Query("SELECT COUNT(sr) > 0 FROM StudentRequest sr " +
+           "WHERE sr.student.id = :studentId " +
+           "AND sr.currentClass.id = :currentClassId " +
+           "AND sr.requestType = :requestType " +
+           "AND sr.status = :status")
+    boolean existsPendingTransferFromClass(
+            @Param("studentId") Long studentId,
+            @Param("currentClassId") Long currentClassId,
+            @Param("requestType") StudentRequestType requestType,
+            @Param("status") RequestStatus status);
 }
