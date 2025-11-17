@@ -1729,6 +1729,8 @@ public class StudentRequestServiceImpl implements StudentRequestService {
         }
 
         oldEnrollment.setStatus(EnrollmentStatus.TRANSFERRED);
+        oldEnrollment.setLeftSessionId(request.getEffectiveSession().getId());
+        oldEnrollment.setLeftAt(OffsetDateTime.now());
         oldEnrollment.setOverrideReason(String.format("Transferred to class %s on %s. Request ID: %d",
                 request.getTargetClass().getCode(),
                 OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
@@ -1740,6 +1742,9 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 .studentId(request.getStudent().getId())
                 .classId(request.getTargetClass().getId())
                 .status(EnrollmentStatus.ENROLLED)
+                .joinSessionId(request.getEffectiveSession().getId())
+                .enrolledAt(OffsetDateTime.now())
+                .enrolledBy(request.getDecidedBy() != null ? request.getDecidedBy().getId() : null)
                 .capacityOverride(false)
                 .overrideReason(String.format("Transferred from class %s. Request ID: %d",
                         request.getCurrentClass().getCode(), request.getId()))
