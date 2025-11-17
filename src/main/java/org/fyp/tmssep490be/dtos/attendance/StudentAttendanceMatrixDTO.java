@@ -12,6 +12,7 @@ public class StudentAttendanceMatrixDTO {
     private Long studentId;
     private String studentCode;
     private String fullName;
+    private Double attendanceRate; // Tỷ lệ chuyên cần của học viên
     private List<Cell> cells;
 
     @Data

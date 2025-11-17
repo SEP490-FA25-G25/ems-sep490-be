@@ -56,9 +56,14 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         Teacher teacher = teacherRepository.findByUserAccountId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TEACHER_NOT_FOUND));
 
-        // 2. Get session
+        // 2. Get session and force load timeSlotTemplate
         Session session = sessionRepository.findById(createDTO.getSessionId())
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        
+        // Force load timeSlotTemplate to avoid lazy loading issues
+        if (session.getTimeSlotTemplate() != null) {
+            session.getTimeSlotTemplate().getId(); // Force load
+        }
 
         // 3. Validate teacher owns session
         validateTeacherOwnsSession(session.getId(), teacher.getId());
@@ -74,12 +79,18 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                 Resource newResource = resourceRepository.findById(createDTO.getNewResourceId())
                         .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
+                // Validate session has time slot template
+                TimeSlotTemplate sessionTimeSlot = session.getTimeSlotTemplate();
+                if (sessionTimeSlot == null) {
+                    throw new CustomException(ErrorCode.TIMESLOT_NOT_FOUND);
+                }
+
                 // Validate resource availability at the session's date + time slot (exclude current session)
                 validateResourceAvailability(newResource.getId(), session.getDate(),
-                        session.getTimeSlotTemplate().getId(), session.getId());
+                        sessionTimeSlot.getId(), session.getId());
 
-                // Validate resource type phù hợp với class modality
-                validateResourceTypeForModality(newResource, session.getClassEntity());
+                // Validate resource type phù hợp với mục tiêu thay đổi modality
+                validateResourceTypeForModalityChange(newResource, session.getClassEntity());
 
                 // Validate resource capacity >= số học viên trong session
                 validateResourceCapacity(newResource, session.getId());
@@ -461,16 +472,12 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toCollection(HashSet::new));
 
+        ResourceType targetResourceType = determineTargetResourceTypeForModalityChange(classEntity.getModality());
+
         return resourceRepository.findAll().stream()
                 .filter(resource -> resource.getBranch() != null && branch.getId().equals(resource.getBranch().getId()))
-                .filter(resource -> {
-                    try {
-                        validateResourceTypeForModality(resource, classEntity);
-                        return true;
-                    } catch (CustomException ex) {
-                        return false;
-                    }
-                })
+                .filter(resource -> targetResourceType == null
+                        || (resource.getResourceType() != null && resource.getResourceType() == targetResourceType))
                 .filter(resource -> {
                     try {
                         validateResourceAvailability(resource.getId(), session.getDate(), timeSlotTemplate.getId(), session.getId());
@@ -701,16 +708,12 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toCollection(HashSet::new));
 
+        ResourceType targetResourceType = determineTargetResourceTypeForModalityChange(classEntity.getModality());
+
         return resourceRepository.findAll().stream()
                 .filter(resource -> resource.getBranch() != null && branch.getId().equals(resource.getBranch().getId()))
-                .filter(resource -> {
-                    try {
-                        validateResourceTypeForModality(resource, classEntity);
-                        return true;
-                    } catch (CustomException ex) {
-                        return false;
-                    }
-                })
+                .filter(resource -> targetResourceType == null
+                        || (resource.getResourceType() != null && resource.getResourceType() == targetResourceType))
                 .filter(resource -> {
                     try {
                         validateResourceAvailability(resource.getId(), session.getDate(), timeSlotTemplate.getId(), session.getId());
@@ -767,13 +770,19 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
 
+        // Validate session has time slot template
+        TimeSlotTemplate sessionTimeSlot = session.getTimeSlotTemplate();
+        if (sessionTimeSlot == null) {
+            throw new CustomException(ErrorCode.TIMESLOT_NOT_FOUND);
+        }
+
         // Validate resource availability at session date + time
         // Exclude current session when checking (we're replacing its resource)
         validateResourceAvailability(newResource.getId(), session.getDate(),
-                session.getTimeSlotTemplate().getId(), session.getId());
+                sessionTimeSlot.getId(), session.getId());
 
-        // Validate resource type phù hợp với class modality
-        validateResourceTypeForModality(newResource, session.getClassEntity());
+        // Validate resource type phù hợp với mục tiêu thay đổi modality
+        validateResourceTypeForModalityChange(newResource, session.getClassEntity());
 
         // Validate resource capacity >= số học viên trong session
         validateResourceCapacity(newResource, session.getId());
@@ -943,10 +952,16 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
 
+        // Validate session has time slot template
+        TimeSlotTemplate sessionTimeSlot = session.getTimeSlotTemplate();
+        if (sessionTimeSlot == null) {
+            throw new CustomException(ErrorCode.TIMESLOT_NOT_FOUND);
+        }
+
         // Validate replacement teacher has no conflict at session date/time
         validateTeacherConflict(replacementTeacher.getId(), 
                 session.getDate(), 
-                session.getTimeSlotTemplate().getId(), 
+                sessionTimeSlot.getId(), 
                 null);
 
         // Set replacement teacher
@@ -993,7 +1008,7 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
      */
     private void validateTimeWindow(LocalDate sessionDate) {
         LocalDate today = LocalDate.now();
-        LocalDate maxDate = today.plusDays(7);
+        LocalDate maxDate = today.plusDays(14);
 
         if (sessionDate.isBefore(today) || sessionDate.isAfter(maxDate)) {
             throw new CustomException(ErrorCode.SESSION_NOT_IN_TIME_WINDOW);
@@ -1041,8 +1056,8 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
 
     /**
      * Validate resource type phù hợp với class modality
-     * - OFFLINE class → VIRTUAL resource (chuyển sang online cho session này)
-     * - ONLINE class → ROOM resource (chuyển sang offline cho session này)
+     * - OFFLINE class → ROOM resource (giữ nguyên lớp offline)
+     * - ONLINE class → VIRTUAL resource (giữ nguyên lớp online)
      * - HYBRID class → có thể dùng cả ROOM hoặc VIRTUAL
      */
     private void validateResourceTypeForModality(Resource resource, ClassEntity classEntity) {
@@ -1050,17 +1065,41 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         ResourceType resourceType = resource.getResourceType();
 
         if (classModality == Modality.OFFLINE) {
-            // OFFLINE class muốn chuyển sang online → cần VIRTUAL resource
-            if (resourceType != ResourceType.VIRTUAL) {
+            // OFFLINE class reschedule → cần ROOM resource
+            if (resourceType != ResourceType.ROOM) {
                 throw new CustomException(ErrorCode.INVALID_RESOURCE_FOR_MODALITY);
             }
         } else if (classModality == Modality.ONLINE) {
-            // ONLINE class muốn chuyển sang offline → cần ROOM resource
-            if (resourceType != ResourceType.ROOM) {
+            // ONLINE class reschedule → cần VIRTUAL resource
+            if (resourceType != ResourceType.VIRTUAL) {
                 throw new CustomException(ErrorCode.INVALID_RESOURCE_FOR_MODALITY);
             }
         }
         // HYBRID class có thể dùng cả ROOM hoặc VIRTUAL, không cần validate
+    }
+
+    private ResourceType determineTargetResourceTypeForModalityChange(Modality classModality) {
+        if (classModality == null) {
+            return null;
+        }
+        return switch (classModality) {
+            case ONLINE -> ResourceType.ROOM;
+            case OFFLINE -> ResourceType.VIRTUAL;
+            default -> null; // HYBRID hoặc modality khác -> allow tất cả resource types
+        };
+    }
+
+    private void validateResourceTypeForModalityChange(Resource resource, ClassEntity classEntity) {
+        if (classEntity == null) {
+            throw new CustomException(ErrorCode.CLASS_NOT_FOUND);
+        }
+        ResourceType targetResourceType = determineTargetResourceTypeForModalityChange(classEntity.getModality());
+        if (targetResourceType == null) {
+            return;
+        }
+        if (resource.getResourceType() != targetResourceType) {
+            throw new CustomException(ErrorCode.INVALID_RESOURCE_FOR_MODALITY);
+        }
     }
 
     /**
@@ -1270,7 +1309,7 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         } else {
             // Default: next 7 days
             fromDate = today;
-            toDate = today.plusDays(7);
+            toDate = today.plusDays(14);
         }
 
         // 3. Query teaching slots
@@ -1339,6 +1378,12 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         validateTeacherOwnsSession(sessionId, currentTeacher.getId());
         validateTimeWindow(session.getDate());
 
+        // Validate session has time slot template
+        TimeSlotTemplate sessionTimeSlot = session.getTimeSlotTemplate();
+        if (sessionTimeSlot == null) {
+            throw new CustomException(ErrorCode.TIMESLOT_NOT_FOUND);
+        }
+
         // 3. Get declined teachers for this session (teachers who have declined swap requests for this session)
         List<TeacherRequest> swapRequestsForSession = teacherRequestRepository.findAll().stream()
                 .filter(tr -> tr.getSession() != null && tr.getSession().getId().equals(sessionId))
@@ -1386,11 +1431,12 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
                 .collect(Collectors.groupingBy(ts -> ts.getTeacher().getId()));
 
         // 6. Map to candidates with priority calculation
+        final Long sessionTimeSlotId = sessionTimeSlot.getId();
         List<SwapCandidateDTO> candidates = allTeachers.stream()
                 .map(teacher -> {
                     UserAccount teacherAccount = teacher.getUserAccount();
                     boolean hasConflict = hasTeacherConflict(teacher.getId(), session.getDate(), 
-                            session.getTimeSlotTemplate().getId(), null);
+                            sessionTimeSlotId, null);
 
                     List<TeacherSkill> teacherSkills = teacherSkillsMap.getOrDefault(
                             teacher.getId(), List.of());
@@ -1485,6 +1531,12 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
         
         final Teacher finalOriginalTeacher = originalTeacher;
 
+        // Validate session has time slot template
+        TimeSlotTemplate sessionTimeSlot = session.getTimeSlotTemplate();
+        if (sessionTimeSlot == null) {
+            throw new CustomException(ErrorCode.TIMESLOT_NOT_FOUND);
+        }
+
         // 3. Get declined teachers for this session
         List<TeacherRequest> swapRequestsForSession = teacherRequestRepository.findAll().stream()
                 .filter(tr -> tr.getSession() != null && tr.getSession().getId().equals(session.getId()))
@@ -1517,23 +1569,33 @@ public class TeacherRequestServiceImpl implements TeacherRequestService {
             }
         }
 
-        // 4. Get all teachers except original teacher and declined teachers
+        // 4. Get replacement teacher that teacher originally selected (if any)
+        // Exclude it from suggestions since staff can see it in request detail
+        Long replacementTeacherId = null;
+        if (request.getReplacementTeacher() != null) {
+            replacementTeacherId = request.getReplacementTeacher().getId();
+        }
+
+        // 5. Get all teachers except original teacher, declined teachers, and replacement teacher
+        final Long finalReplacementTeacherId = replacementTeacherId;
         List<Teacher> allTeachers = teacherRepository.findAll().stream()
                 .filter(t -> !t.getId().equals(finalOriginalTeacher.getId()))
                 .filter(t -> !declinedTeacherIds.contains(t.getId()))
+                .filter(t -> finalReplacementTeacherId == null || !t.getId().equals(finalReplacementTeacherId))
                 .collect(Collectors.toList());
 
-        // 5. Get all teacher skills for quick lookup
+        // 6. Get all teacher skills for quick lookup
         List<TeacherSkill> allTeacherSkills = teacherSkillRepository.findAll();
         java.util.Map<Long, List<TeacherSkill>> teacherSkillsMap = allTeacherSkills.stream()
                 .collect(Collectors.groupingBy(ts -> ts.getTeacher().getId()));
 
-        // 6. Map to candidates with priority calculation
+        // 7. Map to candidates with priority calculation
+        final Long sessionTimeSlotId = sessionTimeSlot.getId();
         List<SwapCandidateDTO> candidates = allTeachers.stream()
                 .map(teacher -> {
                     UserAccount teacherAccount = teacher.getUserAccount();
                     boolean hasConflict = hasTeacherConflict(teacher.getId(), session.getDate(), 
-                            session.getTimeSlotTemplate().getId(), null);
+                            sessionTimeSlotId, null);
 
                     List<TeacherSkill> teacherSkills = teacherSkillsMap.getOrDefault(
                             teacher.getId(), List.of());

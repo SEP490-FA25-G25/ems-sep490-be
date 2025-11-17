@@ -103,44 +103,27 @@ public class TeacherRequestController {
 
     /**
      * Suggest time slots (RESCHEDULE)
-     * For TEACHER: uses sessionId to suggest slots for a session
-     * For ACADEMIC_AFFAIR: uses requestId to suggest slots for a request (to override reschedule)
+     * For TEACHER only: uses sessionId to suggest slots for a session
      */
     @GetMapping("/{id}/reschedule/slots")
-    @PreAuthorize("hasRole('TEACHER') or hasRole('ACADEMIC_AFFAIR')")
+    @PreAuthorize("hasRole('TEACHER')")
     @Operation(
             summary = "Suggest time slots for reschedule",
-            description = "For TEACHER: List time slots without conflicts on the selected date for a session. " +
-                    "For ACADEMIC_AFFAIR: List time slots without conflicts on the selected date for a reschedule request. " +
-                    "If date is not provided for staff, uses the date from the request."
+            description = "List time slots without conflicts on the selected date for a session. " +
+                    "id is sessionId, date is required."
     )
     public ResponseEntity<ResponseObject<List<RescheduleSlotSuggestionDTO>>> suggestSlots(
             @PathVariable Long id,
-            @RequestParam(value = "date", required = false) java.time.LocalDate date,
+            @RequestParam(value = "date", required = true) java.time.LocalDate date,
             @AuthenticationPrincipal UserPrincipal currentUser
     ) {
-        boolean isAcademicStaff = isAcademicAffair(currentUser);
-        
-        if (isAcademicStaff) {
-            // Staff: id is requestId, date is optional (if not provided, uses date from request)
-            List<RescheduleSlotSuggestionDTO> items = teacherRequestService.suggestSlotsForStaff(id, date);
-            return ResponseEntity.ok(ResponseObject.<List<RescheduleSlotSuggestionDTO>>builder()
-                    .success(true)
-                    .message(items.isEmpty() ? "No suitable time slots for the selected date" : "OK")
-                    .data(items)
-                    .build());
-        } else {
-            // Teacher: id is sessionId, date is required
-            if (date == null) {
-                throw new IllegalArgumentException("Date parameter is required for teachers");
-            }
-            List<RescheduleSlotSuggestionDTO> items = teacherRequestService.suggestSlots(id, date, currentUser.getId());
-            return ResponseEntity.ok(ResponseObject.<List<RescheduleSlotSuggestionDTO>>builder()
-                    .success(true)
-                    .message(items.isEmpty() ? "No suitable time slots for the selected date" : "OK")
-                    .data(items)
-                    .build());
-        }
+        // Teacher: id is sessionId, date is required
+        List<RescheduleSlotSuggestionDTO> items = teacherRequestService.suggestSlots(id, date, currentUser.getId());
+        return ResponseEntity.ok(ResponseObject.<List<RescheduleSlotSuggestionDTO>>builder()
+                .success(true)
+                .message(items.isEmpty() ? "No suitable time slots for the selected date" : "OK")
+                .data(items)
+                .build());
     }
 
     /**
