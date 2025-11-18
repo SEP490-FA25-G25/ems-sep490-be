@@ -56,7 +56,7 @@ public interface TeachingSlotRepository extends JpaRepository<TeachingSlot, Teac
             JOIN FETCH c.course course
             LEFT JOIN FETCH s.courseSession cs
             WHERE ts.teacher.id = :teacherId
-              AND ts.status IN ('SCHEDULED', 'SUBSTITUTED')
+              AND ts.status = 'SCHEDULED'
               AND s.status = 'PLANNED'
               AND s.date >= :fromDate
               AND s.date <= :toDate
@@ -80,4 +80,20 @@ public interface TeachingSlotRepository extends JpaRepository<TeachingSlot, Teac
               AND ts.status IN ('SCHEDULED', 'SUBSTITUTED')
             """)
     List<TeachingSlot> findBySessionIdWithTeacher(@Param("sessionId") Long sessionId);
+
+    /**
+     * Find distinct classes that a teacher is teaching
+     * Returns classes where teacher has at least one teaching slot with status SCHEDULED or SUBSTITUTED
+     */
+    @Query("""
+            SELECT DISTINCT c FROM TeachingSlot ts
+            JOIN ts.session s
+            JOIN s.classEntity c
+            JOIN FETCH c.course
+            JOIN FETCH c.branch
+            WHERE ts.teacher.id = :teacherId
+              AND ts.status = 'SCHEDULED'
+            ORDER BY c.code ASC
+            """)
+    List<org.fyp.tmssep490be.entities.ClassEntity> findDistinctClassesByTeacherId(@Param("teacherId") Long teacherId);
 }

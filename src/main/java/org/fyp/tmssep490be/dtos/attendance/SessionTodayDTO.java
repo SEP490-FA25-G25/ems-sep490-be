@@ -12,6 +12,7 @@ public class SessionTodayDTO {
     private Long sessionId;
     private Long classId;
     private String classCode;
+    private String className;
     private String courseCode;
     private String courseName;
     private LocalDate date;

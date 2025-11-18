@@ -51,6 +51,8 @@ class AttendanceServiceImplTest {
         s.setStatus(SessionStatus.PLANNED);
         TimeSlotTemplate tst = new TimeSlotTemplate();
         tst.setName("Morning");
+        tst.setStartTime(java.time.LocalTime.of(8, 0));
+        tst.setEndTime(java.time.LocalTime.of(10, 0));
         s.setTimeSlotTemplate(tst);
         ClassEntity ce = new ClassEntity();
         ce.setId(999L);

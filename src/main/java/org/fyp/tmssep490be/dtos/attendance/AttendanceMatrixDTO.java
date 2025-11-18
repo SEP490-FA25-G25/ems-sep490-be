@@ -10,6 +10,8 @@ import java.util.List;
 public class AttendanceMatrixDTO {
     private Long classId;
     private String classCode;
+    private String courseName;
+    private Double attendanceRate; // Tỷ lệ chuyên cần của cả lớp
     private List<SessionMatrixInfoDTO> sessions;
     private List<StudentAttendanceMatrixDTO> students;
 }

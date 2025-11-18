@@ -128,4 +128,34 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
 
     @Query("SELECT s FROM Session s WHERE s.classEntity.id = :classId ORDER BY s.date ASC, s.timeSlotTemplate.startTime ASC")
     List<Session> findAllByClassIdOrderByDateAndTime(@Param("classId") Long classId);
+
+    /**
+     * Find the previous session in the same class before the given date
+     * Used to get homework assignment from previous session
+     */
+    @Query("SELECT s FROM Session s " +
+           "WHERE s.classEntity.id = :classId " +
+           "AND s.date < :date " +
+           "ORDER BY s.date DESC, s.timeSlotTemplate.startTime DESC")
+    List<Session> findPreviousSessionsByClassIdAndDate(
+            @Param("classId") Long classId,
+            @Param("date") LocalDate date
+    );
+
+    /**
+     * Find sessions that have passed their date and are still in PLANNED status
+     * Used to automatically mark them as DONE
+     */
+    @Query("SELECT s FROM Session s " +
+           "WHERE s.date < :today " +
+           "AND s.status = :status")
+    List<Session> findPastSessionsByStatus(
+            @Param("today") LocalDate today,
+            @Param("status") SessionStatus status
+    );
+
+    /**
+     * Count total number of sessions for a class
+     */
+    long countByClassEntityId(Long classId);
 }

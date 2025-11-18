@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.fyp.tmssep490be.dtos.attendance.AttendanceMatrixDTO;
 import org.fyp.tmssep490be.dtos.attendance.AttendanceSaveRequestDTO;
 import org.fyp.tmssep490be.dtos.attendance.AttendanceSaveResponseDTO;
 import org.fyp.tmssep490be.dtos.attendance.MarkAllResponseDTO;
@@ -181,26 +180,6 @@ public class AttendanceController {
         SessionReportResponseDTO data = attendanceService.submitSessionReport(teacherId, sessionId, request);
         return ResponseEntity.ok(
                 ResponseObject.<SessionReportResponseDTO>builder()
-                        .success(true)
-                        .message("OK")
-                        .data(data)
-                        .build()
-        );
-    }
-
-    @GetMapping("/classes/{classId}/matrix")
-    @PreAuthorize("hasRole('TEACHER')")
-    @Operation(summary = "Get attendance matrix for a class")
-    @ApiResponse(responseCode = "200", description = "OK",
-            content = @Content(schema = @Schema(implementation = AttendanceMatrixDTO.class)))
-    public ResponseEntity<ResponseObject<AttendanceMatrixDTO>> getClassAttendanceMatrix(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @PathVariable Long classId
-    ) {
-        Long teacherId = teacherContextHelper.getTeacherId(userPrincipal);
-        AttendanceMatrixDTO data = attendanceService.getClassAttendanceMatrix(teacherId, classId);
-        return ResponseEntity.ok(
-                ResponseObject.<AttendanceMatrixDTO>builder()
                         .success(true)
                         .message("OK")
                         .data(data)
