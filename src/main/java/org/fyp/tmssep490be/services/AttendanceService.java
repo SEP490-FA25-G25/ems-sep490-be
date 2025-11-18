@@ -22,6 +22,8 @@ public interface AttendanceService {
     SessionReportResponseDTO submitSessionReport(Long teacherId, Long sessionId, SessionReportSubmitDTO request);
 
     AttendanceMatrixDTO getClassAttendanceMatrix(Long teacherId, Long classId);
+
+    List<TeacherClassListItemDTO> getTeacherClasses(Long teacherId);
 }
 
 

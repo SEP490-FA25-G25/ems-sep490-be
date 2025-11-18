@@ -10,6 +10,7 @@ import java.util.List;
 public class StudentAttendanceReportResponseDTO {
     private Long classId;
     private String classCode;
+    private String className;
     private Long courseId;
     private String courseCode;
     private String courseName;
@@ -20,7 +21,6 @@ public class StudentAttendanceReportResponseDTO {
         private int totalSessions;
         private int attended;
         private int absent;
-        private int excused;
         private int upcoming;
         private double attendanceRate;
     }

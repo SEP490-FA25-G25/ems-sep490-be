@@ -13,6 +13,7 @@ public class StudentAttendanceDTO {
     private String fullName;
     private AttendanceStatus attendanceStatus;
     private HomeworkStatus homeworkStatus;
+    private Boolean hasPreviousHomework; // Indicates if previous session has homework assignment
     private String note;
     private boolean makeup;
     private Long makeupSessionId;

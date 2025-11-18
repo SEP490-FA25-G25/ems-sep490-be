@@ -4,13 +4,15 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Data
 @Builder
 public class SessionMatrixInfoDTO {
     private Long sessionId;
     private LocalDate date;
-    private String timeSlotName;
+    private LocalTime startTime;
+    private LocalTime endTime;
     private String status;
 }
 
