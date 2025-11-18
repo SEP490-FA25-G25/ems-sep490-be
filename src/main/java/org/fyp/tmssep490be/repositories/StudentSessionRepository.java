@@ -36,6 +36,7 @@ public interface StudentSessionRepository extends JpaRepository<StudentSession, 
            "LEFT JOIN FETCH sr.resource " +
            "WHERE ss.student.id = :studentId " +
            "AND s.date BETWEEN :startDate AND :endDate " +
+           "AND (ss.isTransferredOut IS NULL OR ss.isTransferredOut = false) " +
            "ORDER BY s.date ASC, tst.startTime ASC")
     List<StudentSession> findWeeklyScheduleByStudentId(
             @Param("studentId") Long studentId,
@@ -60,6 +61,7 @@ public interface StudentSessionRepository extends JpaRepository<StudentSession, 
            "WHERE ss.student.id = :studentId " +
            "AND s.classEntity.id = :classId " +
            "AND s.date BETWEEN :startDate AND :endDate " +
+           "AND (ss.isTransferredOut IS NULL OR ss.isTransferredOut = false) " +
            "ORDER BY s.date ASC, tst.startTime ASC")
     List<StudentSession> findWeeklyScheduleByStudentIdAndClassId(
             @Param("studentId") Long studentId,

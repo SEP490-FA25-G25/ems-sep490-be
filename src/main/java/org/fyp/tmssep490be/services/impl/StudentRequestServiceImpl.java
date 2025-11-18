@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -1752,22 +1753,25 @@ public class StudentRequestServiceImpl implements StudentRequestService {
 
         enrollmentRepository.save(newEnrollment);
 
-        // 4. Update future student sessions in old class to ABSENT
+        // 4. Update student sessions in old class from effective date onwards to ABSENT
+        // Use effectiveDate.minusDays(1) to include the effective date itself (session on 18/11 should be marked ABSENT)
         List<StudentSession> futureOldSessions = studentSessionRepository
                 .findByStudentIdAndClassEntityIdAndSessionDateAfter(
                         request.getStudent().getId(),
                         request.getCurrentClass().getId(),
-                        request.getEffectiveDate());
+                        request.getEffectiveDate().minusDays(1));
 
         for (StudentSession session : futureOldSessions) {
             session.setAttendanceStatus(AttendanceStatus.ABSENT);
+            session.setIsTransferredOut(true);
             session.setNote(String.format("Student transferred out. Request ID: %d", request.getId()));
         }
         studentSessionRepository.saveAll(futureOldSessions);
 
-        // 5. Create student sessions for future sessions in new class
+        // 5. Create student sessions for new class from effective date onwards
+        // Use effectiveDate.minusDays(1) to include the effective date itself (session on 18/11 should be created)
         List<Session> futureNewSessions = sessionRepository
-                .findByClassEntityIdAndDateAfter(request.getTargetClass().getId(), request.getEffectiveDate());
+                .findByClassEntityIdAndDateAfter(request.getTargetClass().getId(), request.getEffectiveDate().minusDays(1));
 
         for (Session session : futureNewSessions) {
             StudentSession.StudentSessionId sessionId = new StudentSession.StudentSessionId(
@@ -1820,22 +1824,41 @@ public class StudentRequestServiceImpl implements StudentRequestService {
             throw new BusinessRuleException("TRANSFER_LIMIT_EXCEEDED", "Transfer limit exceeded for this course");
         }
 
-        // 4. Effective date validation and effective session lookup
-        if (dto.getEffectiveDate().isBefore(LocalDate.now())) {
-            throw new BusinessRuleException("PAST_EFFECTIVE_DATE", "Effective date cannot be in the past");
+        // 4. Session-aware validation: Verify session exists and hasn't started yet
+        Session effectiveSession = sessionRepository.findById(dto.getSessionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with ID: " + dto.getSessionId()));
+
+        // Verify session belongs to target class
+        if (!effectiveSession.getClassEntity().getId().equals(dto.getTargetClassId())) {
+            throw new BusinessRuleException("SESSION_CLASS_MISMATCH",
+                    "Selected session does not belong to the target class");
         }
 
-        // Find session on effective date in target class
-        List<Session> sessionsOnEffectiveDate = sessionRepository.findByClassEntityIdAndDate(
-                dto.getTargetClassId(), dto.getEffectiveDate());
+        // Validate session start time is in the future
+        if (effectiveSession.getTimeSlotTemplate() != null) {
+            LocalDate sessionDate = effectiveSession.getDate();
+            LocalTime sessionStartTime = effectiveSession.getTimeSlotTemplate().getStartTime();
 
-        if (sessionsOnEffectiveDate.isEmpty()) {
-            throw new BusinessRuleException("NO_SESSION_ON_DATE",
-                    "No session found on effective date in target class. Please select a valid class session date.");
+            // Combine date and time for comparison
+            LocalDate today = LocalDate.now();
+            LocalTime now = java.time.LocalTime.now();
+
+            // Check if session is in the past
+            if (sessionDate.isBefore(today) ||
+                (sessionDate.equals(today) && sessionStartTime.isBefore(now))) {
+                throw new BusinessRuleException("SESSION_ALREADY_STARTED",
+                        "Cannot transfer to a session that has already started. Please select a future session.");
+            }
+        } else {
+            // Fallback to date-only validation if time slot is not available
+            if (effectiveSession.getDate().isBefore(LocalDate.now())) {
+                throw new BusinessRuleException("PAST_EFFECTIVE_DATE",
+                        "Effective date cannot be in the past");
+            }
         }
 
-        // Take first session if multiple (shouldn't happen normally)
-        Session effectiveSession = sessionsOnEffectiveDate.get(0);
+        // Set effectiveDate from the session's date
+        dto.setEffectiveDate(effectiveSession.getDate());
 
         // 5. Check duplicate pending transfer
         boolean hasDuplicate = studentRequestRepository.existsByStudentIdAndCurrentClassIdAndTargetClassIdAndRequestTypeAndStatusIn(

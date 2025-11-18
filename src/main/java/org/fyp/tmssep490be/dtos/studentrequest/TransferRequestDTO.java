@@ -27,8 +27,10 @@ public class TransferRequestDTO {
     private Long targetClassId;
 
     @NotNull(message = "Effective date is required")
-    @Future(message = "Effective date must be in the future")
     private LocalDate effectiveDate;
+
+    @NotNull(message = "Session ID is required")
+    private Long sessionId;
 
     @NotBlank(message = "Reason is required")
     @Size(min = 10, message = "Reason must be at least 10 characters")

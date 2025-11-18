@@ -543,6 +543,7 @@ CREATE TABLE student_session (
   is_makeup BOOLEAN DEFAULT false,
   makeup_session_id BIGINT, -- nếu là buổi học bù thì lưu session bù
   original_session_id BIGINT, -- nếu là buổi học bù thì lưu session gốc
+  is_transferred_out BOOLEAN DEFAULT false, -- true nếu học sinh chuyển lớp và không còn tham gia session này
   attendance_status VARCHAR(20) NOT NULL DEFAULT 'PLANNED',
   homework_status VARCHAR(20),
   note TEXT,
