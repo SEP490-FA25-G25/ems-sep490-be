@@ -23,6 +23,54 @@ public interface StudentRequestRepository extends JpaRepository<StudentRequest, 
     boolean existsByStudentIdAndTargetSessionIdAndRequestTypeAndStatusIn(
             Long studentId, Long sessionId, StudentRequestType requestType, List<RequestStatus> statuses);
 
+    // ============== ACADEMIC AFFAIRS BRANCH-FILTERED QUERIES ==============
+
+    /**
+     * Find pending requests filtered by AA user's assigned branches
+     * Used for secure branch-level filtering at database level
+     */
+    @Query("SELECT sr FROM StudentRequest sr " +
+           "WHERE sr.status = :status " +
+           "AND sr.currentClass.branch.id IN :branchIds " +
+           "ORDER BY sr.submittedAt ASC")
+    Page<StudentRequest> findPendingRequestsByBranches(
+            @Param("status") RequestStatus status,
+            @Param("branchIds") List<Long> branchIds,
+            Pageable pageable);
+
+    /**
+     * Find all requests (any status) filtered by AA user's assigned branches
+     * Used for history view with branch-level security
+     */
+    @Query("SELECT sr FROM StudentRequest sr " +
+           "WHERE sr.currentClass.branch.id IN :branchIds " +
+           "ORDER BY sr.submittedAt DESC")
+    Page<StudentRequest> findAllRequestsByBranches(
+            @Param("branchIds") List<Long> branchIds,
+            Pageable pageable);
+
+    /**
+     * Count pending requests by branch IDs for summary statistics
+     */
+    @Query("SELECT COUNT(sr) FROM StudentRequest sr " +
+           "WHERE sr.status = :status " +
+           "AND sr.currentClass.branch.id IN :branchIds")
+    long countByStatusAndBranches(
+            @Param("status") RequestStatus status,
+            @Param("branchIds") List<Long> branchIds);
+
+    /**
+     * Count requests by type, status, and branch IDs for summary statistics
+     */
+    @Query("SELECT COUNT(sr) FROM StudentRequest sr " +
+           "WHERE sr.requestType = :requestType " +
+           "AND sr.status = :status " +
+           "AND sr.currentClass.branch.id IN :branchIds")
+    long countByRequestTypeAndStatusAndBranches(
+            @Param("requestType") StudentRequestType requestType,
+            @Param("status") RequestStatus status,
+            @Param("branchIds") List<Long> branchIds);
+
     // Find pending requests for AA review - simplified query
     @Query("SELECT sr FROM StudentRequest sr WHERE sr.status = :status ORDER BY sr.submittedAt ASC")
     Page<StudentRequest> findPendingRequestsForAA(@Param("status") RequestStatus status, Pageable pageable);

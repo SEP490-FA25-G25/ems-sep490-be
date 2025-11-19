@@ -42,6 +42,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
     private final EnrollmentRepository enrollmentRepository;
     private final StudentSessionRepository studentSessionRepository;
     private final UserAccountRepository userAccountRepository;
+    private final UserBranchesRepository userBranchesRepository;
     private final StudentScheduleService studentScheduleService;
 
     // Configuration values (in real implementation, these would come from properties)
@@ -220,27 +221,42 @@ public class StudentRequestServiceImpl implements StudentRequestService {
     }
 
     @Override
-    public Page<AARequestResponseDTO> getPendingRequests(AARequestFilterDTO filter) {
+    public Page<AARequestResponseDTO> getPendingRequests(Long currentUserId, AARequestFilterDTO filter) {
+        // SECURITY: Get current user's assigned branch IDs
+        List<Long> userBranchIds = userBranchesRepository.findBranchIdsByUserId(currentUserId);
+
+        if (userBranchIds.isEmpty()) {
+            throw new BusinessRuleException("ACCESS_DENIED",
+                "User is not assigned to any branch. Contact administrator.");
+        }
+
+        log.info("AA user {} has access to branches: {}", currentUserId, userBranchIds);
+
+        // SECURITY: Validate requested branchId if provided
+        if (filter.getBranchId() != null && !userBranchIds.contains(filter.getBranchId())) {
+            throw new BusinessRuleException("ACCESS_DENIED",
+                "Access denied to branch ID: " + filter.getBranchId());
+        }
+
+        // Determine which branches to query (specific branch or all user's branches)
+        List<Long> targetBranchIds = filter.getBranchId() != null ?
+            List.of(filter.getBranchId()) : userBranchIds;
+
         Sort sort = Sort.by(Sort.Direction.fromString(filter.getSort().split(",")[1]),
                 filter.getSort().split(",")[0]);
+        Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
 
-        // Fetch all pending requests without pagination for filtering
-        List<StudentRequest> allRequests = studentRequestRepository.findByStatus(RequestStatus.PENDING, sort);
+        // DATABASE-LEVEL filtering by branch (secure and efficient)
+        Page<StudentRequest> requests = studentRequestRepository.findPendingRequestsByBranches(
+                RequestStatus.PENDING, targetBranchIds, pageable);
 
-        // Apply filtering
-        List<StudentRequest> filteredRequests = allRequests.stream()
+        // Apply additional filters in-memory (only on paginated results)
+        List<StudentRequest> filteredRequests = requests.getContent().stream()
                 .filter(request -> {
                     // Filter by request type
                     if (filter.getRequestType() != null) {
                         StudentRequestType requestType = StudentRequestType.valueOf(filter.getRequestType());
                         if (!request.getRequestType().equals(requestType)) {
-                            return false;
-                        }
-                    }
-
-                    // Filter by branch
-                    if (filter.getBranchId() != null && request.getCurrentClass() != null) {
-                        if (!request.getCurrentClass().getBranch().getId().equals(filter.getBranchId())) {
                             return false;
                         }
                     }
@@ -284,50 +300,59 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 })
                 .collect(Collectors.toList());
 
-        // Calculate pagination manually
-        int start = Math.min(filter.getPage() * filter.getSize(), filteredRequests.size());
-        int end = Math.min(start + filter.getSize(), filteredRequests.size());
-        List<StudentRequest> paginatedRequests = filteredRequests.subList(start, end);
-
-        // Create properly paginated result
-        Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
+        // Return filtered results with original pagination metadata
         return new org.springframework.data.domain.PageImpl<>(
-                paginatedRequests.stream().map(this::mapToAAResponseDTO).collect(Collectors.toList()),
+                filteredRequests.stream().map(this::mapToAAResponseDTO).collect(Collectors.toList()),
                 pageable,
-                filteredRequests.size() // Correct total count
+                requests.getTotalElements() // Keep original total for pagination
         );
     }
 
     @Override
-    public Page<AARequestResponseDTO> getAllRequests(AARequestFilterDTO filter) {
-        Sort sort = Sort.by(Sort.Direction.fromString(filter.getSort().split(",")[1]),
-                filter.getSort().split(",")[0]);
+    public Page<AARequestResponseDTO> getAllRequests(Long currentUserId, AARequestFilterDTO filter) {
+        // SECURITY: Get current user's assigned branch IDs
+        List<Long> userBranchIds = userBranchesRepository.findBranchIdsByUserId(currentUserId);
 
-        // Fetch all requests without pagination for proper filtering
-        List<StudentRequest> allRequests;
-        RequestStatus status = filter.getStatus() != null ?
-                RequestStatus.valueOf(filter.getStatus()) : null;
-
-        if (status != null) {
-            allRequests = studentRequestRepository.findByStatus(status, sort);
-        } else {
-            allRequests = studentRequestRepository.findAll(sort);
+        if (userBranchIds.isEmpty()) {
+            throw new BusinessRuleException("ACCESS_DENIED",
+                "User is not assigned to any branch. Contact administrator.");
         }
 
-        // Apply additional filtering in service layer
-        List<StudentRequest> filteredRequests = allRequests.stream()
+        log.info("AA user {} has access to branches: {}", currentUserId, userBranchIds);
+
+        // SECURITY: Validate requested branchId if provided
+        if (filter.getBranchId() != null && !userBranchIds.contains(filter.getBranchId())) {
+            throw new BusinessRuleException("ACCESS_DENIED",
+                "Access denied to branch ID: " + filter.getBranchId());
+        }
+
+        // Determine which branches to query (specific branch or all user's branches)
+        List<Long> targetBranchIds = filter.getBranchId() != null ?
+            List.of(filter.getBranchId()) : userBranchIds;
+
+        Sort sort = Sort.by(Sort.Direction.fromString(filter.getSort().split(",")[1]),
+                filter.getSort().split(",")[0]);
+        Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
+
+        // DATABASE-LEVEL filtering by branch (secure and efficient)
+        Page<StudentRequest> requests = studentRequestRepository.findAllRequestsByBranches(
+                targetBranchIds, pageable);
+
+        // Apply additional filters in-memory (only on paginated results)
+        List<StudentRequest> filteredRequests = requests.getContent().stream()
                 .filter(request -> {
-                    // Filter by request type
-                    if (filter.getRequestType() != null) {
-                        StudentRequestType requestType = StudentRequestType.valueOf(filter.getRequestType());
-                        if (!request.getRequestType().equals(requestType)) {
+                    // Filter by status
+                    if (filter.getStatus() != null) {
+                        RequestStatus status = RequestStatus.valueOf(filter.getStatus());
+                        if (!request.getStatus().equals(status)) {
                             return false;
                         }
                     }
 
-                    // Filter by branch
-                    if (filter.getBranchId() != null && request.getCurrentClass() != null) {
-                        if (!request.getCurrentClass().getBranch().getId().equals(filter.getBranchId())) {
+                    // Filter by request type
+                    if (filter.getRequestType() != null) {
+                        StudentRequestType requestType = StudentRequestType.valueOf(filter.getRequestType());
+                        if (!request.getRequestType().equals(requestType)) {
                             return false;
                         }
                     }
@@ -393,17 +418,11 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 })
                 .collect(Collectors.toList());
 
-        // Calculate pagination manually
-        int start = Math.min(filter.getPage() * filter.getSize(), filteredRequests.size());
-        int end = Math.min(start + filter.getSize(), filteredRequests.size());
-        List<StudentRequest> paginatedRequests = filteredRequests.subList(start, end);
-
-        // Create properly paginated result with correct total count
-        Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
+        // Return filtered results with original pagination metadata
         return new org.springframework.data.domain.PageImpl<>(
-                paginatedRequests.stream().map(this::mapToAAResponseDTO).collect(Collectors.toList()),
+                filteredRequests.stream().map(this::mapToAAResponseDTO).collect(Collectors.toList()),
                 pageable,
-                filteredRequests.size() // Correct total count
+                requests.getTotalElements() // Keep original total for pagination
         );
     }
 
@@ -507,19 +526,40 @@ public class StudentRequestServiceImpl implements StudentRequestService {
     }
 
     @Override
-    public RequestSummaryDTO getRequestSummary(AARequestFilterDTO filter) {
-        long totalPending = studentRequestRepository.countByStatus(RequestStatus.PENDING);
+    public RequestSummaryDTO getRequestSummary(Long currentUserId, AARequestFilterDTO filter) {
+        // SECURITY: Get current user's assigned branch IDs
+        List<Long> userBranchIds = userBranchesRepository.findBranchIdsByUserId(currentUserId);
+
+        if (userBranchIds.isEmpty()) {
+            throw new BusinessRuleException("ACCESS_DENIED",
+                "User is not assigned to any branch. Contact administrator.");
+        }
+
+        // SECURITY: Validate requested branchId if provided
+        if (filter.getBranchId() != null && !userBranchIds.contains(filter.getBranchId())) {
+            throw new BusinessRuleException("ACCESS_DENIED",
+                "Access denied to branch ID: " + filter.getBranchId());
+        }
+
+        // Determine which branches to query (specific branch or all user's branches)
+        List<Long> targetBranchIds = filter.getBranchId() != null ?
+            List.of(filter.getBranchId()) : userBranchIds;
+
+        // Use branch-filtered counts
+        long totalPending = studentRequestRepository.countByStatusAndBranches(
+                RequestStatus.PENDING, targetBranchIds);
 
         // Count urgent requests (sessions in next 2 days)
         LocalDate twoDaysFromNow = LocalDate.now().plusDays(2);
-        long urgentCount = studentRequestRepository.countByStatus(RequestStatus.PENDING); // Simplified, would need date filtering
+        long urgentCount = studentRequestRepository.countByStatusAndBranches(
+                RequestStatus.PENDING, targetBranchIds); // Simplified, would need date filtering
 
-        long absenceRequests = studentRequestRepository.countByRequestTypeAndStatus(
-                StudentRequestType.ABSENCE, RequestStatus.PENDING);
-        long makeupRequests = studentRequestRepository.countByRequestTypeAndStatus(
-                StudentRequestType.MAKEUP, RequestStatus.PENDING);
-        long transferRequests = studentRequestRepository.countByRequestTypeAndStatus(
-                StudentRequestType.TRANSFER, RequestStatus.PENDING);
+        long absenceRequests = studentRequestRepository.countByRequestTypeAndStatusAndBranches(
+                StudentRequestType.ABSENCE, RequestStatus.PENDING, targetBranchIds);
+        long makeupRequests = studentRequestRepository.countByRequestTypeAndStatusAndBranches(
+                StudentRequestType.MAKEUP, RequestStatus.PENDING, targetBranchIds);
+        long transferRequests = studentRequestRepository.countByRequestTypeAndStatusAndBranches(
+                StudentRequestType.TRANSFER, RequestStatus.PENDING, targetBranchIds);
 
         return RequestSummaryDTO.builder()
                 .totalPending((int) totalPending)
