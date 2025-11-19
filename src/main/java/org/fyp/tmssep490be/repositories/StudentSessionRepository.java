@@ -154,4 +154,30 @@ public interface StudentSessionRepository extends JpaRepository<StudentSession, 
             @Param("studentId") Long studentId,
             @Param("date") LocalDate date
     );
+
+    /**
+     * Find student session by student ID and course session
+     * Note: StudentSession links to Session, which links to CourseSession
+     */
+    @Query("SELECT ss FROM StudentSession ss " +
+           "JOIN ss.session s " +
+           "WHERE ss.student.id = :studentId " +
+           "AND s.courseSession.id = :courseSessionId")
+    Optional<StudentSession> findByStudentIdAndCourseSessionId(
+            @Param("studentId") Long studentId,
+            @Param("courseSessionId") Long courseSessionId
+    );
+
+    /**
+     * Find all student sessions for a student in a specific class
+     * Used for enrollment-based progress tracking
+     */
+    @Query("SELECT ss FROM StudentSession ss " +
+           "JOIN ss.session s " +
+           "WHERE ss.student.id = :studentId " +
+           "AND s.classEntity.id = :classId")
+    List<StudentSession> findByStudentIdAndClassId(
+            @Param("studentId") Long studentId,
+            @Param("classId") Long classId
+    );
 }
