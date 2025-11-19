@@ -50,6 +50,19 @@ public interface StudentRequestRepository extends JpaRepository<StudentRequest, 
             Pageable pageable);
 
     /**
+     * Find all requests filtered by AA user's assigned branches and decided by user
+     * Used for history view with decidedBy filtering and branch-level security
+     */
+    @Query("SELECT sr FROM StudentRequest sr " +
+           "WHERE sr.currentClass.branch.id IN :branchIds " +
+           "AND sr.decidedBy.id = :decidedBy " +
+           "ORDER BY sr.submittedAt DESC")
+    Page<StudentRequest> findAllRequestsByBranchesAndDecidedBy(
+            @Param("branchIds") List<Long> branchIds,
+            @Param("decidedBy") Long decidedBy,
+            Pageable pageable);
+
+    /**
      * Count pending requests by branch IDs for summary statistics
      */
     @Query("SELECT COUNT(sr) FROM StudentRequest sr " +

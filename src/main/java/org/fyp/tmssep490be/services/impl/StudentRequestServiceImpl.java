@@ -334,9 +334,17 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                 filter.getSort().split(",")[0]);
         Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize(), sort);
 
-        // DATABASE-LEVEL filtering by branch (secure and efficient)
-        Page<StudentRequest> requests = studentRequestRepository.findAllRequestsByBranches(
-                targetBranchIds, pageable);
+        // DATABASE-LEVEL filtering by branch and decidedBy (secure and efficient)
+        Page<StudentRequest> requests;
+        if (filter.getDecidedBy() != null) {
+            // Use repository method with decidedBy filtering
+            requests = studentRequestRepository.findAllRequestsByBranchesAndDecidedBy(
+                    targetBranchIds, filter.getDecidedBy(), pageable);
+        } else {
+            // Use regular repository method when decidedBy is not specified
+            requests = studentRequestRepository.findAllRequestsByBranches(
+                    targetBranchIds, pageable);
+        }
 
         // Apply additional filters in-memory (only on paginated results)
         List<StudentRequest> filteredRequests = requests.getContent().stream()
@@ -377,12 +385,7 @@ public class StudentRequestServiceImpl implements StudentRequestService {
                         }
                     }
 
-                    // Filter by decided by
-                    if (filter.getDecidedBy() != null && request.getDecidedBy() != null) {
-                        if (!request.getDecidedBy().getId().equals(filter.getDecidedBy())) {
-                            return false;
-                        }
-                    }
+                    // decidedBy filtering now handled at database level - no need for in-memory filtering
 
                     // Filter by session date
                     if (filter.getSessionDateFrom() != null && request.getTargetSession() != null) {
