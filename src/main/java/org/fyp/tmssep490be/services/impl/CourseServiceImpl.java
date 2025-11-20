@@ -188,18 +188,8 @@ public class CourseServiceImpl implements CourseService {
                 .mapToInt(pm -> pm.getTotalMaterials())
                 .sum();
 
-        int accessibleMaterials = (int) (courseLevelMaterials.stream()
-                .mapToLong(m -> m.getIsAccessible() ? 1 : 0)
-                .sum() +
-                phaseMaterials.stream()
-                        .flatMap(pm -> pm.getMaterials().stream())
-                        .mapToLong(m -> m.getIsAccessible() ? 1 : 0)
-                        .sum() +
-                phaseMaterials.stream()
-                        .flatMap(pm -> pm.getSessions().stream())
-                        .flatMap(sm -> sm.getMaterials().stream())
-                        .mapToLong(m -> m.getIsAccessible() ? 1 : 0)
-                        .sum());
+        // accessibleMaterials count is no longer used in frontend, setting to totalMaterials
+        int accessibleMaterials = totalMaterials;
 
         return MaterialHierarchyDTO.builder()
                 .courseLevel(courseLevelMaterials)

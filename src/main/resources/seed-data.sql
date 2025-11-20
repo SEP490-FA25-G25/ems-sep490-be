@@ -407,15 +407,59 @@ INSERT INTO course_material (course_id, phase_id, course_session_id, title, desc
 -- Phase 1 materials
 (1, 1, NULL, 'Phase 1 Vocabulary List', 'Key vocabulary for the first 4 weeks.', 'DOCUMENT', '/materials/phases/1/vocab.docx', 5),
 -- Session-specific materials
-(1, 1, 1, 'Session 1 - Listening Slides', 'Presentation slides for the first session.', 'SLIDE', '/materials/sessions/1/slides.pptx', 5),
-(1, 1, 2, 'Session 2 - Speaking Practice Audio', 'Audio files for speaking practice.', 'AUDIO', '/materials/sessions/2/practice.mp3', 5),
-(1, 1, 3, 'Session 3 - Reading Passage PDF', 'Reading text for session 3.', 'PDF', '/materials/sessions/3/reading.pdf', 5),
-(1, 1, 4, 'Session 4 - Writing Task 1 Sample', 'A sample for the first writing task.', 'DOCUMENT', '/materials/sessions/4/sample.docx', 5),
+-- Session 1
+(1, 1, 1, 'Introduction to IELTS Slides', 'Overview of the IELTS exam structure.', 'SLIDE', '/materials/sessions/1/intro-slides.pptx', 5),
+(1, 1, 1, 'Basic Listening Audio', 'Audio tracks for basic listening exercises.', 'AUDIO', '/materials/sessions/1/audio.mp3', 5),
+-- Session 2
+(1, 1, 2, 'Greetings & Introductions Vocabulary', 'List of common phrases for introductions.', 'DOCUMENT', '/materials/sessions/2/vocab.pdf', 5),
+-- Session 3
+(1, 1, 3, 'Reading Passage: Daily Life', 'Simple reading text about daily routines.', 'PDF', '/materials/sessions/3/reading.pdf', 5),
+-- Session 4
+(1, 1, 4, 'Sentence Structure Guide', 'Basics of English sentence structure.', 'PDF', '/materials/sessions/4/grammar.pdf', 5),
+-- Session 5
+(1, 1, 5, 'Numbers & Dates Audio', 'Listening practice for numbers and dates.', 'AUDIO', '/materials/sessions/5/numbers.mp3', 5),
+-- Session 6
+(1, 1, 6, 'Daily Activities Worksheet', 'Exercises for describing daily routines.', 'DOCUMENT', '/materials/sessions/6/worksheet.docx', 5),
+-- Session 7
+(1, 1, 7, 'Main Idea Identification', 'Strategies for finding the main idea.', 'SLIDE', '/materials/sessions/7/strategies.pptx', 5),
+-- Session 8
+(1, 1, 8, 'Paragraph Writing Template', 'Template for writing simple paragraphs.', 'DOCUMENT', '/materials/sessions/8/template.docx', 5),
+-- Session 9
+(1, 1, 9, 'Conversation Practice Audio', 'Dialogues for listening practice.', 'AUDIO', '/materials/sessions/9/conversations.mp3', 5),
+-- Session 10
+(1, 1, 10, 'Likes & Dislikes Phrases', 'Vocabulary for expressing preferences.', 'PDF', '/materials/sessions/10/phrases.pdf', 5),
+-- Session 11
+(1, 1, 11, 'Scanning Techniques', 'How to scan for details and facts.', 'SLIDE', '/materials/sessions/11/scanning.pptx', 5),
+-- Session 12
+(1, 1, 12, 'Linking Words Chart', 'Common connecting words and their usage.', 'PDF', '/materials/sessions/12/linking-words.pdf', 5),
+
 -- Phase 2 materials
 (1, 2, NULL, 'Phase 2 Grammar Guide', 'Advanced grammar rules for the last 4 weeks.', 'PDF', '/materials/phases/2/grammar.pdf', 5),
--- More session-specific materials
-(1, 2, 13, 'Session 13 - Listening Practice Test', 'A full practice test for listening.', 'AUDIO', '/materials/sessions/13/practice-test.mp3', 5),
-(1, 2, 21, 'Session 21 - Full Practice Test', 'A complete mock test (all sections).', 'PDF', '/materials/sessions/21/mock-test.pdf', 5);
+-- Session 13
+(1, 2, 13, 'Map Labeling Audio', 'Audio for map labeling exercises.', 'AUDIO', '/materials/sessions/13/maps.mp3', 5),
+-- Session 14
+(1, 2, 14, 'Question Formation Rules', 'Grammar guide for asking questions.', 'PDF', '/materials/sessions/14/questions.pdf', 5),
+-- Session 15
+(1, 2, 15, 'Short Story: The Adventure', 'Reading material for the session.', 'PDF', '/materials/sessions/15/story.pdf', 5),
+-- Session 16
+(1, 2, 16, 'Descriptive Adjectives List', 'Vocabulary for describing people and places.', 'DOCUMENT', '/materials/sessions/16/adjectives.docx', 5),
+-- Session 17
+(1, 2, 17, 'News Report Audio', 'Listening practice with news reports.', 'AUDIO', '/materials/sessions/17/news.mp3', 5),
+-- Session 18
+(1, 2, 18, 'Opinion Phrases Cheat Sheet', 'Useful phrases for giving opinions.', 'PDF', '/materials/sessions/18/opinions.pdf', 5),
+-- Session 19
+(1, 2, 19, 'Context Clues Worksheet', 'Exercises on using context clues.', 'DOCUMENT', '/materials/sessions/19/context.docx', 5),
+-- Session 20
+(1, 2, 20, 'Informal Letter Sample', 'Example of a personal letter.', 'PDF', '/materials/sessions/20/letter.pdf', 5),
+-- Session 21
+(1, 2, 21, 'Mock Test 1: Listening & Reading', 'Practice test questions.', 'PDF', '/materials/sessions/21/test1.pdf', 5),
+(1, 2, 21, 'Mock Test 1 Audio', 'Audio for the listening section.', 'AUDIO', '/materials/sessions/21/audio.mp3', 5),
+-- Session 22
+(1, 2, 22, 'Mock Test 1: Writing & Speaking', 'Prompts for writing and speaking.', 'PDF', '/materials/sessions/22/test2.pdf', 5),
+-- Session 23
+(1, 2, 23, 'Course Review Slides', 'Summary of key course concepts.', 'SLIDE', '/materials/sessions/23/review.pptx', 5),
+-- Session 24
+(1, 2, 24, 'Final Exam Instructions', 'Guidelines for the final assessment.', 'DOCUMENT', '/materials/sessions/24/instructions.docx', 5);
 
 -- Course Assessments for Foundation
 INSERT INTO course_assessment (id, course_id, name, kind, duration_minutes, max_score, skills, created_at, updated_at) VALUES
