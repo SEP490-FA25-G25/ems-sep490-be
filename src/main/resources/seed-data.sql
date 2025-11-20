@@ -189,7 +189,7 @@ INSERT INTO time_slot_template (id, branch_id, name, start_time, end_time, creat
 -- Resources (Rooms & Zoom)
 INSERT INTO resource (id, branch_id, resource_type, code, name, capacity, capacity_override, created_at, updated_at) VALUES
 -- Ha Noi Branch - Physical Rooms
-(1, 1, 'ROOM', 'HN01-R101', 'Ha Noi Room 101', 20, NULL, '2024-01-15 00:00:00+07', '2024-01-15 00:00:00+07'),
+(1, 1, 'ROOM', 'HN01-R101', 'Ha Noi Room 101', 20, 25, '2024-01-15 00:00:00+07', '2024-01-15 00:00:00+07'),
 (2, 1, 'ROOM', 'HN01-R102', 'Ha Noi Room 102', 15, NULL, '2024-01-15 00:00:00+07', '2024-01-15 00:00:00+07'),
 (3, 1, 'ROOM', 'HN01-R201', 'Ha Noi Room 201', 25, NULL, '2024-01-15 00:00:00+07', '2024-01-15 00:00:00+07'),
 -- Ha Noi Branch - Virtual
@@ -335,8 +335,10 @@ INSERT INTO plo (id, subject_id, code, description, created_at, updated_at) VALU
 (5, 1, 'PLO5', 'Produce coherent, well-structured academic essays and reports', '2024-06-01 00:00:00+07', '2024-06-01 00:00:00+07');
 
 -- Course: IELTS Foundation
-INSERT INTO course (id, subject_id, level_id, logical_course_code, version, code, name, description, total_hours, duration_weeks, session_per_week, hours_per_session, status, approval_status, decided_by_manager, decided_at, created_by, created_at, updated_at) VALUES
-(1, 1, 1, 'IELTS-FOUND-2025', 1, 'IELTS-FOUND-2025-V1', 'IELTS Foundation 2025', 'Foundation course for IELTS beginners targeting band 3.0-4.0', 60, 8, 3, 2.5, 'ACTIVE', 'APPROVED', 2, '2024-08-20 14:00:00+07', 5, '2024-08-15 00:00:00+07', '2024-08-20 14:00:00+07');
+INSERT INTO course (id, subject_id, level_id, logical_course_code, version, code, name, description, total_hours, duration_weeks, session_per_week, hours_per_session, prerequisites, target_audience, teaching_methods, score_scale, status, approval_status, decided_by_manager, decided_at, rejection_reason, created_by, created_at, updated_at) VALUES
+(1, 1, 1, 'IELTS-FOUND-2025', 1, 'IELTS-FOUND-2025-V1', 'IELTS Foundation 2025', 'Foundation course for IELTS beginners targeting band 3.0-4.0', 60, 8, 3, 2.5, 'None', 'Beginners', 'Interactive', '0-9', 'ACTIVE', 'APPROVED', 2, '2024-08-20 14:00:00+07', NULL, 5, '2024-08-15 00:00:00+07', '2024-08-20 14:00:00+07'),
+(2, 1, 2, 'IELTS-INT-2025', 1, 'IELTS-INT-2025-V1', 'IELTS Intermediate 2025', 'Intermediate course', 75, 10, 3, 2.5, 'IELTS 4.0', 'Intermediate students', 'Advanced drills', '0-9', 'DRAFT', 'PENDING', NULL, NULL, NULL, 5, NOW(), NOW()),
+(3, 1, 3, 'IELTS-ADV-2025', 1, 'IELTS-ADV-2025-V1', 'IELTS Advanced 2025', 'Advanced course', 90, 12, 3, 2.5, 'IELTS 6.0', 'Advanced students', 'Intensive', '0-9', 'DRAFT', 'REJECTED', 2, NOW(), 'Curriculum needs more focus on speaking.', 5, NOW(), NOW());
 
 -- Course Phases for Foundation
 INSERT INTO course_phase (id, course_id, phase_number, name, duration_weeks, created_at, updated_at) VALUES
@@ -436,27 +438,33 @@ INSERT INTO course_assessment_clo_mapping (course_assessment_id, clo_id, status)
 -- ========== TIER 4: CLASSES & SESSIONS ==========
 
 -- Classes (Test scenarios: completed, ongoing, scheduled)
-INSERT INTO "class" (id, branch_id, course_id, code, name, modality, start_date, planned_end_date, actual_end_date, schedule_days, max_capacity, status, approval_status, created_by, decided_by, submitted_at, decided_at, created_at, updated_at) VALUES
+INSERT INTO "class" (id, branch_id, course_id, code, name, modality, start_date, planned_end_date, actual_end_date, schedule_days, max_capacity, status, approval_status, rejection_reason, created_by, decided_by, submitted_at, decided_at, created_at, updated_at) VALUES
 -- HN Branch - Class 1: COMPLETED (to test historical data)
-(1, 1, 1, 'HN-FOUND-C1', 'HN Foundation 1 (Completed)', 'OFFLINE', '2025-07-07', '2025-09-01', '2025-09-01', ARRAY[1,3,5]::smallint[], 20, 'COMPLETED', 'APPROVED', 6, 3, '2025-07-01 10:00:00+07', '2025-07-02 14:00:00+07', '2025-07-01 10:00:00+07', '2025-09-01 18:00:00+07'),
+(1, 1, 1, 'HN-FOUND-C1', 'HN Foundation 1 (Completed)', 'OFFLINE', '2025-07-07', '2025-09-01', '2025-09-01', ARRAY[1,3,5]::smallint[], 20, 'COMPLETED', 'APPROVED', NULL, 6, 3, '2025-07-01 10:00:00+07', '2025-07-02 14:00:00+07', '2025-07-01 10:00:00+07', '2025-09-01 18:00:00+07'),
 
 -- HN Branch - Class 2: ONGOING (main testing class - today is 2025-11-02, started Oct 6)
-(2, 1, 1, 'HN-FOUND-O1', 'HN Foundation 1 (Ongoing)', 'OFFLINE', '2025-10-06', '2025-11-28', NULL, ARRAY[1,3,5]::smallint[], 20, 'ONGOING', 'APPROVED', 6, 3, '2025-09-30 10:00:00+07', '2025-10-01 14:00:00+07', '2025-09-30 10:00:00+07', '2025-10-06 08:00:00+07'),
+(2, 1, 1, 'HN-FOUND-O1', 'HN Foundation 1 (Ongoing)', 'OFFLINE', '2025-10-06', '2025-11-28', NULL, ARRAY[1,3,5]::smallint[], 20, 'ONGOING', 'APPROVED', NULL, 6, 3, '2025-09-30 10:00:00+07', '2025-10-01 14:00:00+07', '2025-09-30 10:00:00+07', '2025-10-06 08:00:00+07'),
 
 -- HN Branch - Class 3: ONGOING (for transfer/makeup scenarios)
-(3, 1, 1, 'HN-FOUND-O2', 'HN Foundation 2 (Ongoing)', 'ONLINE', '2025-10-07', '2025-11-29', NULL, ARRAY[2,4,6]::smallint[], 25, 'ONGOING', 'APPROVED', 6, 3, '2025-10-01 10:00:00+07', '2025-10-02 14:00:00+07', '2025-10-01 10:00:00+07', '2025-10-07 08:00:00+07'),
+(3, 1, 1, 'HN-FOUND-O2', 'HN Foundation 2 (Ongoing)', 'ONLINE', '2025-10-07', '2025-11-29', NULL, ARRAY[2,4,6]::smallint[], 25, 'ONGOING', 'APPROVED', NULL, 6, 3, '2025-10-01 10:00:00+07', '2025-10-02 14:00:00+07', '2025-10-01 10:00:00+07', '2025-10-07 08:00:00+07'),
 
 -- HN Branch - Class 4: SCHEDULED (for future enrollments)
-(4, 1, 1, 'HN-FOUND-S1', 'HN Foundation 3 (Scheduled)', 'HYBRID', '2025-11-18', '2026-01-10', NULL, ARRAY[1,3,5]::smallint[], 20, 'SCHEDULED', 'APPROVED', 7, 3, '2025-11-10 10:00:00+07', '2025-11-11 14:00:00+07', '2025-11-10 10:00:00+07', '2025-11-11 14:00:00+07'),
+(4, 1, 1, 'HN-FOUND-S1', 'HN Foundation 3 (Scheduled)', 'HYBRID', '2025-11-18', '2026-01-10', NULL, ARRAY[1,3,5]::smallint[], 20, 'SCHEDULED', 'APPROVED', NULL, 7, 3, '2025-11-10 10:00:00+07', '2025-11-11 14:00:00+07', '2025-11-10 10:00:00+07', '2025-11-11 14:00:00+07'),
 
 -- HCM Branch - Class 5: ONGOING
-(5, 2, 1, 'HCM-FOUND-O1', 'HCM Foundation 1 (Ongoing)', 'OFFLINE', '2025-10-13', '2025-12-05', NULL, ARRAY[1,3,5]::smallint[], 20, 'ONGOING', 'APPROVED', 8, 4, '2025-10-06 10:00:00+07', '2025-10-07 14:00:00+07', '2025-10-06 10:00:00+07', '2025-10-13 08:00:00+07'),
+(5, 2, 1, 'HCM-FOUND-O1', 'HCM Foundation 1 (Ongoing)', 'OFFLINE', '2025-10-13', '2025-12-05', NULL, ARRAY[1,3,5]::smallint[], 20, 'ONGOING', 'APPROVED', NULL, 8, 4, '2025-10-06 10:00:00+07', '2025-10-07 14:00:00+07', '2025-10-06 10:00:00+07', '2025-10-13 08:00:00+07'),
 
 -- HCM Branch - Class 6: ONGOING (evening cohort for self-service transfers)
-(6, 2, 1, 'HCM-FOUND-E1', 'HCM Foundation 2 (Evening)', 'OFFLINE', '2025-10-14', '2025-12-06', NULL, ARRAY[2,4,6]::smallint[], 18, 'ONGOING', 'APPROVED', 8, 4, '2025-10-08 10:00:00+07', '2025-10-09 14:00:00+07', '2025-10-08 10:00:00+07', '2025-10-14 08:00:00+07'),
+(6, 2, 1, 'HCM-FOUND-E1', 'HCM Foundation 2 (Evening)', 'OFFLINE', '2025-10-14', '2025-12-06', NULL, ARRAY[2,4,6]::smallint[], 18, 'ONGOING', 'APPROVED', NULL, 8, 4, '2025-10-08 10:00:00+07', '2025-10-09 14:00:00+07', '2025-10-08 10:00:00+07', '2025-10-14 08:00:00+07'),
 
 -- HCM Branch - Class 7: ONGOING (micro cohort kept at capacity for negative cases)
-(7, 2, 1, 'HCM-FOUND-M1', 'HCM Foundation Micro Cohort', 'OFFLINE', '2025-10-20', '2025-12-12', NULL, ARRAY[1,3,5]::smallint[], 5, 'ONGOING', 'APPROVED', 8, 4, '2025-10-10 10:00:00+07', '2025-10-11 14:00:00+07', '2025-10-10 10:00:00+07', '2025-10-20 08:00:00+07');
+(7, 2, 1, 'HCM-FOUND-M1', 'HCM Foundation Micro Cohort', 'OFFLINE', '2025-10-20', '2025-12-12', NULL, ARRAY[1,3,5]::smallint[], 5, 'ONGOING', 'APPROVED', NULL, 8, 4, '2025-10-10 10:00:00+07', '2025-10-11 14:00:00+07', '2025-10-10 10:00:00+07', '2025-10-20 08:00:00+07'),
+
+-- DRAFT Class
+(11, 1, 1, 'HN-FOUND-D1', 'HN Foundation Draft', 'OFFLINE', '2026-01-01', '2026-03-01', NULL, ARRAY[2,4,6]::smallint[], 20, 'DRAFT', 'PENDING', NULL, 6, NULL, NULL, NULL, NOW(), NOW()),
+
+-- REJECTED Class
+(12, 1, 1, 'HN-FOUND-R1', 'HN Foundation Rejected', 'ONLINE', '2026-02-01', '2026-04-01', NULL, ARRAY[1,3,5]::smallint[], 20, 'DRAFT', 'REJECTED', 'Schedule conflict with other classes', 6, 3, '2025-11-01 10:00:00+07', '2025-11-02 10:00:00+07', NOW(), NOW());
 
 -- Generate Sessions for Class 1 (HN-FOUND-C1) - COMPLETED
 -- Start: 2025-07-07 (Mon), Schedule: Mon/Wed/Fri, 24 sessions over 8 weeks
@@ -884,6 +892,10 @@ INSERT INTO enrollment (id, class_id, student_id, status, enrolled_at, enrolled_
 -- Student 18 - will be transferred later (SCENARIO 6)
 (17, 2, 18, 'ENROLLED', '2025-10-01 09:00:00+07', 6, 101, '2025-10-01 09:00:00+07', '2025-10-01 09:00:00+07');
 
+-- Enrollment with Capacity Override
+INSERT INTO enrollment (id, class_id, student_id, status, enrolled_at, enrolled_by, join_session_id, capacity_override, override_reason, created_at, updated_at) VALUES
+(18, 2, 60, 'ENROLLED', '2025-10-05 09:00:00+07', 6, 101, true, 'Special request from Center Head', '2025-10-05 09:00:00+07', '2025-10-05 09:00:00+07');
+
 -- Enrollments for Class 3 (HN-FOUND-O2) - 12 students
 INSERT INTO enrollment (id, class_id, student_id, status, enrolled_at, enrolled_by, join_session_id, created_at, updated_at) VALUES
 (20, 3, 20, 'ENROLLED', '2025-10-02 09:00:00+07', 6, 201, '2025-10-02 09:00:00+07', '2025-10-02 09:00:00+07'),
@@ -1240,6 +1252,10 @@ INSERT INTO teacher_request (id, teacher_id, session_id, request_type, new_date,
 INSERT INTO teacher_request (id, teacher_id, session_id, request_type, new_resource_id, status, request_reason, submitted_by, submitted_at, decided_by, decided_at) VALUES
 (3, 1, 117, 'MODALITY_CHANGE', 4, 'APPROVED', 'Room air conditioning broken - need to switch to online', 20, '2025-11-01 07:00:00+07', 6, '2025-11-01 08:00:00+07');
 
+-- Rejected Teacher Request
+INSERT INTO teacher_request (id, teacher_id, session_id, request_type, status, request_reason, submitted_by, submitted_at, decided_by, decided_at) VALUES
+(4, 1, 118, 'SWAP', 'REJECTED', 'Personal reason', 20, NOW(), 6, NOW());
+
 -- Execute modality change: Update session_resource
 DELETE FROM session_resource WHERE session_id = 117;
 INSERT INTO session_resource (session_id, resource_id) VALUES (117, 4);
@@ -1342,6 +1358,10 @@ INSERT INTO student_feedback_response (id, feedback_id, question_id, rating, cre
 INSERT INTO qa_report (id, class_id, session_id, reported_by, report_type, status, findings, action_items, created_at, updated_at) VALUES
 (1, 2, 105, 10, 'classroom_observation', 'closed', 'Teacher demonstrated excellent engagement techniques. Students actively participated.', 'Share teaching approach with other teachers in next training session.', '2025-10-19 15:00:00+07', '2025-10-20 10:00:00+07'),
 (2, 2, 110, 10, 'classroom_observation', 'open', 'Noticed some students struggling with listening exercises. Recommend additional practice materials.', 'Teacher to provide supplementary listening resources. Follow-up in 2 weeks.', '2025-10-30 14:00:00+07', '2025-10-30 14:00:00+07');
+
+-- QA Report for Phase
+INSERT INTO qa_report (id, class_id, phase_id, reported_by, report_type, status, findings, action_items, created_at, updated_at) VALUES
+(3, 2, 1, 10, 'phase_review', 'open', 'Phase 1 completed. Overall good progress.', 'Proceed to Phase 2.', NOW(), NOW());
 
 -- ========== EDGE CASES & BOUNDARY CONDITIONS ==========
 

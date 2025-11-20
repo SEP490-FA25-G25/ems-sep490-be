@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.fyp.tmssep490be.dtos.common.ResponseObject;
 import org.fyp.tmssep490be.dtos.course.*;
 import org.fyp.tmssep490be.security.UserPrincipal;
+import org.fyp.tmssep490be.repositories.StudentRepository;
 import org.fyp.tmssep490be.services.CourseService;
 import org.fyp.tmssep490be.services.MaterialAccessService;
 import org.fyp.tmssep490be.services.StudentProgressService;
@@ -31,15 +32,16 @@ public class CourseController {
     private final CourseService courseService;
     private final MaterialAccessService materialAccessService;
     private final StudentProgressService studentProgressService;
+    private final StudentRepository studentRepository;
 
     @GetMapping("/student/{userId}")
     @Operation(
             summary = "Get student's enrolled courses",
-            description = "Retrieve all courses that a student is currently enrolled in with progress information"
+            description = "Retrieve all courses that a student is currently enrolled in with progress information. Note: The path parameter is userId which will be used to find the corresponding student."
     )
     @PreAuthorize("hasRole('STUDENT') or hasRole('ROLE_ACADEMIC_AFFAIR')")
     public ResponseEntity<ResponseObject<List<StudentCourseDTO>>> getStudentCourses(
-            @Parameter(description = "User ID")
+            @Parameter(description = "User ID (will be used to find corresponding Student)")
             @PathVariable Long userId,
 
             @AuthenticationPrincipal UserPrincipal currentUser
@@ -66,7 +68,25 @@ public class CourseController {
                             .build());
         }
 
-        log.info("User {} requesting courses for user {}", currentUserId, userId);
+        // Convert userId to studentId
+        Long studentId = null;
+        try {
+            studentId = studentRepository.findByUserAccountId(userId)
+                    .map(student -> student.getId())
+                    .orElse(null);
+        } catch (Exception e) {
+            log.error("Error finding student for userId {}", userId, e);
+        }
+
+        if (studentId == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseObject.<List<StudentCourseDTO>>builder()
+                            .success(false)
+                            .message("Student not found for user ID: " + userId)
+                            .build());
+        }
+
+        log.info("User {} requesting courses for student {} (userId: {})", currentUserId, studentId, userId);
 
         List<StudentCourseDTO> courses = courseService.getStudentCoursesByUserId(userId);
 
@@ -213,15 +233,15 @@ public class CourseController {
                 .build());
     }
 
-    @GetMapping("/student/{studentId}/progress")
+    @GetMapping("/student/{userId}/progress")
     @Operation(
             summary = "Get student course progress",
-            description = "Retrieve comprehensive progress information for a student in a specific course"
+            description = "Retrieve comprehensive progress information for a student in a specific course. Note: The path parameter is userId which will be automatically mapped to studentId."
     )
     @PreAuthorize("hasRole('STUDENT') or hasRole('ROLE_ACADEMIC_AFFAIR')")
     public ResponseEntity<ResponseObject<CourseProgressDTO>> getStudentCourseProgress(
-            @Parameter(description = "Student ID")
-            @PathVariable Long studentId,
+            @Parameter(description = "User ID (will be mapped to Student ID)")
+            @PathVariable Long userId,
 
             @Parameter(description = "Course ID")
             @RequestParam Long courseId,
@@ -233,7 +253,7 @@ public class CourseController {
             currentUser.getAuthorities().stream().anyMatch(auth -> auth.getAuthority().equals("ROLE_STUDENT"));
 
         // Students can only view their own progress
-        if (currentUser != null && isStudent && !currentUserId.equals(studentId)) {
+        if (currentUser != null && isStudent && !currentUserId.equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ResponseObject.<CourseProgressDTO>builder()
                             .success(false)
@@ -241,7 +261,25 @@ public class CourseController {
                             .build());
         }
 
-        log.info("User {} requesting progress for student {} in course {}", currentUserId, studentId, courseId);
+        // Convert userId to studentId
+        Long studentId = null;
+        try {
+            studentId = studentRepository.findByUserAccountId(userId)
+                    .map(student -> student.getId())
+                    .orElse(null);
+        } catch (Exception e) {
+            log.error("Error finding student for userId {}", userId, e);
+        }
+
+        if (studentId == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ResponseObject.<CourseProgressDTO>builder()
+                            .success(false)
+                            .message("Student not found for user ID: " + userId)
+                            .build());
+        }
+
+        log.info("User {} requesting progress for student {} (userId: {}) in course {}", currentUserId, studentId, userId, courseId);
 
         CourseProgressDTO progress = studentProgressService.calculateProgress(studentId, courseId);
 
