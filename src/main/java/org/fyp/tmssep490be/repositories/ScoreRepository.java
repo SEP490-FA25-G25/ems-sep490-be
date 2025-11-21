@@ -36,4 +36,15 @@ public interface ScoreRepository extends JpaRepository<Score, Long> {
            "WHERE s.student.id = :studentId " +
            "AND s.assessment.classEntity.id = :classId")
     List<Score> findByStudentIdAndClassId(@Param("studentId") Long studentId, @Param("classId") Long classId);
+
+  /**
+     * Calculate average percentage score for a student across all graded assessments
+     * Normalizes different assessment scales (e.g., quiz max 20, exam max 100) to percentage
+     */
+    @Query("SELECT COALESCE(AVG((s.score / ca.maxScore) * 100), 0) " +
+           "FROM Score s " +
+           "JOIN s.assessment a " +
+           "JOIN a.courseAssessment ca " +
+           "WHERE s.student.id = :studentId AND s.gradedAt IS NOT NULL")
+    java.math.BigDecimal calculateAverageScore(@Param("studentId") Long studentId);
 }

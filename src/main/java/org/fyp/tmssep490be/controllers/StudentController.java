@@ -131,6 +131,30 @@ public class StudentController {
                 .build());
     }
 
+  /**
+     * Get current student's own profile information
+     * For students to view their personal academic information and statistics
+     */
+    @GetMapping("/me/profile")
+    @Operation(
+            summary = "Get my student profile",
+            description = "Retrieve the current student's profile information including personal details, academic statistics, and current classes"
+    )
+    @PreAuthorize("hasRole('ROLE_STUDENT')")
+    public ResponseEntity<ResponseObject<StudentProfileDTO>> getMyProfile(
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("Student {} requesting their profile information", currentUser.getId());
+
+        StudentProfileDTO studentProfile = studentService.getMyProfile(currentUser.getId());
+
+        return ResponseEntity.ok(ResponseObject.<StudentProfileDTO>builder()
+                .success(true)
+                .message("Student profile retrieved successfully")
+                .data(studentProfile)
+                .build());
+    }
+
     /**
      * Get detailed information about a specific student
      * Includes enrollment history and current active classes
