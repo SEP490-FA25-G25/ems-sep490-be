@@ -8,7 +8,7 @@
 -- =========================================
 -- COVERAGE:
 -- - Happy paths: Course creation → Class → Enrollment → Attendance → Requests
--- - Edge cases: Mid-course enrollment, cross-class makeup, transfers, teacher swaps
+-- - Edge cases: Mid-course enrollment, cross-class makeup, transfers, teacher replacements
 -- - Boundary conditions: Capacity limits, date ranges, status transitions
 -- =========================================
 
@@ -1279,11 +1279,11 @@ SELECT 40, s.id, false, 'PLANNED', 'Transferred from class #5', CURRENT_TIMESTAM
 FROM session s
 WHERE s.class_id = 6 AND s.date >= '2025-11-08';
 
--- SCENARIO 7: Teacher Swap Request - Approved
+-- SCENARIO 7: Teacher Replacement Request - Approved
 INSERT INTO teacher_request (id, teacher_id, session_id, request_type, replacement_teacher_id, status, request_reason, submitted_by, submitted_at, decided_by, decided_at) VALUES
-(1, 1, 115, 'SWAP', 3, 'APPROVED', 'Family emergency - cannot attend session', 20, '2025-10-28 08:00:00+07', 6, '2025-10-28 10:00:00+07');
+(1, 1, 115, 'REPLACEMENT', 3, 'APPROVED', 'Family emergency - cannot attend session', 20, '2025-10-28 08:00:00+07', 6, '2025-10-28 10:00:00+07');
 
--- Execute swap: Update teaching_slot
+-- Execute replacement: Update teaching_slot
 UPDATE teaching_slot 
 SET teacher_id = 3, status = 'SUBSTITUTED'
 WHERE session_id = 115 AND teacher_id = 1;
@@ -1298,7 +1298,7 @@ INSERT INTO teacher_request (id, teacher_id, session_id, request_type, new_resou
 
 -- Rejected Teacher Request
 INSERT INTO teacher_request (id, teacher_id, session_id, request_type, status, request_reason, submitted_by, submitted_at, decided_by, decided_at) VALUES
-(4, 1, 118, 'SWAP', 'REJECTED', 'Personal reason', 20, NOW(), 6, NOW());
+(4, 1, 118, 'REPLACEMENT', 'REJECTED', 'Personal reason', 20, NOW(), 6, NOW());
 
 -- Execute modality change: Update session_resource
 DELETE FROM session_resource WHERE session_id = 117;
