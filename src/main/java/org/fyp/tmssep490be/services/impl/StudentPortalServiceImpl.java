@@ -71,8 +71,8 @@ public class StudentPortalServiceImpl implements StudentPortalService {
                     .distinct()
                     .collect(Collectors.toList());
         } else {
-            // Default to ENROLLED for backward compatibility
-            enrollmentStatuses = Arrays.asList(EnrollmentStatus.ENROLLED);
+            // When no status filter provided, return ALL enrollment statuses
+            enrollmentStatuses = Arrays.asList(EnrollmentStatus.values());
         }
 
         List<Enrollment> enrollments = enrollmentRepository.findByStudentIdAndStatusIn(studentId, enrollmentStatuses);

@@ -36,6 +36,6 @@ public class StudentProfileDTO {
     private Long totalSessions;
     private Long totalAbsences;
 
-    // Current Active Classes (clickable for navigation)
-    private List<StudentActiveClassDTO> currentClasses;
+    // All Enrollments (clickable for navigation) - includes ENROLLED, COMPLETED, DROPPED, WITHDRAWN
+    private List<StudentActiveClassDTO> enrollments;
 }

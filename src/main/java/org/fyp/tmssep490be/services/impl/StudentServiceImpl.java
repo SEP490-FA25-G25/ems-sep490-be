@@ -628,9 +628,14 @@ public class StudentServiceImpl implements StudentService {
         // Calculate average score
         java.math.BigDecimal averageScore = scoreRepository.calculateAverageScore(student.getId());
 
-        // Get current active classes
-        List<StudentActiveClassDTO> currentClasses = student.getEnrollments().stream()
-                .filter(e -> e.getStatus() == EnrollmentStatus.ENROLLED)
+        // Get ALL enrollments (not just active ones) - sorted by enrolledAt descending
+        List<StudentActiveClassDTO> enrollments = student.getEnrollments().stream()
+                .sorted((e1, e2) -> {
+                    if (e1.getEnrolledAt() == null && e2.getEnrolledAt() == null) return 0;
+                    if (e1.getEnrolledAt() == null) return 1;
+                    if (e2.getEnrolledAt() == null) return -1;
+                    return e2.getEnrolledAt().compareTo(e1.getEnrolledAt());
+                })
                 .map(this::convertToStudentActiveClassDTO)
                 .collect(Collectors.toList());
 
@@ -655,7 +660,7 @@ public class StudentServiceImpl implements StudentService {
                 .averageScore(averageScore)
                 .totalSessions(totalAttendedSessions)
                 .totalAbsences(totalAbsences)
-                .currentClasses(currentClasses)
+                .enrollments(enrollments)
                 .build();
     }
 }
