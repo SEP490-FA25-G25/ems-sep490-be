@@ -54,8 +54,27 @@ public class StudentPortalServiceImpl implements StudentPortalService {
             throw new CustomException(ErrorCode.STUDENT_NOT_FOUND);
         }
 
-        // Get enrollments with filters
-        List<EnrollmentStatus> enrollmentStatuses = Arrays.asList(EnrollmentStatus.ENROLLED);
+        // Get enrollments with dynamic status filters
+        List<EnrollmentStatus> enrollmentStatuses;
+        if (statusFilters != null && !statusFilters.isEmpty()) {
+            enrollmentStatuses = statusFilters.stream()
+                    .filter(status -> status != null && !status.trim().isEmpty())
+                    .map(status -> {
+                        try {
+                            return EnrollmentStatus.valueOf(status.trim().toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                            log.warn("Invalid enrollment status: {}, skipping", status);
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+        } else {
+            // Default to ENROLLED for backward compatibility
+            enrollmentStatuses = Arrays.asList(EnrollmentStatus.ENROLLED);
+        }
+
         List<Enrollment> enrollments = enrollmentRepository.findByStudentIdAndStatusIn(studentId, enrollmentStatuses);
 
         // Filter by class status if provided
@@ -261,6 +280,27 @@ public class StudentPortalServiceImpl implements StudentPortalService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<StudentTranscriptDTO> getStudentTranscript(Long studentId) {
+        log.info("Getting transcript for student: {}", studentId);
+
+        // Validate student exists
+        if (!studentRepository.existsById(studentId)) {
+            throw new CustomException(ErrorCode.STUDENT_NOT_FOUND);
+        }
+
+        // Get all enrollments for the student with status ENROLLED or COMPLETED classes
+        List<EnrollmentStatus> enrollmentStatuses = Arrays.asList(
+                EnrollmentStatus.ENROLLED,
+                EnrollmentStatus.COMPLETED
+        );
+        List<Enrollment> enrollments = enrollmentRepository.findByStudentIdAndStatusIn(studentId, enrollmentStatuses);
+
+        return enrollments.stream()
+                .map(this::convertToStudentTranscriptDTO)
+                .collect(Collectors.toList());
+    }
+
     // Helper methods for converting entities to DTOs
 
     private StudentClassDTO convertToStudentClassDTO(Enrollment enrollment) {
@@ -274,33 +314,13 @@ public class StudentPortalServiceImpl implements StudentPortalService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        // Calculate session statistics
+        // Calculate session statistics (only what's needed for progress bar)
         List<Session> allSessions = sessionRepository.findAllByClassIdOrderByDateAndTime(classEntity.getId());
         int totalSessions = allSessions.size();
-
-        List<StudentSession> studentSessions = studentSessionRepository.findAllByStudentId(student.getId())
-                .stream()
-                .filter(ss -> ss.getSession().getClassEntity().getId().equals(classEntity.getId()))
-                .collect(Collectors.toList());
-
-        long attendedSessions = studentSessions.stream()
-                .filter(ss -> ss.getAttendanceStatus() == AttendanceStatus.PRESENT)
-                .count();
 
         int completedSessions = (int) allSessions.stream()
                 .filter(session -> session.getDate().isBefore(LocalDate.now()) || session.getStatus() != SessionStatus.PLANNED)
                 .count();
-
-        // Calculate attendance rate
-        BigDecimal attendanceRate = BigDecimal.ZERO;
-        if (completedSessions > 0) {
-            attendanceRate = new BigDecimal(attendedSessions)
-                    .divide(new BigDecimal(completedSessions), 2, RoundingMode.HALF_UP)
-                    .multiply(new BigDecimal("100"));
-        }
-
-        // Get average score (placeholder - would need to implement score calculation)
-        BigDecimal averageScore = null; // Implement if needed
 
         return StudentClassDTO.builder()
                 .classId(classEntity.getId())
@@ -320,11 +340,8 @@ public class StudentPortalServiceImpl implements StudentPortalService {
                 .enrollmentStatus(enrollment.getStatus().toString())
                 .totalSessions(totalSessions)
                 .completedSessions(completedSessions)
-                .attendedSessions((int) attendedSessions)
-                .attendanceRate(attendanceRate)
                 .instructorNames(instructorNames)
                 .scheduleSummary(generateScheduleSummary(classEntity))
-                .averageScore(averageScore)
                 .build();
     }
 
@@ -362,11 +379,12 @@ public class StudentPortalServiceImpl implements StudentPortalService {
                 .maxCapacity(classEntity.getMaxCapacity())
                 .build();
 
-        // Get upcoming sessions
-        List<SessionDTO> upcomingSessions = sessionRepository.findUpcomingSessions(classEntity.getId(), Pageable.ofSize(5))
+        // Get next session only (optimization: previously fetched up to 5 sessions)
+        SessionDTO nextSession = sessionRepository.findUpcomingSessions(classEntity.getId(), Pageable.ofSize(1))
                 .stream()
+                .findFirst()
                 .map(this::convertToSessionDTO)
-                .collect(Collectors.toList());
+                .orElse(null);
 
         return ClassDetailDTO.builder()
                 .id(classEntity.getId())
@@ -391,7 +409,7 @@ public class StudentPortalServiceImpl implements StudentPortalService {
                 .teachers(teachers)
                 .scheduleSummary(generateScheduleSummary(classEntity))
                 .enrollmentSummary(enrollmentSummary)
-                .upcomingSessions(upcomingSessions)
+                .nextSession(nextSession)
                 .build();
     }
 
@@ -501,6 +519,74 @@ public class StudentPortalServiceImpl implements StudentPortalService {
         // In a real scenario, you'd want to analyze the actual session schedule
         // For now, return a placeholder
         return "Lịch học tạm thời"; // Placeholder
+    }
+
+    private StudentTranscriptDTO convertToStudentTranscriptDTO(Enrollment enrollment) {
+        ClassEntity classEntity = enrollment.getClassEntity();
+        Student student = enrollment.getStudent();
+
+        // Get primary teacher name
+        String primaryTeacherName = teachingSlotRepository.findByClassEntityIdAndStatus(
+                classEntity.getId(), TeachingSlotStatus.SCHEDULED)
+                .stream()
+                .collect(Collectors.groupingBy(ts -> ts.getTeacher().getId()))
+                .values()
+                .stream()
+                .max(Comparator.comparingInt(List::size))
+                .map(teachingSlots -> teachingSlots.get(0).getTeacher().getUserAccount().getFullName())
+                .orElse("Chưa phân công");
+
+        // Calculate session statistics
+        List<Session> allSessions = sessionRepository.findAllByClassIdOrderByDateAndTime(classEntity.getId());
+        List<Session> activeSessions = allSessions.stream()
+                .filter(session -> session.getStatus() != SessionStatus.CANCELLED)
+                .collect(Collectors.toList());
+
+        int totalSessions = activeSessions.size();
+        int completedSessions = (int) activeSessions.stream()
+                .filter(session -> session.getDate().isBefore(LocalDate.now()) || session.getStatus() != SessionStatus.PLANNED)
+                .count();
+
+        // Get assessments and scores for this student in this class
+        List<Assessment> assessments = assessmentRepository.findByClassEntityId(classEntity.getId());
+        List<Score> scores = scoreRepository.findByStudentIdAndClassId(student.getId(), classEntity.getId());
+
+        // Build component scores map
+        Map<String, BigDecimal> componentScores = new HashMap<>();
+        for (Score score : scores) {
+            if (score.getAssessment() != null && score.getAssessment().getCourseAssessment() != null) {
+                String assessmentName = score.getAssessment().getCourseAssessment().getName();
+                componentScores.put(assessmentName, score.getScore());
+            }
+        }
+
+        // Calculate average score
+        BigDecimal averageScore = null;
+        if (!componentScores.isEmpty()) {
+            BigDecimal sum = componentScores.values().stream()
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            averageScore = sum.divide(new BigDecimal(componentScores.size()), 2, RoundingMode.HALF_UP);
+        }
+
+        // Determine completed date
+        LocalDate completedDate = null;
+        if (classEntity.getStatus() == ClassStatus.COMPLETED && classEntity.getActualEndDate() != null) {
+            completedDate = classEntity.getActualEndDate();
+        }
+
+        return StudentTranscriptDTO.builder()
+                .classId(classEntity.getId())
+                .classCode(classEntity.getCode())
+                .className(classEntity.getName())
+                .courseName(classEntity.getCourse().getName())
+                .teacherName(primaryTeacherName)
+                .status(classEntity.getStatus().toString())
+                .averageScore(averageScore)
+                .componentScores(componentScores)
+                .completedDate(completedDate)
+                .totalSessions(totalSessions)
+                .completedSessions(completedSessions)
+                .build();
     }
 
     /**

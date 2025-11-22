@@ -73,4 +73,12 @@ public interface StudentPortalService {
      * @return List of classmates
      */
     List<ClassmateDTO> getClassmates(Long classId);
+
+    /**
+     * Get student transcript with all classes, scores, and progress
+     *
+     * @param studentId Student ID
+     * @return List of transcript entries for all student's enrollments
+     */
+    List<StudentTranscriptDTO> getStudentTranscript(Long studentId);
 }

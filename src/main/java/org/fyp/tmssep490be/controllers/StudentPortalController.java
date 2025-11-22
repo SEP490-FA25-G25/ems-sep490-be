@@ -27,7 +27,7 @@ import java.util.List;
  * Provides endpoints for students to view their classes and related information
  */
 @RestController
-@RequestMapping("/api/v1/students/{studentId}/classes")
+@RequestMapping("/api/v1/students/{studentId}")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Student Portal", description = "Student portal APIs for viewing classes and progress")
@@ -41,7 +41,7 @@ public class StudentPortalController {
      * Get classes enrolled by a student with filtering and pagination
      * GET /api/v1/students/{studentId}/classes
      */
-    @GetMapping
+    @GetMapping("/classes")
     @Operation(
             summary = "Get student's enrolled classes",
             description = "Get all classes enrolled by the student with optional filtering by status, branch, course, and modality"
@@ -77,5 +77,32 @@ public class StudentPortalController {
         );
 
         return ResponseEntity.ok(ResponseObject.success(classes));
+    }
+
+    /**
+     * Get transcript for a student
+     * GET /api/v1/students/{studentId}/transcript
+     */
+    @GetMapping("/transcript")
+    @Operation(
+            summary = "Get student transcript",
+            description = "Get complete academic transcript including all classes, scores, and progress"
+    )
+    @PreAuthorize("hasRole('STUDENT') or hasRole('MANAGER')")
+    public ResponseEntity<ResponseObject<List<StudentTranscriptDTO>>> getStudentTranscript(
+            @Parameter(description = "Student ID (ignored, derived từ token)") @PathVariable Long studentId,
+            @AuthenticationPrincipal UserPrincipal currentUser
+    ) {
+        log.info("User {} retrieving transcript for student: {}", currentUser.getId(), studentId);
+
+        // Luôn lấy studentId từ principal để tránh client truyền userId/nhầm ID
+        Long authStudentId = studentContextHelper.getStudentId(currentUser);
+        if (studentId != null && !authStudentId.equals(studentId)) {
+            log.warn("Overriding requested studentId {} with authenticated studentId {}", studentId, authStudentId);
+        }
+
+        List<StudentTranscriptDTO> transcript = studentPortalService.getStudentTranscript(authStudentId);
+
+        return ResponseEntity.ok(ResponseObject.success(transcript));
     }
 }

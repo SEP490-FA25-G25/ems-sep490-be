@@ -600,26 +600,28 @@ public class StudentServiceImpl implements StudentService {
                 .min(LocalDate::compareTo)
                 .orElse(null);
 
-        // Calculate attendance rate - only count completed sessions (status = 'DONE')
+        // Calculate attendance rate - only count completed sessions with recorded attendance
         List<StudentSession> studentSessions =
                 studentSessionRepository.findAllByStudentId(student.getId());
 
-        // Filter only completed sessions (sessions that have already occurred)
-        List<StudentSession> completedSessions = studentSessions.stream()
+        // Filter only completed sessions that are not cancelled and have actual attendance recorded
+        List<StudentSession> attendedSessions = studentSessions.stream()
                 .filter(ss -> ss.getSession().getStatus() == SessionStatus.DONE)
+                .filter(ss -> ss.getSession().getStatus() != SessionStatus.CANCELLED)
+                .filter(ss -> ss.getAttendanceStatus() != AttendanceStatus.PLANNED)
                 .collect(Collectors.toList());
 
-        long totalCompletedSessions = completedSessions.size();
-        long presentSessions = completedSessions.stream()
+        long totalAttendedSessions = attendedSessions.size();
+        long presentSessions = attendedSessions.stream()
                 .filter(ss -> ss.getAttendanceStatus() == AttendanceStatus.PRESENT)
                 .count();
 
-        java.math.BigDecimal attendanceRate = totalCompletedSessions > 0
-                ? java.math.BigDecimal.valueOf(presentSessions * 100.0 / totalCompletedSessions)
+        java.math.BigDecimal attendanceRate = totalAttendedSessions > 0
+                ? java.math.BigDecimal.valueOf(presentSessions * 100.0 / totalAttendedSessions)
                         .setScale(1, java.math.RoundingMode.HALF_UP)
                 : java.math.BigDecimal.ZERO;
 
-        long totalAbsences = completedSessions.stream()
+        long totalAbsences = attendedSessions.stream()
                 .filter(ss -> ss.getAttendanceStatus() == AttendanceStatus.ABSENT)
                 .count();
 
@@ -651,7 +653,7 @@ public class StudentServiceImpl implements StudentService {
                 .firstEnrollmentDate(firstEnrollmentDate)
                 .attendanceRate(attendanceRate)
                 .averageScore(averageScore)
-                .totalSessions(totalCompletedSessions)
+                .totalSessions(totalAttendedSessions)
                 .totalAbsences(totalAbsences)
                 .currentClasses(currentClasses)
                 .build();

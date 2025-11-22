@@ -117,6 +117,8 @@ public class CourseServiceImpl implements CourseService {
                 });
 
         List<CoursePhaseDTO> phases = getCoursePhases(courseId);
+        List<CourseCLODTO> clos = getCourseCLOsList(courseId);
+        List<CourseAssessmentDTO> assessments = getCourseAssessments(courseId);
 
         return CourseDetailDTO.builder()
                 .id(course.getId())
@@ -126,6 +128,8 @@ public class CourseServiceImpl implements CourseService {
                 .subjectName(course.getSubject() != null ? course.getSubject().getName() : null)
                 .levelName(course.getLevel() != null ? course.getLevel().getName() : null)
                 .phases(phases)
+                .clos(clos)
+                .assessments(assessments)
                 .build();
     }
 
@@ -454,6 +458,12 @@ public class CourseServiceImpl implements CourseService {
     }
 
     private CourseAssessmentDTO convertToAssessmentDTO(CourseAssessment assessment) {
+        // Extract CLO codes from mappings
+        List<String> cloMappings = assessment.getCourseAssessmentCLOMappings().stream()
+                .map(mapping -> mapping.getClo().getCode())
+                .sorted()
+                .collect(Collectors.toList());
+
         return CourseAssessmentDTO.builder()
                 .id(assessment.getId())
                 .name(assessment.getName())
@@ -462,6 +472,7 @@ public class CourseServiceImpl implements CourseService {
                 .weight(null) // weight not available in CourseAssessment
                 .maxScore(assessment.getMaxScore())
                 .duration(assessment.getDurationMinutes() != null ? assessment.getDurationMinutes().toString() : null) // Convert Integer to String
+                .cloMappings(cloMappings)
                 .build();
     }
 }

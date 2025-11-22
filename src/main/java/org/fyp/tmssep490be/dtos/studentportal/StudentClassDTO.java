@@ -36,9 +36,6 @@ public class StudentClassDTO {
     private String enrollmentStatus;
     private Integer totalSessions;
     private Integer completedSessions;
-    private Integer attendedSessions;
-    private BigDecimal attendanceRate;
     private List<String> instructorNames;
     private String scheduleSummary;
-    private BigDecimal averageScore;
 }

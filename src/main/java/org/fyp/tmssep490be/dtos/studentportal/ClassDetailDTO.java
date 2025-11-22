@@ -32,7 +32,7 @@ public class ClassDetailDTO {
     private List<TeacherSummary> teachers;
     private String scheduleSummary;
     private EnrollmentSummary enrollmentSummary;
-    private List<SessionDTO> upcomingSessions;
+    private SessionDTO nextSession;
 
     @Data
     @Builder
